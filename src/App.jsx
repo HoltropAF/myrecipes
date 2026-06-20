@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import AuthScreen from './components/AuthScreen'
 import AddRecipeWizard from './components/AddRecipeWizard'
+import RecipeDetail from './components/RecipeDetail'
 import './App.css'
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
   const [recipes, setRecipes] = useState([])
   const [showWizard, setShowWizard] = useState(false)
   const [loadingRecipes, setLoadingRecipes] = useState(false)
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -52,6 +54,25 @@ function App() {
     )
   }
 
+  const handleDelete = async (recipe) => {
+    if (!window.confirm(`Delete "${recipe.title}"? This can't be undone.`)) return
+    const { error } = await supabase.from('recipes').delete().eq('id', recipe.id)
+    if (!error) {
+      setSelectedRecipe(null)
+      loadRecipes()
+    }
+  }
+
+  if (selectedRecipe) {
+    return (
+      <RecipeDetail
+        recipe={selectedRecipe}
+        onClose={() => setSelectedRecipe(null)}
+        onDelete={handleDelete}
+      />
+    )
+  }
+
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)' }}>
       <div style={{ padding: '20px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -83,8 +104,8 @@ function App() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {recipes.map(r => (
-              <div key={r.id} style={{
-                background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px',
+              <div key={r.id} onClick={() => setSelectedRecipe(r)} style={{
+                background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
               }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: 'var(--charcoal)' }}>{r.title}</div>
                 {r.tagline && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{r.tagline}</div>}
