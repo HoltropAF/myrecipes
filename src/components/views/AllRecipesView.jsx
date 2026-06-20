@@ -3,12 +3,14 @@ import { useState, useMemo } from 'react'
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
   const [query, setQuery] = useState('')
   const [searchMode, setSearchMode] = useState('title') // 'title' | 'ingredient'
+  const [wishlistOnly, setWishlistOnly] = useState(false)
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return recipes
+    let base = wishlistOnly ? recipes.filter(r => r.wishlist) : recipes
+    if (!query.trim()) return base
     const q = query.trim().toLowerCase()
     if (searchMode === 'ingredient') {
-      return recipes.filter(r => {
+      return base.filter(r => {
         const allIngredients = [
           ...(r.ingredients || []),
           ...(r.variants || []).flatMap(v => v.ingredients || []),
@@ -16,12 +18,12 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         return allIngredients.some(group => group.items.some(item => item.name.toLowerCase().includes(q)))
       })
     }
-    return recipes.filter(r =>
+    return base.filter(r =>
       r.title.toLowerCase().includes(q) ||
       (r.tagline || '').toLowerCase().includes(q) ||
       (r.category || '').toLowerCase().includes(q)
     )
-  }, [recipes, query, searchMode])
+  }, [recipes, query, searchMode, wishlistOnly])
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
@@ -53,9 +55,21 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         style={{
           width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
           background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
-          marginBottom: 16, boxSizing: 'border-box',
+          marginBottom: 10, boxSizing: 'border-box',
         }}
       />
+
+      <button
+        onClick={() => setWishlistOnly(w => !w)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 99,
+          border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
+          background: wishlistOnly ? 'var(--tomato)' : '#fffdf9',
+          color: wishlistOnly ? '#fffdf9' : 'var(--charcoal-soft)',
+          fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 16,
+        }}
+      >⭐ Wishlist only</button>
+      <br />
 
       {loading ? (
         <Empty>loading recipes…</Empty>
@@ -86,7 +100,9 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient }) {
         <img src={r.photo_url} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--charcoal)' }}>{r.title}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--charcoal)' }}>
+          {r.wishlist && <span style={{ marginRight: 5 }}>⭐</span>}{r.title}
+        </div>
         {r.tagline && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{r.tagline}</div>}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 5 }}>
           {matchedIngredient

@@ -1,18 +1,29 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatIngredientRow, scaleAmount } from '../lib/ingredientParser'
+import CookLogSection from './CookLogSection'
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('main') // 'main' | variant.id
   const [servings, setServings] = useState(recipe.servings || null)
   const [addedToList, setAddedToList] = useState(false)
+  const [wishlist, setWishlist] = useState(!!recipe.wishlist)
+  const [togglingWishlist, setTogglingWishlist] = useState(false)
 
   const active = activeTab === 'main'
     ? { ingredients: recipe.ingredients || [], steps: recipe.steps || [] }
     : (variants.find(v => v.id === activeTab) || { ingredients: [], steps: [] })
 
   const baseServings = recipe.servings || null
+
+  const handleToggleWishlist = async () => {
+    setTogglingWishlist(true)
+    const next = !wishlist
+    const { error } = await supabase.from('recipes').update({ wishlist: next }).eq('id', recipe.id)
+    if (!error) setWishlist(next)
+    setTogglingWishlist(false)
+  }
 
   const handleAddToShoppingList = async () => {
     const { data: userData } = await supabase.auth.getUser()
@@ -46,7 +57,12 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
       <div style={{ position: 'sticky', top: 0, zIndex: 5, background: '#fffdf9', borderBottom: '1px solid var(--line)', padding: '14px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={onClose} style={navBtnStyle}>‹ Back</button>
-          <div style={{ display: 'flex', gap: 14 }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <button
+              onClick={handleToggleWishlist} disabled={togglingWishlist}
+              title={wishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 19, lineHeight: 1, padding: 0 }}
+            >{wishlist ? '⭐' : '☆'}</button>
             {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>Edit</button>}
             {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>Delete</button>}
           </div>
@@ -151,6 +167,10 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
               </div>
             </div>
           ))}
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <CookLogSection recipeId={recipe.id} variants={variants} />
         </div>
 
         {recipe.notes && (
