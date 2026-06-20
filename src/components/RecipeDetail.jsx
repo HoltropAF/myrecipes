@@ -1,16 +1,44 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { formatIngredientRow, scaleAmount } from '../lib/ingredientParser'
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('main') // 'main' | variant.id
   const [servings, setServings] = useState(recipe.servings || null)
+  const [addedToList, setAddedToList] = useState(false)
 
   const active = activeTab === 'main'
     ? { ingredients: recipe.ingredients || [], steps: recipe.steps || [] }
     : (variants.find(v => v.id === activeTab) || { ingredients: [], steps: [] })
 
   const baseServings = recipe.servings || null
+
+  const handleAddToShoppingList = async () => {
+    const { data: userData } = await supabase.auth.getUser()
+    const user_id = userData?.user?.id
+    if (!user_id) return
+
+    const rows = active.ingredients.flatMap(group =>
+      group.items
+        .filter(item => item.name.trim())
+        .map(item => {
+          const scaled = baseServings && servings ? scaleAmount(item.amount, baseServings, servings) : item.amount
+          return {
+            user_id,
+            recipe_id: recipe.id,
+            name: item.name,
+            amount: scaled,
+            unit: item.unit,
+            checked: false,
+          }
+        })
+    )
+    if (rows.length === 0) return
+    await supabase.from('shopping_list').insert(rows)
+    setAddedToList(true)
+    setTimeout(() => setAddedToList(false), 2000)
+  }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
@@ -66,7 +94,14 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
         )}
 
         {/* Ingredients */}
-        <SectionLabel>Ingredients</SectionLabel>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <SectionLabel>Ingredients</SectionLabel>
+          <button onClick={handleAddToShoppingList} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: addedToList ? 'var(--sage)' : 'var(--tomato-deep)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+          }}>{addedToList ? '✓ Added' : '+ Add to list'}</button>
+        </div>
         <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, padding: '6px 16px', marginBottom: 22 }}>
           {active.ingredients.length === 0 && <EmptyRow>No ingredients listed.</EmptyRow>}
           {active.ingredients.map((group, gi) => (
