@@ -3,13 +3,20 @@ import { supabase } from '../../lib/supabase'
 
 // Normalize an ingredient name for merging: lowercase, strip common descriptors
 function normalizeName(name) {
-  return name
+  let n = name
     .toLowerCase()
     .replace(/\(.*?\)/g, '')
     .replace(/\b(rode?|witte?|grote?|kleine?|fijne?|verse?|gedroogde?|fresh|finely|chopped|diced|sliced|minced)\b/g, '')
     .replace(/[,.]/g, '')
     .trim()
-    .replace(/s$/, '') // crude singularize
+  // Singularize common plural patterns, while protecting words that are already
+  // singular and just happen to end in 's' (e.g. "kaas", "ananas", "asperges" stays as-is
+  // since stripping would give the wrong singular anyway for short Dutch words).
+  if (n.length > 4) {
+    if (/[^aeiou]oes$/.test(n)) n = n.slice(0, -2)       // tomatoes -> tomato, potatoes -> potato
+    else if (/[a-z]s$/.test(n) && !/[aeiou]s$/.test(n)) n = n.slice(0, -1) // onions -> onion, eggs -> egg
+  }
+  return n
 }
 
 export default function ShoppingListView({ userId }) {
