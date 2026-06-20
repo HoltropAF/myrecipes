@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatIngredientRow, scaleAmount } from '../lib/ingredientParser'
 import CookLogSection from './CookLogSection'
+import NutritionSection from './NutritionSection'
 
-export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
+export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete }) {
+  const [recipe, setRecipe] = useState(initialRecipe)
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('main') // 'main' | variant.id
   const [servings, setServings] = useState(recipe.servings || null)
@@ -85,6 +87,12 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete }) {
         <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
           {recipe.category && <MetaChip>{recipe.category}{recipe.subcategory ? ` · ${recipe.subcategory}` : ''}</MetaChip>}
           {recipe.total_minutes && <MetaChip>⏱ {recipe.total_minutes} min</MetaChip>}
+        </div>
+
+        {/* Nutrition */}
+        <SectionLabel>Nutrition</SectionLabel>
+        <div style={{ marginBottom: 22 }}>
+          <NutritionSection recipe={recipe} onUpdated={setRecipe} />
         </div>
 
         {/* Variant tabs */}
