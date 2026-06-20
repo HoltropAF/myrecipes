@@ -4,16 +4,17 @@ create table if not exists recipes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   title text not null,
-  category text,            -- top-level folder, e.g. "Desserts"
-  subcategory text,         -- subfolder, e.g. "Cakes"
+  tagline text,              -- short subtitle, e.g. "Creamy pasta met boursin"
+  category text,             -- top-level folder, e.g. "Desserts"
+  subcategory text,          -- subfolder, e.g. "Cakes"
   servings int,
-  prep_minutes int,
-  cook_minutes int,
-  ingredients jsonb not null default '[]',   -- [{id, name, amount, unit}]
-  steps jsonb not null default '[]',         -- [{id, title, content, timer_seconds}]
+  total_minutes int,         -- single rough time estimate (no prep/cook split in source docs)
+  ingredients jsonb not null default '[]',  -- grouped: [{group, items:[{id,name,amount,unit}]}]
+  steps jsonb not null default '[]',        -- sectioned: [{group, items:[{id,content,timer_seconds}]}]
+  variants jsonb not null default '[]',     -- alternate full versions: [{id,label,ingredients,steps}]
   notes text,
   photo_url text,
-  source text,               -- e.g. "imported from Canva", url, or freetext
+  source text,                -- e.g. "imported from Canva", url, or freetext
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
