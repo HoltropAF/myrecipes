@@ -5,6 +5,7 @@ export default function ExtrasStep({
   servings, setServings, totalMinutes, setTotalMinutes,
   category, setCategory, subcategory, setSubcategory,
   existingCategories, photoPreview, onPhotoChange,
+  notes, setNotes,
 }) {
   return (
     <div>
@@ -66,6 +67,16 @@ export default function ExtrasStep({
             <input type="file" accept="image/*" onChange={e => onPhotoChange(e.target.files?.[0] || null)} style={{ display: 'none' }} />
           </label>
         )}
+      </label>
+
+      <label style={{ ...labelStyle, marginTop: 18 }}>
+        <span style={labelTextStyle}>notes (optional)</span>
+        <textarea
+          value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Tips, substitutions, variations…"
+          rows={3}
+          style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
+        />
       </label>
     </div>
   )

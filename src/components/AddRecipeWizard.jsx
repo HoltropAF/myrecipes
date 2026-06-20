@@ -10,30 +10,40 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
 const emptyGroup = () => ({ group: null, items: [] })
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [] }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingRecipe = null }) {
+  const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Form state
-  const [title, setTitle] = useState('')
-  const [tagline, setTagline] = useState('')
+  // Form state — pre-filled from existingRecipe when editing
+  const [title, setTitle] = useState(existingRecipe?.title || '')
+  const [tagline, setTagline] = useState(existingRecipe?.tagline || '')
 
-  const [ingredientGroups, setIngredientGroups] = useState([emptyGroup()])
+  const [ingredientGroups, setIngredientGroups] = useState(
+    existingRecipe?.ingredients?.length ? existingRecipe.ingredients : [emptyGroup()]
+  )
   const [ingredientPaste, setIngredientPaste] = useState('')
-  const [showIngredientGrouping, setShowIngredientGrouping] = useState(false)
+  const [showIngredientGrouping, setShowIngredientGrouping] = useState(
+    (existingRecipe?.ingredients?.length || 0) > 1
+  )
 
-  const [stepGroups, setStepGroups] = useState([{ group: 'Bereiding', items: [] }])
+  const [stepGroups, setStepGroups] = useState(
+    existingRecipe?.steps?.length ? existingRecipe.steps : [{ group: 'Bereiding', items: [] }]
+  )
   const [stepPaste, setStepPaste] = useState('')
 
-  const [servings, setServings] = useState('')
-  const [totalMinutes, setTotalMinutes] = useState('')
-  const [category, setCategory] = useState('')
-  const [subcategory, setSubcategory] = useState('')
+  const [servings, setServings] = useState(existingRecipe?.servings ? String(existingRecipe.servings) : '')
+  const [totalMinutes, setTotalMinutes] = useState(existingRecipe?.total_minutes ? String(existingRecipe.total_minutes) : '')
+  const [category, setCategory] = useState(existingRecipe?.category || '')
+  const [subcategory, setSubcategory] = useState(existingRecipe?.subcategory || '')
   const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(existingRecipe?.photo_url || null)
+  const [notes, setNotes] = useState(existingRecipe?.notes || '')
 
-  const [wantsVariant, setWantsVariant] = useState(null) // null | true | false
+  // Variants — support multiple (existing recipes like Gyoza/Tiramisu have several)
+  const [variants, setVariants] = useState(existingRecipe?.variants || [])
+  const [wantsVariant, setWantsVariant] = useState(existingRecipe?.variants?.length ? true : null)
   const [variantLabel, setVariantLabel] = useState('')
   const [variantIngredientGroups, setVariantIngredientGroups] = useState([emptyGroup()])
   const [variantIngredientPaste, setVariantIngredientPaste] = useState('')
@@ -55,6 +65,21 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     }
   }
 
+  const addCurrentVariant = () => {
+    if (!variantLabel.trim()) return
+    setVariants(prev => [...prev, {
+      id: `var_${Date.now()}`,
+      label: variantLabel.trim(),
+      ingredients: variantIngredientGroups.filter(g => g.items.length > 0),
+      steps: variantStepGroups.filter(g => g.items.length > 0),
+    }])
+    setVariantLabel('')
+    setVariantIngredientGroups([emptyGroup()])
+    setVariantStepGroups([{ group: 'Bereiding', items: [] }])
+  }
+
+  const removeVariant = (id) => setVariants(prev => prev.filter(v => v.id !== id))
+
   const handleSave = async () => {
     setSaving(true)
     setError(null)
@@ -63,7 +88,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       const user_id = userData?.user?.id
       if (!user_id) throw new Error('Not signed in')
 
-      let photo_url = null
+      let photo_url = existingRecipe?.photo_url || null
       if (photoFile) {
         const ext = photoFile.name.split('.').pop()
         const path = `${user_id}/${Date.now()}.${ext}`
@@ -71,16 +96,9 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         if (uploadError) throw uploadError
         const { data: urlData } = supabase.storage.from('recipe-photos').getPublicUrl(path)
         photo_url = urlData.publicUrl
+      } else if (photoPreview === null) {
+        photo_url = null // photo was explicitly removed
       }
-
-      const variants = wantsVariant && variantLabel.trim()
-        ? [{
-            id: `var_${Date.now()}`,
-            label: variantLabel.trim(),
-            ingredients: variantIngredientGroups.filter(g => g.items.length > 0),
-            steps: variantStepGroups.filter(g => g.items.length > 0),
-          }]
-        : []
 
       const payload = {
         user_id,
@@ -93,11 +111,22 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         ingredients: ingredientGroups.filter(g => g.items.length > 0),
         steps: stepGroups.filter(g => g.items.length > 0),
         variants,
+        notes: notes.trim() || null,
         photo_url,
       }
 
-      const { data, error: insertError } = await supabase.from('recipes').insert(payload).select().single()
-      if (insertError) throw insertError
+      let data, saveError
+      if (isEditing) {
+        ;({ data, error: saveError } = await supabase
+          .from('recipes')
+          .update(payload)
+          .eq('id', existingRecipe.id)
+          .select()
+          .single())
+      } else {
+        ;({ data, error: saveError } = await supabase.from('recipes').insert(payload).select().single())
+      }
+      if (saveError) throw saveError
       onSaved?.(data)
     } catch (err) {
       setError(err.message || 'Something went wrong saving the recipe.')
@@ -108,7 +137,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
-      <WizardHeader stepIndex={stepIndex} total={STEPS.length} onClose={onClose} onBack={stepIndex > 0 ? goBack : null} />
+      <WizardHeader stepIndex={stepIndex} total={STEPS.length} onClose={onClose} onBack={stepIndex > 0 ? goBack : null} isEditing={isEditing} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 100px' }}>
         {step === 'title' && (
@@ -133,6 +162,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             subcategory={subcategory} setSubcategory={setSubcategory}
             existingCategories={existingCategories}
             photoPreview={photoPreview} onPhotoChange={handlePhotoChange}
+            notes={notes} setNotes={setNotes}
           />
         )}
         {step === 'variant' && (
@@ -143,6 +173,9 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             paste={variantIngredientPaste} setPaste={setVariantIngredientPaste}
             stepGroups={variantStepGroups} setStepGroups={setVariantStepGroups}
             stepPaste={variantStepPaste} setStepPaste={setVariantStepPaste}
+            savedVariants={variants}
+            onAddVariant={addCurrentVariant}
+            onRemoveVariant={removeVariant}
           />
         )}
 
@@ -161,6 +194,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         onNext={stepIndex === STEPS.length - 1 ? handleSave : goNext}
         saving={saving}
         isLast={stepIndex === STEPS.length - 1}
+        isEditing={isEditing}
       />
     </div>
   )
@@ -170,12 +204,12 @@ function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, v
   if (step === 'title') return title.trim().length > 0
   if (step === 'ingredients') return ingredientGroups.some(g => g.items.length > 0)
   if (step === 'steps') return stepGroups.some(g => g.items.length > 0)
-  if (step === 'variant') return wantsVariant === null || wantsVariant === false || (wantsVariant === true && variantLabel.trim().length > 0)
+  if (step === 'variant') return true // adding variants is optional and self-contained via its own button
   return true
 }
 
-function WizardHeader({ stepIndex, total, onClose, onBack }) {
-  const labels = ['Title', 'Ingredients', 'Steps', 'Extras', 'Variant']
+function WizardHeader({ stepIndex, total, onClose, onBack, isEditing }) {
+  const labels = ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants']
   return (
     <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--line)', background: '#fffdf9' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -183,7 +217,7 @@ function WizardHeader({ stepIndex, total, onClose, onBack }) {
           ? <button onClick={onBack} style={navBtnStyle}>‹ Back</button>
           : <div style={{ width: 50 }} />}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-          {stepIndex + 1} / {total} — {labels[stepIndex]}
+          {isEditing ? 'Editing — ' : ''}{stepIndex + 1} / {total} — {labels[stepIndex]}
         </div>
         <button onClick={onClose} style={navBtnStyle}>Close</button>
       </div>
@@ -204,7 +238,7 @@ const navBtnStyle = {
   fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, width: 50, textAlign: 'left',
 }
 
-function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast }) {
+function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isEditing }) {
   return (
     <div style={{
       position: 'sticky', bottom: 0, padding: '14px 20px', background: '#fffdf9',
@@ -220,7 +254,7 @@ function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast }) {
           opacity: canGoNext && !saving ? 1 : 0.5,
         }}
       >
-        {saving ? 'Saving…' : isLast ? 'Save recipe' : 'Continue'}
+        {saving ? 'Saving…' : isLast ? (isEditing ? 'Save changes' : 'Save recipe') : 'Continue'}
       </button>
     </div>
   )

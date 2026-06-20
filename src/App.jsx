@@ -14,6 +14,7 @@ function App() {
   const [session, setSession] = useState(undefined)
   const [recipes, setRecipes] = useState([])
   const [showWizard, setShowWizard] = useState(false)
+  const [editingRecipe, setEditingRecipe] = useState(null)
   const [loadingRecipes, setLoadingRecipes] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState('recipes')
@@ -26,6 +27,12 @@ function App() {
   }
   const openWizard = () => {
     window.history.pushState({ screen: 'wizard' }, '')
+    setEditingRecipe(null)
+    setShowWizard(true)
+  }
+  const openEdit = (recipe) => {
+    window.history.pushState({ screen: 'wizard' }, '')
+    setEditingRecipe(recipe)
     setShowWizard(true)
   }
   const closeRecipe = () => {
@@ -34,6 +41,7 @@ function App() {
   }
   const closeWizard = () => {
     setShowWizard(false)
+    setEditingRecipe(null)
     if (window.history.state?.screen === 'wizard') window.history.back()
   }
 
@@ -67,7 +75,7 @@ function App() {
   }, [session])
 
   const handleDelete = async (recipe) => {
-    if (!window.confirm(`Delete "${recipe.title}"? This can't be undone.`)) return
+    if (!window.confirm(`Delete "${recipe.title}"? This also removes its shopping list items and cook history, and can't be undone.`)) return
     const { error } = await supabase.from('recipes').delete().eq('id', recipe.id)
     if (!error) {
       closeRecipe()
@@ -92,8 +100,9 @@ function App() {
       <AddRecipeWizard
         existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
         existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
+        existingRecipe={editingRecipe}
         onClose={closeWizard}
-        onSaved={() => { closeWizard(); loadRecipes() }}
+        onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}
       />
     )
   }
@@ -104,6 +113,7 @@ function App() {
         recipe={selectedRecipe}
         onClose={closeRecipe}
         onDelete={handleDelete}
+        onEdit={openEdit}
       />
     )
   }
