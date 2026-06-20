@@ -1,121 +1,34 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [status, setStatus] = useState('checking...')
+
+  useEffect(() => {
+    supabase.from('recipes').select('id', { count: 'exact', head: true })
+      .then(({ error, count }) => {
+        if (error) setStatus(`error: ${error.message}`)
+        else setStatus(`connected — ${count ?? 0} recipes`)
+      })
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <div style={{
+      minHeight: '100dvh', background: '#0c0c14', color: '#e2e0ff',
+      fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 16, textAlign: 'center', padding: 24,
+    }}>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 32 }}>myrecipes</div>
+      <div style={{ color: '#6b6a8f', fontFamily: "'DM Mono', monospace", fontSize: 13 }}>your personal recipe book</div>
+      <div style={{
+        marginTop: 16, padding: '10px 16px', borderRadius: 10,
+        background: '#13131f', border: '1px solid #1f1f35',
+        color: '#a78bfa', fontFamily: "'DM Mono', monospace", fontSize: 12,
+      }}>
+        Supabase: {status}
+      </div>
+    </div>
   )
 }
 
