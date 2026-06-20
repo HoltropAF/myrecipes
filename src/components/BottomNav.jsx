@@ -2,6 +2,7 @@ const TABS = [
   { id: 'recipes', label: 'Recipes', icon: '📖' },
   { id: 'cookbook', label: 'Cookbook', icon: '📚' },
   { id: 'shopping', label: 'List', icon: '🛒' },
+  { id: 'stats', label: 'Stats', icon: '📊' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
 

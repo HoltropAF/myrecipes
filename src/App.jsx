@@ -7,6 +7,7 @@ import BottomNav from './components/BottomNav'
 import AllRecipesView from './components/views/AllRecipesView'
 import CookbookView from './components/views/CookbookView'
 import ShoppingListView from './components/views/ShoppingListView'
+import StatsView from './components/views/StatsView'
 import SettingsView from './components/views/SettingsView'
 import './App.css'
 
@@ -138,6 +139,9 @@ function App() {
         )}
         {activeTab === 'shopping' && (
           <ShoppingListView userId={session.user.id} />
+        )}
+        {activeTab === 'stats' && (
+          <StatsView recipes={recipes} />
         )}
         {activeTab === 'settings' && (
           <SettingsView userEmail={session.user.email} />
