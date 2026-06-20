@@ -109,11 +109,18 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
 
         {/* Variant tabs */}
         {variants.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 18, overflowX: 'auto', paddingBottom: 2 }}>
-            <TabButton active={activeTab === 'main'} onClick={() => setActiveTab('main')}>Origineel</TabButton>
-            {variants.map(v => (
-              <TabButton key={v.id} active={activeTab === v.id} onClick={() => setActiveTab(v.id)}>{v.label}</TabButton>
-            ))}
+          <div style={{ marginBottom: 20 }}>
+            <SectionLabel>{variants.length + 1} versions of this recipe</SectionLabel>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginTop: 4 }}>
+              <BigTabButton active={activeTab === 'main'} onClick={() => setActiveTab('main')}>
+                🍽 Origineel
+              </BigTabButton>
+              {variants.map((v, i) => (
+                <BigTabButton key={v.id} active={activeTab === v.id} onClick={() => setActiveTab(v.id)}>
+                  {VARIANT_ICONS[i % VARIANT_ICONS.length]} {v.label}
+                </BigTabButton>
+              ))}
+            </div>
           </div>
         )}
 
@@ -246,6 +253,8 @@ function EmptyRow({ children }) {
   return <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', padding: '10px 0' }}>{children}</div>
 }
 
+const VARIANT_ICONS = ['🔸', '🔹', '⭐', '🔶', '🔷', '✨', '🟣', '🟢']
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -256,6 +265,23 @@ function TabButton({ active, onClick, children }) {
         background: active ? 'var(--tomato)' : '#fffdf9',
         color: active ? '#fffdf9' : 'var(--charcoal-soft)',
         fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
+      }}
+    >{children}</button>
+  )
+}
+
+function BigTabButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flexShrink: 0, padding: '12px 18px', borderRadius: 12, cursor: 'pointer',
+        border: `2px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+        background: active ? 'var(--tomato)' : '#fffdf9',
+        color: active ? '#fffdf9' : 'var(--charcoal)',
+        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15,
+        boxShadow: active ? '0 4px 10px rgba(193,67,47,0.25)' : 'none',
+        transition: 'all 0.12s ease',
       }}
     >{children}</button>
   )

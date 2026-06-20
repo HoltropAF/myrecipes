@@ -91,3 +91,22 @@ create policy "Users manage their own preferences"
   on user_preferences for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Meal prep groups: user-curated bundles of recipes that go well together
+create table if not exists meal_groups (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  notes text,
+  recipe_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+alter table meal_groups enable row level security;
+
+create policy "Users manage their own meal groups"
+  on meal_groups for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists idx_meal_groups_user on meal_groups(user_id);

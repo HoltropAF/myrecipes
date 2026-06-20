@@ -3,7 +3,7 @@ const TABS = [
   { id: 'cookbook', label: 'Cookbook', icon: '📚' },
   { id: 'shopping', label: 'List', icon: '🛒' },
   { id: 'stats', label: 'Stats', icon: '📊' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+  { id: 'mealprep', label: 'Meal Prep', icon: '🧺' },
 ]
 
 export default function BottomNav({ active, onChange }) {

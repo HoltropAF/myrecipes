@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { estimateNutrition } from '../lib/nutritionEstimator'
 
 export default function NutritionSection({ recipe, onUpdated }) {
   const [estimating, setEstimating] = useState(false)
@@ -14,48 +15,30 @@ export default function NutritionSection({ recipe, onUpdated }) {
   const servings = recipe.servings || 1
   const hasData = recipe.calories !== null && recipe.calories !== undefined
 
-  const allIngredientNames = (recipe.ingredients || [])
-    .flatMap(g => g.items)
-    .map(item => `${item.amount ?? ''} ${item.unit ?? ''} ${item.name}`.trim())
-    .join('\n')
-
   const handleEstimate = async () => {
     setEstimating(true)
     setError(null)
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 300,
-          messages: [{
-            role: 'user',
-            content: `Estimate total nutrition (for the WHOLE recipe, all servings combined, not per serving) for this recipe which makes ${servings} serving(s):\n\nIngredients:\n${allIngredientNames}\n\nRespond ONLY with JSON, no other text, in this exact shape: {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}. Use your best estimate based on typical ingredient nutrition values.`,
-          }],
-        }),
-      })
-      const data = await response.json()
-      const text = data.content?.find(c => c.type === 'text')?.text || ''
-      const cleaned = text.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(cleaned)
+      const result = estimateNutrition(recipe.ingredients)
+      if (!result) {
+        setError('Couldn\'t recognize enough ingredients to estimate — try entering manually.')
+        setEstimating(false)
+        return
+      }
 
       const { error: updateError } = await supabase.from('recipes').update({
-        calories: parsed.calories,
-        protein_g: parsed.protein_g,
-        carbs_g: parsed.carbs_g,
-        fat_g: parsed.fat_g,
+        ...result,
         nutrition_is_estimate: true,
       }).eq('id', recipe.id)
       if (updateError) throw updateError
 
-      setCalories(parsed.calories)
-      setProtein(parsed.protein_g)
-      setCarbs(parsed.carbs_g)
-      setFat(parsed.fat_g)
-      onUpdated?.({ ...recipe, ...parsed, nutrition_is_estimate: true })
+      setCalories(result.calories)
+      setProtein(result.protein_g)
+      setCarbs(result.carbs_g)
+      setFat(result.fat_g)
+      onUpdated?.({ ...recipe, ...result, nutrition_is_estimate: true })
     } catch (err) {
-      setError('Could not estimate nutrition — try again or enter manually.')
+      setError('Could not save the estimate — try again or enter manually.')
     } finally {
       setEstimating(false)
     }
@@ -99,7 +82,7 @@ export default function NutritionSection({ recipe, onUpdated }) {
         {error && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={handleEstimate} disabled={estimating} style={primaryBtnStyle}>
-            {estimating ? 'Estimating…' : '✨ Estimate with AI'}
+            {estimating ? 'Estimating…' : '📊 Estimate from ingredients'}
           </button>
           <button onClick={() => setEditing(true)} style={secondaryBtnStyle}>Enter manually</button>
         </div>
@@ -119,7 +102,7 @@ export default function NutritionSection({ recipe, onUpdated }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-          {recipe.nutrition_is_estimate ? '✨ AI estimate' : 'manually entered'} · per serving shown below total
+          {recipe.nutrition_is_estimate ? '📊 rough estimate' : 'manually entered'} · per serving shown below total
         </span>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => setEditing(true)} style={linkBtnStyle}>Edit</button>
