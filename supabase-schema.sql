@@ -15,6 +15,14 @@ create table if not exists recipes (
   notes text,
   photo_url text,
   source text,                -- e.g. "imported from Canva", url, or freetext
+  -- Nutrition: TOTAL for whole recipe; per-serving computed in app (total / servings)
+  calories numeric,
+  protein_g numeric,
+  carbs_g numeric,
+  fat_g numeric,
+  nutrition_is_estimate boolean not null default true,  -- false once user edits/confirms manually
+  -- Wishlist: "want to try", independent of cook_log history
+  wishlist boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
