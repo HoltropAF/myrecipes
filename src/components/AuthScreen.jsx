@@ -13,8 +13,9 @@ export default function AuthScreen() {
     e.preventDefault()
     setLoading(true)
     setStatus(null)
-    const fn = isSignUp ? supabase.auth.signUp : supabase.auth.signInWithPassword
-    const { error } = await fn({ email, password })
+    const { error } = isSignUp
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) setStatus({ type: 'error', text: error.message })
     else if (isSignUp) setStatus({ type: 'info', text: 'Check your email to confirm your account.' })
