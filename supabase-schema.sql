@@ -19,29 +19,53 @@ create table if not exists recipes (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists meal_plan (
+-- Shopping list: individual line items, optionally linked to a recipe.
+-- Smart merging of same-name items happens in the app at display time.
+create table if not exists shopping_list (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  recipe_id uuid references recipes(id) on delete set null,  -- null = manually added item
+  name text not null,
+  amount numeric,
+  unit text,
+  checked boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Cook log: each time a recipe is cooked (like settracker's concert entries)
+create table if not exists cook_log (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   recipe_id uuid references recipes(id) on delete cascade,
-  planned_date date not null,
-  meal_slot text,            -- breakfast/lunch/dinner/snack
+  cooked_date date not null default current_date,
+  thumbs text check (thumbs in ('up','down')),  -- nullable: cooked but not rated yet
+  notes text,
+  variant_label text,   -- which variant was cooked, if applicable
   created_at timestamptz not null default now()
 );
 
 -- Row Level Security
 alter table recipes enable row level security;
-alter table meal_plan enable row level security;
+alter table shopping_list enable row level security;
+alter table cook_log enable row level security;
 
 create policy "Users manage their own recipes"
   on recipes for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-create policy "Users manage their own meal plan"
-  on meal_plan for all
+create policy "Users manage their own shopping list"
+  on shopping_list for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users manage their own cook log"
+  on cook_log for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 create index if not exists idx_recipes_user on recipes(user_id);
 create index if not exists idx_recipes_category on recipes(category);
-create index if not exists idx_meal_plan_user_date on meal_plan(user_id, planned_date);
+create index if not exists idx_shopping_list_user on shopping_list(user_id);
+create index if not exists idx_cook_log_user_recipe on cook_log(user_id, recipe_id);
+create index if not exists idx_cook_log_date on cook_log(user_id, cooked_date);
