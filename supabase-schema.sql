@@ -77,3 +77,17 @@ create index if not exists idx_recipes_category on recipes(category);
 create index if not exists idx_shopping_list_user on shopping_list(user_id);
 create index if not exists idx_cook_log_user_recipe on cook_log(user_id, recipe_id);
 create index if not exists idx_cook_log_date on cook_log(user_id, cooked_date);
+
+-- Per-user preference for measurement system (metric vs us), used by the unit-toggle button
+create table if not exists user_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  unit_system text not null default 'metric' check (unit_system in ('metric', 'us')),
+  updated_at timestamptz not null default now()
+);
+
+alter table user_preferences enable row level security;
+
+create policy "Users manage their own preferences"
+  on user_preferences for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

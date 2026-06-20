@@ -19,6 +19,7 @@ function App() {
   const [loadingRecipes, setLoadingRecipes] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState('recipes')
+  const [unitSystem, setUnitSystem] = useState('metric')
 
   // Wrap setters so opening a "screen" (recipe detail, wizard) pushes browser history,
   // and the phone's back button/gesture closes that screen instead of exiting the app.
@@ -75,6 +76,20 @@ function App() {
     if (session) loadRecipes()
   }, [session])
 
+  useEffect(() => {
+    if (!session) return
+    supabase.from('user_preferences').select('unit_system').eq('user_id', session.user.id).maybeSingle()
+      .then(({ data }) => { if (data?.unit_system) setUnitSystem(data.unit_system) })
+  }, [session])
+
+  const toggleUnitSystem = async () => {
+    const next = unitSystem === 'metric' ? 'us' : 'metric'
+    setUnitSystem(next)
+    if (session) {
+      await supabase.from('user_preferences').upsert({ user_id: session.user.id, unit_system: next, updated_at: new Date().toISOString() })
+    }
+  }
+
   const handleDelete = async (recipe) => {
     if (!window.confirm(`Delete "${recipe.title}"? This also removes its shopping list items and cook history, and can't be undone.`)) return
     const { error } = await supabase.from('recipes').delete().eq('id', recipe.id)
@@ -115,6 +130,8 @@ function App() {
         onClose={closeRecipe}
         onDelete={handleDelete}
         onEdit={openEdit}
+        unitSystem={unitSystem}
+        onToggleUnitSystem={toggleUnitSystem}
       />
     )
   }

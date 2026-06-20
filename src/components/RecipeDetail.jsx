@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatIngredientRow, scaleAmount } from '../lib/ingredientParser'
+import { convertIngredient, convertStepTemperatures, formatConvertedAmount } from '../lib/unitConverter'
 import CookLogSection from './CookLogSection'
 import NutritionSection from './NutritionSection'
 
-export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete }) {
+export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem }) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('main') // 'main' | variant.id
@@ -60,6 +61,17 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={onClose} style={navBtnStyle}>‹ Back</button>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            {onToggleUnitSystem && (
+              <button
+                onClick={onToggleUnitSystem}
+                title="Switch units"
+                style={{
+                  background: 'var(--parchment-dim)', border: '1px solid var(--line)', borderRadius: 99,
+                  cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+                  color: 'var(--tomato-deep)', padding: '5px 10px',
+                }}
+              >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
+            )}
             <button
               onClick={handleToggleWishlist} disabled={togglingWishlist}
               title={wishlist ? 'Remove from wishlist' : 'Add to wishlist'}
@@ -134,14 +146,16 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{group.group}</div>
               )}
               {group.items.map(item => {
-                const scaled = baseServings && servings
-                  ? { ...item, amount: scaleAmount(item.amount, baseServings, servings) }
-                  : item
+                let displayItem = item
+                if (baseServings && servings) {
+                  displayItem = { ...displayItem, amount: scaleAmount(displayItem.amount, baseServings, servings) }
+                }
+                displayItem = convertIngredient(displayItem, unitSystem)
                 return (
                   <div key={item.id} style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '5px 0', fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)' }}>
-                    {(scaled.amount !== null || scaled.unit) && (
+                    {(displayItem.amount !== null || displayItem.unit) && (
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, minWidth: 50, flexShrink: 0 }}>
-                        {formatAmount(scaled.amount)}{scaled.unit ? ` ${scaled.unit}` : ''}
+                        {formatConvertedAmount(displayItem.amount)}{displayItem.unit ? ` ${displayItem.unit}` : ''}
                       </span>
                     )}
                     <span>{item.name}</span>
@@ -169,7 +183,9 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 1,
                     }}>{si + 1}</div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)', lineHeight: 1.5 }}>{step.content}</div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)', lineHeight: 1.5 }}>
+                      {convertStepTemperatures(step.content, unitSystem)}
+                    </div>
                   </div>
                 ))}
               </div>
