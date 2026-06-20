@@ -18,6 +18,35 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState('recipes')
 
+  // Wrap setters so opening a "screen" (recipe detail, wizard) pushes browser history,
+  // and the phone's back button/gesture closes that screen instead of exiting the app.
+  const openRecipe = (recipe) => {
+    window.history.pushState({ screen: 'recipe' }, '')
+    setSelectedRecipe(recipe)
+  }
+  const openWizard = () => {
+    window.history.pushState({ screen: 'wizard' }, '')
+    setShowWizard(true)
+  }
+  const closeRecipe = () => {
+    setSelectedRecipe(null)
+    if (window.history.state?.screen === 'recipe') window.history.back()
+  }
+  const closeWizard = () => {
+    setShowWizard(false)
+    if (window.history.state?.screen === 'wizard') window.history.back()
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      // Back button pressed: close whichever overlay screen is open.
+      setSelectedRecipe(null)
+      setShowWizard(false)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -41,7 +70,7 @@ function App() {
     if (!window.confirm(`Delete "${recipe.title}"? This can't be undone.`)) return
     const { error } = await supabase.from('recipes').delete().eq('id', recipe.id)
     if (!error) {
-      setSelectedRecipe(null)
+      closeRecipe()
       loadRecipes()
     }
   }
@@ -63,8 +92,8 @@ function App() {
       <AddRecipeWizard
         existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
         existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
-        onClose={() => setShowWizard(false)}
-        onSaved={() => { setShowWizard(false); loadRecipes() }}
+        onClose={closeWizard}
+        onSaved={() => { closeWizard(); loadRecipes() }}
       />
     )
   }
@@ -73,7 +102,7 @@ function App() {
     return (
       <RecipeDetail
         recipe={selectedRecipe}
-        onClose={() => setSelectedRecipe(null)}
+        onClose={closeRecipe}
         onDelete={handleDelete}
       />
     )
@@ -86,15 +115,15 @@ function App() {
           <AllRecipesView
             recipes={recipes}
             loading={loadingRecipes}
-            onSelect={setSelectedRecipe}
-            onAdd={() => setShowWizard(true)}
+            onSelect={openRecipe}
+            onAdd={openWizard}
           />
         )}
         {activeTab === 'cookbook' && (
           <CookbookView
             recipes={recipes}
-            onSelect={setSelectedRecipe}
-            onAdd={() => setShowWizard(true)}
+            onSelect={openRecipe}
+            onAdd={openWizard}
           />
         )}
         {activeTab === 'shopping' && (
