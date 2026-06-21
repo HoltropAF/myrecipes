@@ -10,7 +10,7 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
 const emptyGroup = () => ({ group: null, items: [] })
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingRecipe = null }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingRecipe = null, prefillCategory = null }) {
   const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -35,8 +35,8 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
   const [servings, setServings] = useState(existingRecipe?.servings ? String(existingRecipe.servings) : '')
   const [totalMinutes, setTotalMinutes] = useState(existingRecipe?.total_minutes ? String(existingRecipe.total_minutes) : '')
-  const [category, setCategory] = useState(existingRecipe?.category || '')
-  const [subcategory, setSubcategory] = useState(existingRecipe?.subcategory || '')
+  const [category, setCategory] = useState(existingRecipe?.category || prefillCategory?.category || '')
+  const [subcategory, setSubcategory] = useState(existingRecipe?.subcategory || prefillCategory?.subcategory || '')
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(existingRecipe?.photo_url || null)
   const [notes, setNotes] = useState(existingRecipe?.notes || '')

@@ -28,6 +28,7 @@ function App() {
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
   const [defaultCategory, setDefaultCategory] = useState(null)
   const [pinWishlistFirst, setPinWishlistFirst] = useState(false)
+  const [prefillCategory, setPrefillCategory] = useState(null)
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
@@ -51,9 +52,10 @@ function App() {
     window.history.pushState({ screen: 'recipe' }, '')
     setSelectedRecipe(recipe)
   }
-  const openWizard = () => {
+  const openWizard = (prefill) => {
     window.history.pushState({ screen: 'wizard' }, '')
     setEditingRecipe(null)
+    setPrefillCategory(prefill || null)
     setShowWizard(true)
   }
   const openEdit = (recipe) => {
@@ -68,6 +70,7 @@ function App() {
   const closeWizard = () => {
     setShowWizard(false)
     setEditingRecipe(null)
+    setPrefillCategory(null)
     if (window.history.state?.screen === 'wizard') window.history.back()
   }
 
@@ -180,6 +183,7 @@ function App() {
         existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
         existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
         existingRecipe={editingRecipe}
+        prefillCategory={prefillCategory}
         onClose={closeWizard}
         onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}
       />

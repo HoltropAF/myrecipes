@@ -10,6 +10,7 @@ const CATEGORY_ICONS = {
 export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCategory }) {
   const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
   const [openSubcategories, setOpenSubcategories] = useState({})
+  const [lastOpened, setLastOpened] = useState(defaultOpenCategory ? { category: defaultOpenCategory, subcategory: null } : null)
 
   // Build a tree: { category: { direct: [recipes], subcategories: { name: [recipes] } } }
   const tree = useMemo(() => {
@@ -32,14 +33,27 @@ export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCate
     })
   }, [recipes])
 
-  const toggleCategory = (cat) => setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }))
-  const toggleSubcategory = (key) => setOpenSubcategories(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleCategory = (cat) => {
+    setOpenCategories(prev => {
+      const next = { ...prev, [cat]: !prev[cat] }
+      if (next[cat]) setLastOpened({ category: cat, subcategory: null })
+      return next
+    })
+  }
+  const toggleSubcategory = (cat, subcat) => {
+    const key = `${cat}::${subcat}`
+    setOpenSubcategories(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      if (next[key]) setLastOpened({ category: cat, subcategory: subcat })
+      return next
+    })
+  }
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Cookbook</h1>
-        <button onClick={onAdd} style={addBtnStyle}>+ Add</button>
+        <button onClick={() => onAdd(lastOpened)} style={addBtnStyle}>+ Add</button>
       </div>
 
       {tree.length === 0 ? (
@@ -82,7 +96,7 @@ export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCate
                       return (
                         <div key={subcat} style={{ background: 'var(--parchment-dim)', borderRadius: 10, overflow: 'hidden' }}>
                           <button
-                            onClick={() => toggleSubcategory(subKey)}
+                            onClick={() => toggleSubcategory(cat, subcat)}
                             style={{
                               width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                               padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
