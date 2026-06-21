@@ -12,6 +12,7 @@ import ShoppingListView from './components/views/ShoppingListView'
 import StatsView from './components/views/StatsView'
 import MealPrepView from './components/views/MealPrepView'
 import SettingsView from './components/views/SettingsView'
+import UndoToast from './components/UndoToast'
 import './App.css'
 
 function App() {
@@ -145,13 +146,23 @@ function App() {
     savePreferences({ pin_wishlist_first: next })
   }
 
-  const handleDelete = async (recipe) => {
-    if (!window.confirm(`Delete "${recipe.title}"? This also removes its shopping list items and cook history, and can't be undone.`)) return
-    const { error } = await supabase.from('recipes').delete().eq('id', recipe.id)
-    if (!error) {
-      closeRecipe()
-      loadRecipes()
-    }
+  const [pendingDelete, setPendingDelete] = useState(null) // { recipe, timeoutId }
+
+  const handleDelete = (recipe) => {
+    closeRecipe()
+    setRecipes(prev => prev.filter(r => r.id !== recipe.id))
+    const timeoutId = setTimeout(async () => {
+      await supabase.from('recipes').delete().eq('id', recipe.id)
+      setPendingDelete(null)
+    }, 5000)
+    setPendingDelete({ recipe, timeoutId })
+  }
+
+  const undoDelete = () => {
+    if (!pendingDelete) return
+    clearTimeout(pendingDelete.timeoutId)
+    setRecipes(prev => [pendingDelete.recipe, ...prev])
+    setPendingDelete(null)
   }
 
   if (session === undefined) {
@@ -268,6 +279,14 @@ function App() {
           recipes={recipes}
           onClose={() => setShowQuickLog(false)}
           onLogged={() => setShowQuickLog(false)}
+        />
+      )}
+
+      {pendingDelete && (
+        <UndoToast
+          message={`"${pendingDelete.recipe.title}" deleted`}
+          onUndo={undoDelete}
+          onDismiss={() => setPendingDelete(null)}
         />
       )}
     </div>

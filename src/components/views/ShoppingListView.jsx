@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
 import LoadingGyoza from '../LoadingGyoza'
+import SwipeToDelete from '../SwipeToDelete'
 
 export default function ShoppingListView({ userId }) {
   const [items, setItems] = useState([])
@@ -96,36 +97,34 @@ export default function ShoppingListView({ userId }) {
         <>
           <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
             {mergedList.map((g, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                borderBottom: i < mergedList.length - 1 ? '1px solid var(--line)' : 'none',
-              }}>
-                <button
-                  onClick={() => g.ids.forEach(id => toggleChecked(items.find(it => it.id === id)))}
-                  style={{
-                    width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
-                    border: `2px solid ${g.checked ? 'var(--sage)' : 'var(--line)'}`,
-                    background: g.checked ? 'var(--sage)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--card)', fontSize: 13,
-                  }}
-                >{g.checked ? '✓' : ''}</button>
+              <SwipeToDelete key={i} onDelete={() => g.ids.forEach(id => removeItem({ id }))}>
                 <div style={{
-                  flex: 1, fontFamily: 'var(--font-body)', fontSize: 15,
-                  color: g.checked ? 'var(--charcoal-soft)' : 'var(--charcoal)',
-                  textDecoration: g.checked ? 'line-through' : 'none',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                  borderBottom: i < mergedList.length - 1 ? '1px solid var(--line)' : 'none',
                 }}>
-                  {g.hasAmount && (
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, marginRight: 6 }}>
-                      {Number.isInteger(g.amount) ? g.amount : g.amount.toFixed(1)}{g.unit ? ` ${g.unit}` : ''}
-                    </span>
-                  )}
-                  {g.displayName}
+                  <button
+                    onClick={() => g.ids.forEach(id => toggleChecked(items.find(it => it.id === id)))}
+                    style={{
+                      width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
+                      border: `2px solid ${g.checked ? 'var(--sage)' : 'var(--line)'}`,
+                      background: g.checked ? 'var(--sage)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--card)', fontSize: 13,
+                    }}
+                  >{g.checked ? '✓' : ''}</button>
+                  <div style={{
+                    flex: 1, fontFamily: 'var(--font-body)', fontSize: 15,
+                    color: g.checked ? 'var(--charcoal-soft)' : 'var(--charcoal)',
+                    textDecoration: g.checked ? 'line-through' : 'none',
+                  }}>
+                    {g.hasAmount && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, marginRight: 6 }}>
+                        {Number.isInteger(g.amount) ? g.amount : g.amount.toFixed(1)}{g.unit ? ` ${g.unit}` : ''}
+                      </span>
+                    )}
+                    {g.displayName}
+                  </div>
                 </div>
-                <button
-                  onClick={() => g.ids.forEach(id => removeItem({ id }))}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 16, padding: '0 4px' }}
-                >×</button>
-              </div>
+              </SwipeToDelete>
             ))}
           </div>
 
