@@ -136,6 +136,7 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
   const [selected, setSelected] = useState([])
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   const filtered = useMemo(() => {
     if (!query.trim()) return recipes.slice(0, 20)
@@ -148,12 +149,22 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
   const handleSave = async () => {
     if (!name.trim() || selected.length === 0) return
     setSaving(true)
+    setError(null)
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
-    await supabase.from('meal_groups').insert({
+    if (!user_id) {
+      setError('Not signed in — please reload and try again.')
+      setSaving(false)
+      return
+    }
+    const { error: insertError } = await supabase.from('meal_groups').insert({
       user_id, name: name.trim(), notes: notes.trim() || null, recipe_ids: selected,
     })
     setSaving(false)
+    if (insertError) {
+      setError('Could not save — check your connection and try again.')
+      return
+    }
     onSaved()
   }
 
@@ -185,6 +196,11 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
         </button>
         <button onClick={onClose} style={cancelBtnStyle}>Cancel</button>
       </div>
+      {error && (
+        <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)' }}>
+          {error}
+        </div>
+      )}
     </div>
   )
 }

@@ -10,6 +10,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
   const [notes, setNotes] = useState('')
   const [variantLabel, setVariantLabel] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   const filtered = useMemo(() => {
     if (!query.trim()) return recipes.slice(0, 8)
@@ -24,11 +25,16 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
 
   const handleSave = async () => {
     setSaving(true)
+    setError(null)
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
-    if (!user_id) { setSaving(false); return }
+    if (!user_id) {
+      setError('Not signed in — please reload and try again.')
+      setSaving(false)
+      return
+    }
 
-    await supabase.from('cook_log').insert({
+    const { error: insertError } = await supabase.from('cook_log').insert({
       user_id,
       recipe_id: selectedRecipe.id,
       cooked_date: date,
@@ -37,6 +43,10 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
       variant_label: variantLabel || null,
     })
     setSaving(false)
+    if (insertError) {
+      setError('Could not save — check your connection and try again.')
+      return
+    }
     onLogged?.()
   }
 
@@ -136,6 +146,11 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
             <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
               {saving ? 'Saving…' : 'Save'}
             </button>
+            {error && (
+              <div style={{ marginTop: 10, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)', textAlign: 'center' }}>
+                {error}
+              </div>
+            )}
           </>
         )}
       </div>

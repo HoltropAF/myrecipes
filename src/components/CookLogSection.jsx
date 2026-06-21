@@ -10,6 +10,7 @@ export default function CookLogSection({ recipeId, variants = [] }) {
   const [notes, setNotes] = useState('')
   const [variantLabel, setVariantLabel] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -26,11 +27,16 @@ export default function CookLogSection({ recipeId, variants = [] }) {
 
   const handleSave = async () => {
     setSaving(true)
+    setError(null)
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
-    if (!user_id) { setSaving(false); return }
+    if (!user_id) {
+      setError('Not signed in — please reload and try again.')
+      setSaving(false)
+      return
+    }
 
-    await supabase.from('cook_log').insert({
+    const { error: insertError } = await supabase.from('cook_log').insert({
       user_id,
       recipe_id: recipeId,
       cooked_date: date,
@@ -39,6 +45,10 @@ export default function CookLogSection({ recipeId, variants = [] }) {
       variant_label: variantLabel || null,
     })
     setSaving(false)
+    if (insertError) {
+      setError('Could not save — check your connection and try again.')
+      return
+    }
     setShowForm(false)
     setThumbs(null)
     setNotes('')
@@ -105,6 +115,11 @@ export default function CookLogSection({ recipeId, variants = [] }) {
           <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
             {saving ? 'Saving…' : 'Save'}
           </button>
+          {error && (
+            <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)' }}>
+              {error}
+            </div>
+          )}
         </div>
       )}
 
