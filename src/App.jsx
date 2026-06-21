@@ -191,6 +191,7 @@ function App() {
       <AddRecipeWizard
         existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
         existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
+        existingTags={[...new Set(recipes.flatMap(r => r.tags || []))]}
         existingRecipe={editingRecipe}
         prefillCategory={prefillCategory}
         onClose={closeWizard}

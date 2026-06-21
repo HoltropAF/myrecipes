@@ -10,7 +10,7 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
 const emptyGroup = () => ({ group: null, items: [] })
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingRecipe = null, prefillCategory = null }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null }) {
   const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -40,6 +40,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(existingRecipe?.photo_url || null)
   const [notes, setNotes] = useState(existingRecipe?.notes || '')
+  const [tags, setTags] = useState(existingRecipe?.tags || [])
 
   // Variants — support multiple (existing recipes like Gyoza/Tiramisu have several)
   const [variants, setVariants] = useState(existingRecipe?.variants || [])
@@ -120,6 +121,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
           .filter(g => g.items.length > 0),
         variants,
         notes: notes.trim() || null,
+        tags,
         photo_url,
       }
 
@@ -171,6 +173,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             existingCategories={existingCategories}
             photoPreview={photoPreview} onPhotoChange={handlePhotoChange}
             notes={notes} setNotes={setNotes}
+            tags={tags} setTags={setTags} existingTags={existingTags}
           />
         )}
         {step === 'variant' && (

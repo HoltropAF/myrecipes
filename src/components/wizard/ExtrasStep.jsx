@@ -1,11 +1,12 @@
 import ComboInput from '../ComboInput'
+import TagPicker from '../TagPicker'
 import { titleStyle, labelStyle, labelTextStyle, inputStyle } from './TitleStep'
 
 export default function ExtrasStep({
   servings, setServings, totalMinutes, setTotalMinutes,
   category, setCategory, subcategory, setSubcategory,
   existingCategories, photoPreview, onPhotoChange,
-  notes, setNotes,
+  notes, setNotes, tags, setTags, existingTags,
 }) {
   return (
     <div>
@@ -77,6 +78,11 @@ export default function ExtrasStep({
           rows={3}
           style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
         />
+      </label>
+
+      <label style={{ ...labelStyle, marginTop: 18 }}>
+        <span style={labelTextStyle}>tags (optional)</span>
+        <TagPicker tags={tags} setTags={setTags} existingTags={existingTags} />
       </label>
     </div>
   )
