@@ -19,6 +19,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
   const [proteinFilter, setProteinFilter] = useState(null)
   const [tagFilter, setTagFilter] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [lastOpenedFolder, setLastOpenedFolder] = useState(defaultOpenCategory ? { category: defaultOpenCategory, subcategory: null } : null)
 
   const allTags = useMemo(
     () => [...new Set(recipes.flatMap(r => r.tags || []))].sort(),
@@ -71,7 +72,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Recipes</h1>
-        {onAdd && <button onClick={() => onAdd()} style={addBtnStyle}>+ Add</button>}
+        {onAdd && <button onClick={() => onAdd(viewMode === 'folders' ? lastOpenedFolder : null)} style={addBtnStyle}>+ Add</button>}
       </div>
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />
@@ -187,6 +188,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
       ) : viewMode === 'folders' ? (
         <FolderView
           recipes={filtered} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
+          lastOpened={lastOpenedFolder} setLastOpened={setLastOpenedFolder}
         />
       ) : filtered.length === 0 ? (
         <Empty>{query || activeFilterCount > 0 ? 'No recipes match.' : 'No recipes yet — tap + Add to create one.'}</Empty>
@@ -225,10 +227,9 @@ function FilterGroup({ label, options, active, onSelect }) {
 }
 
 // Folder/cookbook browse mode — operates on the already-filtered recipe list
-function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory }) {
+function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened }) {
   const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
   const [openSubcategories, setOpenSubcategories] = useState({})
-  const [lastOpened, setLastOpened] = useState(defaultOpenCategory ? { category: defaultOpenCategory, subcategory: null } : null)
 
   const tree = useMemo(() => {
     const map = {}

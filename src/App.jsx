@@ -254,7 +254,9 @@ function App() {
           padding: '8px 16px', background: 'var(--sage-light)', borderBottom: '1px solid var(--line)',
           fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)',
         }}>
-          <span>👀 Guest mode — browsing a demo cookbook, nothing is saved</span>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Guest mode — nothing is saved
+          </span>
           <button
             onClick={exitGuestMode}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sage)', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0 }}

@@ -132,21 +132,21 @@ export const DEMO_RECIPES = [
     ] }],
     variants: [
       { id: 'v1', label: 'Limoncello', ingredients: [{ group: null, items: [
-        { id: 'vi1', name: 'slagroom', unit: 'ml', amount: 200 },
-        { id: 'vi2', name: 'mascarpone', unit: 'g', amount: 250 },
-        { id: 'vi3', name: 'limoncello', unit: 'ml', amount: 100 },
-        { id: 'vi4', name: 'lange vingers', unit: 'g', amount: 100 },
+        { id: 'tv1-i1', name: 'slagroom', unit: 'ml', amount: 200 },
+        { id: 'tv1-i2', name: 'mascarpone', unit: 'g', amount: 250 },
+        { id: 'tv1-i3', name: 'limoncello', unit: 'ml', amount: 100 },
+        { id: 'tv1-i4', name: 'lange vingers', unit: 'g', amount: 100 },
       ] }], steps: [{ group: 'Bereiding', items: [
-        { id: 'vs1', content: 'Klop de slagroom stijf met mascarpone en poedersuiker.', timer_seconds: null },
-        { id: 'vs2', content: 'Dip de lange vingers kort in limoncello en laag op met het mengsel.', timer_seconds: null },
+        { id: 'tv1-s1', content: 'Klop de slagroom stijf met mascarpone en poedersuiker.', timer_seconds: null },
+        { id: 'tv1-s2', content: 'Dip de lange vingers kort in limoncello en laag op met het mengsel.', timer_seconds: null },
       ] }] },
       { id: 'v2', label: 'Pistache', ingredients: [{ group: null, items: [
-        { id: 'vi1', name: 'pistachenoten', unit: 'g', amount: 100 },
-        { id: 'vi2', name: 'pistachepasta', unit: 'g', amount: 200 },
-        { id: 'vi3', name: 'mascarpone', unit: 'g', amount: 500 },
+        { id: 'tv2-i1', name: 'pistachenoten', unit: 'g', amount: 100 },
+        { id: 'tv2-i2', name: 'pistachepasta', unit: 'g', amount: 200 },
+        { id: 'tv2-i3', name: 'mascarpone', unit: 'g', amount: 500 },
       ] }], steps: [{ group: 'Bereiding', items: [
-        { id: 'vs1', content: 'Rooster de pistachenoten, laat afkoelen.', timer_seconds: null },
-        { id: 'vs2', content: 'Mix de mascarpone en pistachepasta tot een gladde massa, laag op met koffie-gedoopte koekjes.', timer_seconds: null },
+        { id: 'tv2-s1', content: 'Rooster de pistachenoten, laat afkoelen.', timer_seconds: null },
+        { id: 'tv2-s2', content: 'Mix de mascarpone en pistachepasta tot een gladde massa, laag op met koffie-gedoopte koekjes.', timer_seconds: null },
       ] }] },
     ],
     notes: 'Make-ahead: Best made 1 day ahead. Not recommended to freeze (raw egg/mascarpone texture suffers).',
