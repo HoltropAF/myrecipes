@@ -1,6 +1,6 @@
 import NutritionSection from '../NutritionSection'
 
-export default function InfoTab({ recipe, servings, baseServings, onServingsChange, onUpdated }) {
+export default function InfoTab({ recipe, variants, activeVariant, onVariantChange, servings, baseServings, onServingsChange, onUpdated }) {
   return (
     <div>
       {recipe.photo_url && (
@@ -17,10 +17,27 @@ export default function InfoTab({ recipe, servings, baseServings, onServingsChan
       {/* Meta row */}
       <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
         {recipe.category && <MetaChip>{recipe.category}{recipe.subcategory ? ` · ${recipe.subcategory}` : ''}</MetaChip>}
-        {recipe.total_minutes && <MetaChip>⏱ {recipe.total_minutes} min</MetaChip>}
-        {recipe.freezer_friendly === true && <MetaChip>🧊 Freezes well</MetaChip>}
-        {recipe.freezer_friendly === false && <MetaChip>🚫 Not freezer-friendly</MetaChip>}
+        {recipe.total_minutes && <MetaChip>{recipe.total_minutes} min</MetaChip>}
+        {recipe.freezer_friendly === true && <MetaChip>Freezes well</MetaChip>}
+        {recipe.freezer_friendly === false && <MetaChip>Not freezer-friendly</MetaChip>}
       </div>
+
+      {/* Version picker */}
+      {variants.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <SectionLabel>Which version?</SectionLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <VersionPill active={activeVariant === 'main'} onClick={() => onVariantChange('main')}>
+              Origineel
+            </VersionPill>
+            {variants.map(v => (
+              <VersionPill key={v.id} active={activeVariant === v.id} onClick={() => onVariantChange(v.id)}>
+                {v.label}
+              </VersionPill>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Servings adjuster */}
       {baseServings && (
@@ -40,6 +57,21 @@ export default function InfoTab({ recipe, servings, baseServings, onServingsChan
         <NutritionSection recipe={recipe} onUpdated={onUpdated} />
       </div>
     </div>
+  )
+}
+
+function VersionPill({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '9px 16px', borderRadius: 10, cursor: 'pointer',
+        border: `1.5px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? '#fffdf9' : 'var(--charcoal)',
+        fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14,
+      }}
+    >{children}</button>
   )
 }
 

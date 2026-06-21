@@ -7,13 +7,29 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#c1432f" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>html, body { background: #fdf8f0; margin: 0; }</style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,ital@9..144,400..700,0..1&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <title>myrecipes</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash" style="
+        min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 14px; background: #fdf8f0; font-family: -apple-system, sans-serif;
+      ">
+        <div style="font-size: 56px; animation: boot-pulse 1.6s ease-in-out infinite;">🥟</div>
+        <div style="font-weight: 700; font-size: 20px; color: #9c3525;">myrecipes</div>
+        <div style="font-family: monospace; color: #6b6258; font-size: 12px;">warming up the kitchen…</div>
+      </div>
+      <style>
+        @keyframes boot-pulse {
+          0%, 100% { transform: scale(1) rotate(-3deg); opacity: 0.85; }
+          50% { transform: scale(1.12) rotate(3deg); opacity: 1; }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
