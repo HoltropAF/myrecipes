@@ -70,8 +70,12 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     setVariants(prev => [...prev, {
       id: `var_${Date.now()}`,
       label: variantLabel.trim(),
-      ingredients: variantIngredientGroups.filter(g => g.items.length > 0),
-      steps: variantStepGroups.filter(g => g.items.length > 0),
+      ingredients: variantIngredientGroups
+        .map(g => ({ ...g, items: g.items.filter(item => item.name.trim().length > 0) }))
+        .filter(g => g.items.length > 0),
+      steps: variantStepGroups
+        .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
+        .filter(g => g.items.length > 0),
     }])
     setVariantLabel('')
     setVariantIngredientGroups([emptyGroup()])
@@ -108,8 +112,12 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         subcategory: subcategory.trim() || null,
         servings: servings ? parseInt(servings, 10) : null,
         total_minutes: totalMinutes ? parseInt(totalMinutes, 10) : null,
-        ingredients: ingredientGroups.filter(g => g.items.length > 0),
-        steps: stepGroups.filter(g => g.items.length > 0),
+        ingredients: ingredientGroups
+          .map(g => ({ ...g, items: g.items.filter(item => item.name.trim().length > 0) }))
+          .filter(g => g.items.length > 0),
+        steps: stepGroups
+          .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
+          .filter(g => g.items.length > 0),
         variants,
         notes: notes.trim() || null,
         photo_url,
@@ -202,8 +210,8 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
 function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, variantLabel }) {
   if (step === 'title') return title.trim().length > 0
-  if (step === 'ingredients') return ingredientGroups.some(g => g.items.length > 0)
-  if (step === 'steps') return stepGroups.some(g => g.items.length > 0)
+  if (step === 'ingredients') return ingredientGroups.some(g => g.items.some(item => item.name.trim().length > 0))
+  if (step === 'steps') return stepGroups.some(g => g.items.some(item => item.content.trim().length > 0))
   if (step === 'variant') return true // adding variants is optional and self-contained via its own button
   return true
 }
