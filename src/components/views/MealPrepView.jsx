@@ -1,27 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
+import { normalizeName } from '../../lib/ingredientParser'
 
-// Normalize an ingredient name for comparison across recipes (same approach as shopping list)
-function normalizeName(name) {
-  let n = name
-    .toLowerCase()
-    .replace(/\(.*?\)/g, '')
-    .replace(/\b(rode?|witte?|grote?|kleine?|fijne?|verse?|gedroogde?|fresh|finely|chopped|diced|sliced|minced)\b/g, '')
-    .replace(/[,.]/g, '')
-    .trim()
-  if (n.length > 4) {
-    if (/[^aeiou]oes$/.test(n)) n = n.slice(0, -2)
-    else if (/[a-z]s$/.test(n) && !/[aeiou]s$/.test(n)) n = n.slice(0, -1)
-  }
-  return n
-}
+// Pantry staples so common to almost every recipe that sharing them is meaningless
+// for a "these go well together" suggestion (would otherwise pair nearly everything).
+const PANTRY_STAPLES = new Set([
+  'zout', 'peper', 'olijfolie', 'olie', 'water', 'suiker', 'boter', 'bloem',
+  'salt', 'pepper', 'oil', 'sugar', 'butter', 'flour', 'ui', 'onion', 'knoflook', 'garlic',
+])
 
 function getIngredientSet(recipe) {
   const names = new Set()
   for (const group of recipe.ingredients || []) {
     for (const item of group.items || []) {
       const n = normalizeName(item.name)
-      if (n.length > 2) names.add(n)
+      if (n.length > 2 && !PANTRY_STAPLES.has(n)) names.add(n)
     }
   }
   return names

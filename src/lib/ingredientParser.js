@@ -101,3 +101,29 @@ export function scaleAmount(amount, fromServings, toServings) {
   if (amount === null || amount === undefined || !fromServings) return amount
   return amount * (toServings / fromServings)
 }
+
+/**
+ * Normalize an ingredient name for cross-recipe comparison (shopping list merging,
+ * meal-prep pairing suggestions). Strips descriptors, prep instructions, and singularizes
+ * common plurals while protecting words that are already singular and just happen to end
+ * in 's' (e.g. "kaas", "ananas" — stripping would give the wrong result for short Dutch words).
+ */
+export function normalizeName(name) {
+  let n = name.toLowerCase()
+  // Drop parenthetical asides entirely, e.g. "(approx 1/4 of a cabbage)"
+  n = n.replace(/\(.*?\)/g, '')
+  // Drop everything after the first comma — this is almost always prep instruction
+  // ("garlic cloves, finely chopped" -> "garlic cloves", "ui, gesnipperd" -> "ui")
+  n = n.split(',')[0]
+  // Strip common size/freshness/prep descriptor words anywhere in the remaining phrase
+  n = n.replace(/\b(rode?|witte?|grote?|kleine?|middelgrote?|fijne?|verse?|gedroogde?|fresh|finely|chopped|diced|sliced|minced|grated|peeled|cooked|raw|whole|large|small|medium)\b/g, '')
+  // Strip a trailing counting-noun like "cloves" once the modifier words are gone
+  // ("garlic cloves" -> "garlic")
+  n = n.replace(/\b(cloves?|leaves?|sprigs?|stalks?)\b\s*$/g, '')
+  n = n.replace(/[.]/g, '').trim().replace(/\s+/g, ' ')
+  if (n.length > 4) {
+    if (/[^aeiou]oes$/.test(n)) n = n.slice(0, -2)       // tomatoes -> tomato, potatoes -> potato
+    else if (/[a-z]s$/.test(n) && !/[aeiou]s$/.test(n)) n = n.slice(0, -1) // onions -> onion, eggs -> egg
+  }
+  return n
+}
