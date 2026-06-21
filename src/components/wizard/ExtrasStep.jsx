@@ -53,7 +53,7 @@ export default function ExtrasStep({
               onClick={() => onPhotoChange(null)}
               style={{
                 position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 99,
-                background: 'rgba(42,36,32,0.7)', color: '#fffdf9', border: 'none', cursor: 'pointer', fontSize: 16,
+                background: 'rgba(42,36,32,0.7)', color: 'var(--card)', border: 'none', cursor: 'pointer', fontSize: 16,
               }}
             >×</button>
           </div>

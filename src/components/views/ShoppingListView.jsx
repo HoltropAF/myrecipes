@@ -78,12 +78,12 @@ export default function ShoppingListView({ userId }) {
           placeholder="Add an item…"
           style={{
             flex: 1, padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
-            background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
+            background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
           }}
         />
         <button onClick={addManualItem} style={{
           padding: '0 16px', borderRadius: 9, border: 'none', background: 'var(--tomato)',
-          color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15, cursor: 'pointer',
+          color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15, cursor: 'pointer',
         }}>Add</button>
       </div>
 
@@ -93,7 +93,7 @@ export default function ShoppingListView({ userId }) {
         <Empty>Your list is empty. Add items above, or add ingredients from a recipe.</Empty>
       ) : (
         <>
-          <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
             {mergedList.map((g, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
@@ -105,7 +105,7 @@ export default function ShoppingListView({ userId }) {
                     width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
                     border: `2px solid ${g.checked ? 'var(--sage)' : 'var(--line)'}`,
                     background: g.checked ? 'var(--sage)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fffdf9', fontSize: 13,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--card)', fontSize: 13,
                   }}
                 >{g.checked ? '✓' : ''}</button>
                 <div style={{

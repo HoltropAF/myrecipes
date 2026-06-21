@@ -33,5 +33,5 @@ export const labelTextStyle = {
 }
 export const inputStyle = {
   padding: '12px 13px', borderRadius: 9, border: '1px solid var(--line)',
-  background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 16,
+  background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 16,
 }

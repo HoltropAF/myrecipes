@@ -57,7 +57,7 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: '#fffdf9', borderBottom: '1px solid var(--line)', padding: '14px 16px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '14px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={onClose} style={navBtnStyle}>‹ Back</button>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -128,7 +128,7 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
 
         {/* Servings adjuster */}
         {baseServings && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px' }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>servings</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
               <StepperBtn onClick={() => setServings(s => Math.max(1, (s || baseServings) - 1))}>−</StepperBtn>
@@ -147,7 +147,7 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
             fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
           }}>{addedToList ? '✓ Added' : '+ Add to list'}</button>
         </div>
-        <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, padding: '6px 16px', marginBottom: 22 }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '6px 16px', marginBottom: 22 }}>
           {active.ingredients.length === 0 && <EmptyRow>No ingredients listed.</EmptyRow>}
           {active.ingredients.map((group, gi) => (
             <div key={gi} style={{ padding: '10px 0', borderBottom: gi < active.ingredients.length - 1 ? '1px solid var(--line)' : 'none' }}>
@@ -188,7 +188,7 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                 {group.items.map((step, si) => (
                   <div key={step.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{
-                      width: 24, height: 24, borderRadius: 99, background: 'var(--tomato)', color: '#fffdf9',
+                      width: 24, height: 24, borderRadius: 99, background: 'var(--tomato)', color: 'var(--card)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 1,
                     }}>{si + 1}</div>
@@ -264,8 +264,8 @@ function TabButton({ active, onClick, children }) {
       style={{
         flexShrink: 0, padding: '7px 14px', borderRadius: 99, cursor: 'pointer',
         border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-        background: active ? 'var(--tomato)' : '#fffdf9',
-        color: active ? '#fffdf9' : 'var(--charcoal-soft)',
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? 'var(--card)' : 'var(--charcoal-soft)',
         fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
       }}
     >{children}</button>
@@ -279,8 +279,8 @@ function BigTabButton({ active, onClick, children }) {
       style={{
         flexShrink: 0, padding: '12px 18px', borderRadius: 12, cursor: 'pointer',
         border: `2px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-        background: active ? 'var(--tomato)' : '#fffdf9',
-        color: active ? '#fffdf9' : 'var(--charcoal)',
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? 'var(--card)' : 'var(--charcoal)',
         fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15,
         boxShadow: active ? '0 4px 10px rgba(193,67,47,0.25)' : 'none',
         transition: 'all 0.12s ease',

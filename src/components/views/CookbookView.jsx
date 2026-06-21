@@ -7,8 +7,8 @@ const CATEGORY_ICONS = {
   'Drinks': '🍹', 'Household': '🧴',
 }
 
-export default function CookbookView({ recipes, onSelect, onAdd }) {
-  const [openCategories, setOpenCategories] = useState({})
+export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCategory }) {
+  const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
   const [openSubcategories, setOpenSubcategories] = useState({})
 
   // Build a tree: { category: { direct: [recipes], subcategories: { name: [recipes] } } }
@@ -54,7 +54,7 @@ export default function CookbookView({ recipes, onSelect, onAdd }) {
             const subEntries = Object.entries(subcategories).sort((a, b) => b[1].length - a[1].length)
 
             return (
-              <div key={cat} style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
+              <div key={cat} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
                 {/* Category toggle row */}
                 <button
                   onClick={() => toggleCategory(cat)}
@@ -123,5 +123,5 @@ export default function CookbookView({ recipes, onSelect, onAdd }) {
 
 const addBtnStyle = {
   padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)',
-  color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
 }

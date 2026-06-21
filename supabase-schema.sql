@@ -84,6 +84,9 @@ create index if not exists idx_cook_log_date on cook_log(user_id, cooked_date);
 create table if not exists user_preferences (
   user_id uuid primary key references auth.users(id) on delete cascade,
   unit_system text not null default 'metric' check (unit_system in ('metric', 'us')),
+  theme text not null default 'auto' check (theme in ('light', 'dark', 'auto')),
+  default_category text,
+  pin_wishlist_first boolean not null default false,
   updated_at timestamptz not null default now()
 );
 

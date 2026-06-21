@@ -41,7 +41,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
             style={{
               flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
               fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
-              background: searchMode === id ? '#fffdf9' : 'transparent',
+              background: searchMode === id ? 'var(--card)' : 'transparent',
               color: searchMode === id ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
               boxShadow: searchMode === id ? '0 1px 3px rgba(42,36,32,0.12)' : 'none',
             }}
@@ -54,7 +54,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         placeholder={searchMode === 'ingredient' ? 'e.g. knoflook, kip…' : 'Search recipes…'}
         style={{
           width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
-          background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
+          background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
           marginBottom: 10, boxSizing: 'border-box',
         }}
       />
@@ -64,8 +64,8 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 99,
           border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
-          background: wishlistOnly ? 'var(--tomato)' : '#fffdf9',
-          color: wishlistOnly ? '#fffdf9' : 'var(--charcoal-soft)',
+          background: wishlistOnly ? 'var(--tomato)' : 'var(--card)',
+          color: wishlistOnly ? 'var(--card)' : 'var(--charcoal-soft)',
           fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 16,
         }}
       >⭐ Wishlist only</button>
@@ -93,7 +93,7 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient }) {
 
   return (
     <div onClick={onClick} style={{
-      background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
+      background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
       display: 'flex', gap: 12, alignItems: 'center',
     }}>
       {r.photo_url && (
@@ -128,5 +128,5 @@ function Empty({ children }) {
 
 const addBtnStyle = {
   padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)',
-  color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
 }

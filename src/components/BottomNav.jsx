@@ -9,7 +9,7 @@ const TABS = [
 export default function BottomNav({ active, onChange }) {
   return (
     <div style={{
-      position: 'sticky', bottom: 0, display: 'flex', background: '#fffdf9',
+      position: 'sticky', bottom: 0, display: 'flex', background: 'var(--card)',
       borderTop: '1px solid var(--line)', paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     }}>
       {TABS.map(tab => (

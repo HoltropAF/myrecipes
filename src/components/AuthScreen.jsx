@@ -22,7 +22,7 @@ export default function AuthScreen() {
       flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
       <div style={{
-        width: '100%', maxWidth: 360, background: '#fffdf9',
+        width: '100%', maxWidth: 360, background: 'var(--card)',
         border: '1px solid var(--line)', borderRadius: '2px 2px 10px 10px',
         boxShadow: '0 1px 0 var(--line), 0 18px 40px -20px rgba(42,36,32,0.25)',
         position: 'relative', overflow: 'hidden',
@@ -72,7 +72,7 @@ export default function AuthScreen() {
               type="submit" disabled={loading}
               style={{
                 marginTop: 6, padding: '12px 0', borderRadius: 8, border: 'none', cursor: loading ? 'default' : 'pointer',
-                background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)',
+                background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)',
                 fontWeight: 700, fontSize: 15, opacity: loading ? 0.7 : 1,
               }}
             >

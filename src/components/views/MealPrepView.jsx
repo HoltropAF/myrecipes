@@ -226,7 +226,7 @@ function SuggestionSection({ title, description, suggestions, onSelectRecipe, on
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {suggestions.map((s, i) => (
-          <div key={i} style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
+          <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>
                 {suggestionTitle(s)} <span style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>({s.recipes.length})</span>
@@ -248,7 +248,7 @@ function SuggestionSection({ title, description, suggestions, onSelectRecipe, on
 function GroupCard({ group, recipes, onSelectRecipe, onDelete }) {
   const groupRecipes = group.recipe_ids.map(id => recipes.find(r => r.id === id)).filter(Boolean)
   return (
-    <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--charcoal)' }}>{group.name}</div>
         <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 16 }}>×</button>
@@ -317,7 +317,7 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
       </label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto', marginBottom: 12 }}>
         {filtered.map(r => (
-          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#fffdf9', borderRadius: 8, border: '1px solid var(--line)', cursor: 'pointer' }}>
+          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--card)', borderRadius: 8, border: '1px solid var(--line)', cursor: 'pointer' }}>
             <input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} />
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)' }}>{r.title}</span>
           </label>
@@ -349,16 +349,16 @@ function SectionLabel({ children }) {
 
 const addBtnStyle = {
   padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)',
-  color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
 }
 const labelTextStyle = { fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }
 const inputStyle = {
   padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-  background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
+  background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
 }
 const saveBtnStyle = {
   flex: 1, padding: '10px 0', borderRadius: 9, border: 'none',
-  background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+  background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
 }
 const cancelBtnStyle = {
   flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--line)',

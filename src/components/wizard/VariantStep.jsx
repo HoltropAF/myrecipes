@@ -47,7 +47,7 @@ export default function VariantStep({
           {savedVariants.map(v => (
             <div key={v.id} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-              background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10,
+              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
             }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>{v.label}</div>
@@ -111,7 +111,7 @@ export default function VariantStep({
           onClick={onAddVariant} disabled={!canAdd}
           style={{
             width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
-            background: canAdd ? 'var(--sage)' : 'var(--line)', color: '#fffdf9',
+            background: canAdd ? 'var(--sage)' : 'var(--line)', color: 'var(--card)',
             fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
             cursor: canAdd ? 'pointer' : 'default',
           }}

@@ -1,7 +1,8 @@
 :root {
-  /* Palette — rooted in the recipes themselves: tomato sauce, sage herbs, turmeric */
+  /* Light palette — rooted in the recipes themselves: tomato sauce, sage herbs, turmeric */
   --parchment: #fdf8f0;
   --parchment-dim: #f5ecdc;
+  --card: #fffdf9;
   --charcoal: #2a2420;
   --charcoal-soft: #6b6258;
   --tomato: #c1432f;
@@ -14,6 +15,22 @@
   --font-display: 'Fraunces', serif;
   --font-body: 'Karla', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Dark palette — same warm character, inverted: deep charcoal bg, brightened tomato,
+   cream text. Activated via data-theme="dark" on the root element. */
+[data-theme="dark"] {
+  --parchment: #1c1714;
+  --parchment-dim: #241d18;
+  --card: #2a221c;
+  --charcoal: #f3ece1;
+  --charcoal-soft: #a89a8a;
+  --tomato: #e2624a;
+  --tomato-deep: #ff8268;
+  --sage: #8da178;
+  --sage-light: #2e3328;
+  --mustard: #f0b75c;
+  --line: #3a2f27;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

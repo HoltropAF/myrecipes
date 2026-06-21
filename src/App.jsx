@@ -25,6 +25,25 @@ function App() {
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
+  const [defaultCategory, setDefaultCategory] = useState(null)
+  const [pinWishlistFirst, setPinWishlistFirst] = useState(false)
+
+  // Apply the resolved theme (auto = follow system) to the document root
+  useEffect(() => {
+    const apply = () => {
+      const resolved = theme === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : theme
+      document.documentElement.setAttribute('data-theme', resolved)
+    }
+    apply()
+    if (theme === 'auto') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      mq.addEventListener('change', apply)
+      return () => mq.removeEventListener('change', apply)
+    }
+  }, [theme])
 
   // Wrap setters so opening a "screen" (recipe detail, wizard) pushes browser history,
   // and the phone's back button/gesture closes that screen instead of exiting the app.
@@ -85,16 +104,42 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    supabase.from('user_preferences').select('unit_system').eq('user_id', session.user.id).maybeSingle()
-      .then(({ data }) => { if (data?.unit_system) setUnitSystem(data.unit_system) })
+    supabase.from('user_preferences').select('*').eq('user_id', session.user.id).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        if (data.unit_system) setUnitSystem(data.unit_system)
+        if (data.theme) setTheme(data.theme)
+        if (data.default_category) setDefaultCategory(data.default_category)
+        if (data.pin_wishlist_first) setPinWishlistFirst(data.pin_wishlist_first)
+      })
   }, [session])
+
+  const savePreferences = async (patch) => {
+    if (!session) return
+    await supabase.from('user_preferences').upsert({
+      user_id: session.user.id, updated_at: new Date().toISOString(), ...patch,
+    })
+  }
 
   const toggleUnitSystem = async () => {
     const next = unitSystem === 'metric' ? 'us' : 'metric'
     setUnitSystem(next)
-    if (session) {
-      await supabase.from('user_preferences').upsert({ user_id: session.user.id, unit_system: next, updated_at: new Date().toISOString() })
-    }
+    savePreferences({ unit_system: next })
+  }
+
+  const updateTheme = (next) => {
+    setTheme(next)
+    savePreferences({ theme: next })
+  }
+
+  const updateDefaultCategory = (next) => {
+    setDefaultCategory(next)
+    savePreferences({ default_category: next })
+  }
+
+  const updatePinWishlistFirst = (next) => {
+    setPinWishlistFirst(next)
+    savePreferences({ pin_wishlist_first: next })
   }
 
   const handleDelete = async (recipe) => {
@@ -152,7 +197,14 @@ function App() {
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14 }}
           >‹ Back</button>
         </div>
-        <SettingsView userEmail={session.user.email} />
+        <SettingsView
+          userEmail={session.user.email}
+          recipes={recipes}
+          theme={theme} onThemeChange={updateTheme}
+          defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
+          pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
+          unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
+        />
       </div>
     )
   }
@@ -169,7 +221,7 @@ function App() {
         </div>
         {activeTab === 'recipes' && (
           <AllRecipesView
-            recipes={recipes}
+            recipes={pinWishlistFirst ? [...recipes].sort((a, b) => (b.wishlist === true) - (a.wishlist === true)) : recipes}
             loading={loadingRecipes}
             onSelect={openRecipe}
             onAdd={openWizard}
@@ -180,6 +232,7 @@ function App() {
             recipes={recipes}
             onSelect={openRecipe}
             onAdd={openWizard}
+            defaultOpenCategory={defaultCategory}
           />
         )}
         {activeTab === 'shopping' && (

@@ -14,13 +14,13 @@ export default function ComboInput({ value, onChange, suggestions = [], placehol
         placeholder={placeholder}
         style={{
           width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-          background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
+          background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
         }}
       />
       {open && suggestions.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, marginTop: 4,
-          background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 8,
+          background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
           boxShadow: '0 8px 20px rgba(42,36,32,0.12)', overflow: 'hidden', maxHeight: 160, overflowY: 'auto',
         }}>
           {suggestions

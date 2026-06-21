@@ -75,7 +75,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
               placeholder="Search recipes…"
               style={{
                 width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
-                background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
+                background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
                 marginBottom: 14, boxSizing: 'border-box',
               }}
             />
@@ -90,7 +90,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
                   key={r.id} onClick={() => pickRecipe(r)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10,
-                    border: '1px solid var(--line)', background: '#fffdf9', cursor: 'pointer', textAlign: 'left',
+                    border: '1px solid var(--line)', background: 'var(--card)', cursor: 'pointer', textAlign: 'left',
                   }}
                 >
                   {r.photo_url && <img src={r.photo_url} alt="" style={{ width: 36, height: 36, borderRadius: 7, objectFit: 'cover' }} />}
@@ -165,8 +165,8 @@ function ThumbButton({ active, onClick, children }) {
       style={{
         flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
         border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-        background: active ? 'var(--tomato)' : '#fffdf9',
-        color: active ? '#fffdf9' : 'var(--charcoal)',
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? 'var(--card)' : 'var(--charcoal)',
         fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
       }}
     >{children}</button>
@@ -176,9 +176,9 @@ function ThumbButton({ active, onClick, children }) {
 const labelTextStyle = { fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }
 const inputStyle = {
   padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-  background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
+  background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
 }
 const saveBtnStyle = {
   width: '100%', padding: '12px 0', borderRadius: 9, border: 'none',
-  background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15, cursor: 'pointer',
+  background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15, cursor: 'pointer',
 }

@@ -72,7 +72,7 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
               {group.items.map((item, iIdx) => (
                 <div key={item.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                   <div style={{
-                    width: 22, height: 22, borderRadius: 99, background: 'var(--tomato)', color: '#fffdf9',
+                    width: 22, height: 22, borderRadius: 99, background: 'var(--tomato)', color: 'var(--card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     fontFamily: 'var(--font-mono)', fontSize: 11, marginTop: 9,
                   }}>{iIdx + 1}</div>

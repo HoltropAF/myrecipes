@@ -115,7 +115,7 @@ export default function NutritionSection({ recipe, onUpdated }) {
 
 function NutritionTile({ label, total, perServing, unit = '' }) {
   return (
-    <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 4px', textAlign: 'center' }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 4px', textAlign: 'center' }}>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--tomato-deep)' }}>
         {total !== null && total !== undefined ? Math.round(total) : '—'}{unit}
       </div>
@@ -133,7 +133,7 @@ function NutritionInput({ label, value, onChange }) {
       <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }}>{label}</span>
       <input
         type="number" inputMode="decimal" value={value} onChange={e => onChange(e.target.value)}
-        style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)', background: '#fffdf9', fontFamily: 'var(--font-body)', fontSize: 14 }}
+        style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--card)', fontFamily: 'var(--font-body)', fontSize: 14 }}
       />
     </label>
   )
@@ -141,10 +141,10 @@ function NutritionInput({ label, value, onChange }) {
 
 const primaryBtnStyle = {
   padding: '9px 14px', borderRadius: 9, border: 'none', background: 'var(--tomato)',
-  color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
 }
 const secondaryBtnStyle = {
-  padding: '9px 14px', borderRadius: 9, border: '1px solid var(--line)', background: '#fffdf9',
+  padding: '9px 14px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)',
   color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, cursor: 'pointer',
 }
 const linkBtnStyle = {

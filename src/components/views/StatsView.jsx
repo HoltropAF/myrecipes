@@ -82,7 +82,7 @@ export default function StatsView({ recipes }) {
       </div>
 
       <SectionLabel>Cooking activity (last 6 months)</SectionLabel>
-      <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 14px 12px', marginBottom: 22 }}>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 14px 12px', marginBottom: 22 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
           {stats.months.map(m => (
             <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -119,7 +119,7 @@ export default function StatsView({ recipes }) {
       )}
 
       <SectionLabel>Recipes by category</SectionLabel>
-      <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
         {stats.categoryList.map(([cat, count]) => (
           <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', width: 110, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
@@ -136,7 +136,7 @@ export default function StatsView({ recipes }) {
 
 function Tile({ value, label }) {
   return (
-    <div style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--tomato-deep)', lineHeight: 1 }}>{value}</div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>{label}</div>
     </div>
@@ -145,7 +145,7 @@ function Tile({ value, label }) {
 
 function RankRow({ rank, title, value }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10 }}>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', width: 16, flexShrink: 0 }}>{rank}</span>
       <span style={{ flex: 1, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--tomato-deep)', flexShrink: 0 }}>{value}</span>

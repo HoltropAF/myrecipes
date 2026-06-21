@@ -141,7 +141,7 @@ export default function CookLogSection({ recipeId, variants = [] }) {
           {entries.map(entry => (
             <div key={entry.id} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
-              background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10,
+              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
             }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>{entry.thumbs === 'up' ? '👍' : entry.thumbs === 'down' ? '👎' : '·'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -185,8 +185,8 @@ function ThumbButton({ active, onClick, children }) {
       style={{
         flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
         border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-        background: active ? 'var(--tomato)' : '#fffdf9',
-        color: active ? '#fffdf9' : 'var(--charcoal)',
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? 'var(--card)' : 'var(--charcoal)',
         fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
       }}
     >{children}</button>
@@ -196,7 +196,7 @@ function ThumbButton({ active, onClick, children }) {
 const labelTextStyle = { fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }
 const inputStyle = {
   padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-  background: '#fffdf9', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
+  background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
 }
 const addBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)',
@@ -204,5 +204,5 @@ const addBtnStyle = {
 }
 const saveBtnStyle = {
   width: '100%', padding: '10px 0', borderRadius: 9, border: 'none',
-  background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+  background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
 }

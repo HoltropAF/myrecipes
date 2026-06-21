@@ -219,7 +219,7 @@ function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, v
 function WizardHeader({ stepIndex, total, onClose, onBack, isEditing }) {
   const labels = ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants']
   return (
-    <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--line)', background: '#fffdf9' }}>
+    <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--line)', background: 'var(--card)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         {onBack
           ? <button onClick={onBack} style={navBtnStyle}>‹ Back</button>
@@ -249,7 +249,7 @@ const navBtnStyle = {
 function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isEditing }) {
   return (
     <div style={{
-      position: 'sticky', bottom: 0, padding: '14px 20px', background: '#fffdf9',
+      position: 'sticky', bottom: 0, padding: '14px 20px', background: 'var(--card)',
       borderTop: '1px solid var(--line)',
     }}>
       <button
@@ -257,7 +257,7 @@ function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isE
         disabled={!canGoNext || saving}
         style={{
           width: '100%', padding: '13px 0', borderRadius: 10, border: 'none',
-          background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)',
+          background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)',
           fontWeight: 700, fontSize: 15, cursor: canGoNext && !saving ? 'pointer' : 'default',
           opacity: canGoNext && !saving ? 1 : 0.5,
         }}
