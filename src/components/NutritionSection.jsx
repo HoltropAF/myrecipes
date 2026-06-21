@@ -106,7 +106,6 @@ export default function NutritionSection({ recipe, onUpdated }) {
         </span>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => setEditing(true)} style={linkBtnStyle}>Edit</button>
-          <button onClick={handleEstimate} disabled={estimating} style={linkBtnStyle}>{estimating ? '…' : 'Re-estimate'}</button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
+import { MAIN_INGREDIENTS, getMainIngredientKeys } from '../../lib/recipeTags'
 import LoadingGyoza from '../LoadingGyoza'
 
 // Pantry staples so common to almost every recipe that sharing them is meaningless
@@ -9,20 +10,6 @@ const PANTRY_STAPLES = new Set([
   'zout', 'peper', 'olijfolie', 'olie', 'water', 'suiker', 'boter', 'bloem',
   'salt', 'pepper', 'oil', 'sugar', 'butter', 'flour', 'ui', 'onion', 'knoflook', 'garlic',
 ])
-
-// Main proteins / key ingredients worth grouping recipes by — "stock up on X, make these"
-const MAIN_INGREDIENTS = [
-  { key: 'kip', label: 'Chicken', match: /kipfilet|chicken breast|chicken fillet|\bkip\b|\bchicken\b/i },
-  { key: 'rundvlees', label: 'Beef', match: /rundvlees|\bbeef\b|short rib|sukade|ground beef|gehakt/i },
-  { key: 'varkensvlees', label: 'Pork', match: /pork belly|pork shoulder|\bspek\b|\bbacon\b|spekjes|ground pork/i },
-  { key: 'zalm', label: 'Salmon', match: /\bzalm\b|\bsalmon\b/i },
-  { key: 'tofu', label: 'Tofu', match: /\btofu\b/i },
-  { key: 'kikkererwten', label: 'Chickpeas', match: /kikkererwten|chickpea/i },
-  { key: 'kaas', label: 'Cheese', match: /\bkaas\b|\bcheese\b|mozzarella|feta|mascarpone/i },
-  { key: 'pasta', label: 'Pasta', match: /\bpasta\b|tagliatelle|lasagne/i },
-  { key: 'rijst', label: 'Rice', match: /\brijst\b|\brice\b/i },
-  { key: 'aardappel', label: 'Potato', match: /aardappel|\bpotato/i },
-]
 
 function getIngredientSet(recipe) {
   const names = new Set()
@@ -33,14 +20,6 @@ function getIngredientSet(recipe) {
     }
   }
   return names
-}
-
-function getMainIngredientKeys(recipe) {
-  const allText = (recipe.ingredients || [])
-    .flatMap(g => g.items || [])
-    .map(item => item.name)
-    .join(' | ')
-  return MAIN_INGREDIENTS.filter(m => m.match.test(allText)).map(m => m.key)
 }
 
 const MIN_GROUP_SIZE = 3

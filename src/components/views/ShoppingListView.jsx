@@ -112,16 +112,14 @@ export default function ShoppingListView({ userId }) {
                     }}
                   >{g.checked ? '✓' : ''}</button>
                   <div style={{
-                    flex: 1, fontFamily: 'var(--font-body)', fontSize: 15,
+                    flex: 1, fontFamily: 'var(--font-body)', fontSize: 15, display: 'flex', alignItems: 'baseline', gap: 6,
                     color: g.checked ? 'var(--charcoal-soft)' : 'var(--charcoal)',
                     textDecoration: g.checked ? 'line-through' : 'none',
                   }}>
-                    {g.hasAmount && (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, marginRight: 6 }}>
-                        {Number.isInteger(g.amount) ? g.amount : g.amount.toFixed(1)}{g.unit ? ` ${g.unit}` : ''}
-                      </span>
-                    )}
-                    {g.displayName}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, minWidth: 44, flexShrink: 0, display: 'inline-block' }}>
+                      {g.hasAmount ? `${Number.isInteger(g.amount) ? g.amount : g.amount.toFixed(1)}${g.unit ? ` ${g.unit}` : ''}` : '\u00A0'}
+                    </span>
+                    <span>{g.displayName}</span>
                   </div>
                 </div>
               </SwipeToDelete>

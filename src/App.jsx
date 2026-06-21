@@ -7,7 +7,6 @@ import BottomNav from './components/BottomNav'
 import FloatingActionButton from './components/FloatingActionButton'
 import QuickLogCook from './components/QuickLogCook'
 import AllRecipesView from './components/views/AllRecipesView'
-import CookbookView from './components/views/CookbookView'
 import ShoppingListView from './components/views/ShoppingListView'
 import StatsView from './components/views/StatsView'
 import MealPrepView from './components/views/MealPrepView'
@@ -26,7 +25,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('recipes')
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
   const [defaultCategory, setDefaultCategory] = useState(null)
   const [pinWishlistFirst, setPinWishlistFirst] = useState(false)
@@ -81,7 +79,6 @@ function App() {
       // Back button pressed: close whichever overlay screen is open.
       setSelectedRecipe(null)
       setShowWizard(false)
-      setShowSettings(false)
       setShowQuickLog(false)
     }
     window.addEventListener('popstate', handlePopState)
@@ -215,48 +212,13 @@ function App() {
     )
   }
 
-  if (showSettings) {
-    return (
-      <div style={{ minHeight: '100dvh', background: 'var(--parchment)' }}>
-        <div style={{ padding: '16px 20px 0' }}>
-          <button
-            onClick={() => setShowSettings(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14 }}
-          >‹ Back</button>
-        </div>
-        <SettingsView
-          userEmail={session.user.email}
-          recipes={recipes}
-          theme={theme} onThemeChange={updateTheme}
-          defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
-          pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
-          unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
-        />
-      </div>
-    )
-  }
-
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 20px 4px' }}>
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--charcoal-soft)' }}
-          >⚙️</button>
-        </div>
         {activeTab === 'recipes' && (
           <AllRecipesView
             recipes={pinWishlistFirst ? [...recipes].sort((a, b) => (b.wishlist === true) - (a.wishlist === true)) : recipes}
             loading={loadingRecipes}
-            onSelect={openRecipe}
-            onAdd={openWizard}
-          />
-        )}
-        {activeTab === 'cookbook' && (
-          <CookbookView
-            recipes={recipes}
             onSelect={openRecipe}
             onAdd={openWizard}
             defaultOpenCategory={defaultCategory}
@@ -270,6 +232,16 @@ function App() {
         )}
         {activeTab === 'mealprep' && (
           <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsView
+            userEmail={session.user.email}
+            recipes={recipes}
+            theme={theme} onThemeChange={updateTheme}
+            defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
+            pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
+            unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
+          />
         )}
       </PullToRefresh>
       <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />

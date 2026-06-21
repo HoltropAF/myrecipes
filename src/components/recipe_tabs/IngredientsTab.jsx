@@ -39,11 +39,11 @@ export default function IngredientsTab({
                     textDecoration: isChecked ? 'line-through' : 'none', opacity: isChecked ? 0.6 : 1,
                   }}
                 >
-                  {(displayItem.amount !== null || displayItem.unit) && (
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: isChecked ? 'var(--charcoal-soft)' : 'var(--tomato-deep)', fontWeight: 600, minWidth: 50, flexShrink: 0 }}>
-                      {formatConvertedAmount(displayItem.amount)}{displayItem.unit ? ` ${displayItem.unit}` : ''}
-                    </span>
-                  )}
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: isChecked ? 'var(--charcoal-soft)' : 'var(--tomato-deep)', fontWeight: 600, minWidth: 50, flexShrink: 0, display: 'inline-block' }}>
+                    {(displayItem.amount !== null || displayItem.unit)
+                      ? `${formatConvertedAmount(displayItem.amount)}${displayItem.unit ? ` ${displayItem.unit}` : ''}`
+                      : '\u00A0'}
+                  </span>
                   <span>{item.name}</span>
                 </div>
               )

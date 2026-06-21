@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { scaleAmount } from '../lib/ingredientParser'
 import CookingMode from './CookingMode'
@@ -12,8 +12,8 @@ const TABS = [
   { id: 'info', label: 'Info' },
   { id: 'ingredients', label: 'Ingredients' },
   { id: 'steps', label: 'Steps' },
-  { id: 'cooklog', label: 'Cook log' },
-  { id: 'storage', label: 'Storage' },
+  { id: 'cooklog', label: 'Log' },
+  { id: 'storage', label: 'Notes' },
 ]
 
 // A palette of subtly differing card shades, like colored index dividers in a real binder.
@@ -32,6 +32,14 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
   const [togglingWishlist, setTogglingWishlist] = useState(false)
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [showCookingMode, setShowCookingMode] = useState(false)
+  const [compact, setCompact] = useState(false)
+
+  useEffect(() => {
+    const check = () => setCompact(window.innerWidth <= 360)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const toggleIngredientChecked = (id) => {
     setCheckedIngredients(prev => {
@@ -147,14 +155,16 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                   flexShrink: 0,
                   position: 'relative',
                   zIndex: isActive ? TABS.length + 1 : TABS.length - i,
-                  marginLeft: i === 0 ? 0 : -10,
-                  padding: isActive ? '10px 18px 11px' : '8px 16px 9px',
+                  marginLeft: i === 0 ? 0 : (compact ? -6 : -10),
+                  padding: isActive
+                    ? (compact ? '8px 12px 9px' : '10px 18px 11px')
+                    : (compact ? '7px 10px 8px' : '8px 16px 9px'),
                   borderRadius: '10px 10px 0 0',
                   border: '1px solid var(--line)',
                   borderBottom: isActive ? `1px solid ${TAB_SHADES[i % TAB_SHADES.length]}` : '1px solid var(--line)',
                   background: TAB_SHADES[i % TAB_SHADES.length],
                   color: isActive ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
-                  fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: isActive ? 14 : 13,
+                  fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: compact ? (isActive ? 12.5 : 11.5) : (isActive ? 14 : 13),
                   cursor: 'pointer',
                   transform: isActive ? 'translateY(0)' : 'translateY(4px)',
                   boxShadow: isActive ? '0 -2px 8px rgba(42,36,32,0.08)' : 'none',
