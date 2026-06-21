@@ -4,6 +4,7 @@ import { formatIngredientRow, scaleAmount } from '../lib/ingredientParser'
 import { convertIngredient, convertStepTemperatures, formatConvertedAmount } from '../lib/unitConverter'
 import CookLogSection from './CookLogSection'
 import NutritionSection from './NutritionSection'
+import CookingMode from './CookingMode'
 
 export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem }) {
   const [recipe, setRecipe] = useState(initialRecipe)
@@ -13,6 +14,17 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
   const [addedToList, setAddedToList] = useState(false)
   const [wishlist, setWishlist] = useState(!!recipe.wishlist)
   const [togglingWishlist, setTogglingWishlist] = useState(false)
+  const [checkedIngredients, setCheckedIngredients] = useState(new Set())
+  const [showCookingMode, setShowCookingMode] = useState(false)
+
+  const toggleIngredientChecked = (id) => {
+    setCheckedIngredients(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const active = activeTab === 'main'
     ? { ingredients: recipe.ingredients || [], steps: recipe.steps || [] }
@@ -52,6 +64,17 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
     await supabase.from('shopping_list').insert(rows)
     setAddedToList(true)
     setTimeout(() => setAddedToList(false), 2000)
+  }
+
+  if (showCookingMode) {
+    return (
+      <CookingMode
+        recipe={recipe}
+        steps={active.steps}
+        unitSystem={unitSystem}
+        onClose={() => setShowCookingMode(false)}
+      />
+    )
   }
 
   return (
@@ -160,10 +183,19 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                   displayItem = { ...displayItem, amount: scaleAmount(displayItem.amount, baseServings, servings) }
                 }
                 displayItem = convertIngredient(displayItem, unitSystem)
+                const isChecked = checkedIngredients.has(item.id)
                 return (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '5px 0', fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)' }}>
+                  <div
+                    key={item.id}
+                    onClick={() => toggleIngredientChecked(item.id)}
+                    style={{
+                      display: 'flex', alignItems: 'baseline', gap: 8, padding: '7px 0', fontFamily: 'var(--font-body)', fontSize: 15,
+                      color: isChecked ? 'var(--charcoal-soft)' : 'var(--charcoal)', cursor: 'pointer',
+                      textDecoration: isChecked ? 'line-through' : 'none', opacity: isChecked ? 0.6 : 1,
+                    }}
+                  >
                     {(displayItem.amount !== null || displayItem.unit) && (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, minWidth: 50, flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: isChecked ? 'var(--charcoal-soft)' : 'var(--tomato-deep)', fontWeight: 600, minWidth: 50, flexShrink: 0 }}>
                         {formatConvertedAmount(displayItem.amount)}{displayItem.unit ? ` ${displayItem.unit}` : ''}
                       </span>
                     )}
@@ -176,7 +208,15 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
         </div>
 
         {/* Steps */}
-        <SectionLabel>Steps</SectionLabel>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <SectionLabel>Steps</SectionLabel>
+          {active.steps.length > 0 && (
+            <button onClick={() => setShowCookingMode(true)} style={{
+              background: 'var(--tomato)', border: 'none', cursor: 'pointer', borderRadius: 99,
+              color: '#fffdf9', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, padding: '6px 14px',
+            }}>▶ Start cooking</button>
+          )}
+        </div>
         <div style={{ marginBottom: 22 }}>
           {active.steps.length === 0 && <EmptyRow>No steps listed.</EmptyRow>}
           {active.steps.map((group, gi) => (
