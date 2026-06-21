@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
+import LoadingGyoza from '../LoadingGyoza'
 
 // Pantry staples so common to almost every recipe that sharing them is meaningless
 // for a "these go well together" suggestion (would otherwise pair nearly everything).
@@ -144,7 +145,7 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
       {/* Your saved groups */}
       <SectionLabel>Your groups</SectionLabel>
       {loading ? (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>loading…</div>
+        <LoadingGyoza />
       ) : groups.length === 0 ? (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 20 }}>
           No groups yet — tap "+ New group", or save one of the suggestions below.

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
+import LoadingGyoza from '../LoadingGyoza'
 
 export default function ShoppingListView({ userId }) {
   const [items, setItems] = useState([])
@@ -88,7 +89,7 @@ export default function ShoppingListView({ userId }) {
       </div>
 
       {loading ? (
-        <Empty>loading…</Empty>
+        <LoadingGyoza label="loading your list…" />
       ) : mergedList.length === 0 ? (
         <Empty>Your list is empty. Add items above, or add ingredients from a recipe.</Empty>
       ) : (

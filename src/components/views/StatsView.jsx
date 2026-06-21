@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
+import LoadingGyoza from '../LoadingGyoza'
 
 export default function StatsView({ recipes }) {
   const [cookLog, setCookLog] = useState([])
@@ -64,7 +65,7 @@ export default function StatsView({ recipes }) {
   }, [recipes, cookLog])
 
   if (loading) {
-    return <div style={{ padding: '0 20px 100px', fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 13 }}>loading stats…</div>
+    return <div style={{ padding: '0 20px 100px' }}><LoadingGyoza label="loading stats…" /></div>
   }
 
   const maxMonthCount = Math.max(...stats.months.map(m => m.count), 1)

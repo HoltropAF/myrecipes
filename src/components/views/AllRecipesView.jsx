@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import LoadingGyoza from '../LoadingGyoza'
 
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
   const [query, setQuery] = useState('')
@@ -72,7 +73,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
       <br />
 
       {loading ? (
-        <Empty>loading recipes…</Empty>
+        <LoadingGyoza label="loading recipes…" />
       ) : filtered.length === 0 ? (
         <Empty>{query ? 'No recipes match.' : 'No recipes yet — tap + Add to create one.'}</Empty>
       ) : (

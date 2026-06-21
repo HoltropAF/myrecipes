@@ -153,8 +153,19 @@ function App() {
 
   if (session === undefined) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--parchment)' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 13 }}>loading…</div>
+      <div style={{
+        minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--parchment)', gap: 14,
+      }}>
+        <div style={{ fontSize: 56, animation: 'gyoza-pulse 1.6s ease-in-out infinite' }}>🥟</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--tomato-deep)' }}>myrecipes</div>
+        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 12 }}>warming up the kitchen…</div>
+        <style>{`
+          @keyframes gyoza-pulse {
+            0%, 100% { transform: scale(1) rotate(-3deg); opacity: 0.85; }
+            50% { transform: scale(1.12) rotate(3deg); opacity: 1; }
+          }
+        `}</style>
       </div>
     )
   }
