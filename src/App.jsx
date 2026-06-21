@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS } from './lib/demoData'
 import AuthScreen from './components/AuthScreen'
 import AddRecipeWizard from './components/AddRecipeWizard'
 import RecipeDetail from './components/RecipeDetail'
@@ -17,6 +18,7 @@ import './App.css'
 
 function App() {
   const [session, setSession] = useState(undefined)
+  const [isGuest, setIsGuest] = useState(false)
   const [recipes, setRecipes] = useState([])
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
@@ -94,10 +96,25 @@ function App() {
   }, [])
 
   const loadRecipes = async () => {
+    if (isGuest) {
+      setRecipes(DEMO_RECIPES)
+      return
+    }
     setLoadingRecipes(true)
     const { data } = await supabase.from('recipes').select('*').order('created_at', { ascending: false })
     setRecipes(data || [])
     setLoadingRecipes(false)
+  }
+
+  const enterGuestMode = () => {
+    setIsGuest(true)
+    setRecipes(DEMO_RECIPES)
+  }
+
+  const exitGuestMode = () => {
+    setIsGuest(false)
+    setRecipes([])
+    setActiveTab('recipes')
   }
 
   useEffect(() => {
@@ -105,7 +122,11 @@ function App() {
   }, [session])
 
   useEffect(() => {
-    if (!session) return
+    if (isGuest) loadRecipes()
+  }, [isGuest])
+
+  useEffect(() => {
+    if (!session || isGuest) return
     supabase.from('user_preferences').select('*').eq('user_id', session.user.id).maybeSingle()
       .then(({ data }) => {
         if (!data) return
@@ -117,7 +138,7 @@ function App() {
   }, [session])
 
   const savePreferences = async (patch) => {
-    if (!session) return
+    if (!session || isGuest) return
     await supabase.from('user_preferences').upsert({
       user_id: session.user.id, updated_at: new Date().toISOString(), ...patch,
     })
@@ -149,6 +170,10 @@ function App() {
   const handleDelete = (recipe) => {
     closeRecipe()
     setRecipes(prev => prev.filter(r => r.id !== recipe.id))
+    if (isGuest) {
+      setPendingDelete({ recipe, timeoutId: setTimeout(() => setPendingDelete(null), 5000) })
+      return
+    }
     const timeoutId = setTimeout(async () => {
       await supabase.from('recipes').delete().eq('id', recipe.id)
       setPendingDelete(null)
@@ -182,11 +207,18 @@ function App() {
     )
   }
 
-  if (!session) {
-    return <AuthScreen />
+  if (!session && !isGuest) {
+    return <AuthScreen onGuest={enterGuestMode} />
   }
 
   if (showWizard) {
+    if (isGuest) {
+      // Guest mode is read-only for recipe creation/editing — close immediately,
+      // FloatingActionButton and Add buttons are hidden in guest mode anyway as a first line of defense,
+      // but this is a safety net in case anything still calls openWizard.
+      closeWizard()
+      return null
+    }
     return (
       <AddRecipeWizard
         existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
@@ -205,50 +237,82 @@ function App() {
       <RecipeDetail
         recipe={selectedRecipe}
         onClose={closeRecipe}
-        onDelete={handleDelete}
-        onEdit={openEdit}
+        onDelete={isGuest ? null : handleDelete}
+        onEdit={isGuest ? null : openEdit}
         unitSystem={unitSystem}
         onToggleUnitSystem={toggleUnitSystem}
+        isGuest={isGuest}
       />
     )
   }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+      {isGuest && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          padding: '8px 16px', background: 'var(--sage-light)', borderBottom: '1px solid var(--line)',
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)',
+        }}>
+          <span>👀 Guest mode — browsing a demo cookbook, nothing is saved</span>
+          <button
+            onClick={exitGuestMode}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sage)', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0 }}
+          >exit</button>
+        </div>
+      )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
         {activeTab === 'recipes' && (
           <AllRecipesView
             recipes={pinWishlistFirst ? [...recipes].sort((a, b) => (b.wishlist === true) - (a.wishlist === true)) : recipes}
             loading={loadingRecipes}
             onSelect={openRecipe}
-            onAdd={openWizard}
+            onAdd={isGuest ? null : openWizard}
             defaultOpenCategory={defaultCategory}
           />
         )}
         {activeTab === 'shopping' && (
-          <ShoppingListView userId={session.user.id} />
+          <ShoppingListView userId={session?.user?.id} isGuest={isGuest} />
         )}
         {activeTab === 'stats' && (
-          <StatsView recipes={recipes} />
+          <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} />
         )}
         {activeTab === 'mealprep' && (
-          <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} />
+          <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} isGuest={isGuest} demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null} />
         )}
         {activeTab === 'settings' && (
-          <SettingsView
-            userEmail={session.user.email}
-            recipes={recipes}
-            theme={theme} onThemeChange={updateTheme}
-            defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
-            pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
-            unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
-          />
+          isGuest ? (
+            <div style={{ padding: '0 20px 100px' }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>Settings</h1>
+              <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6 }}>
+                  You're browsing in guest mode. Settings and preferences aren't available until you sign in with a real account.
+                </div>
+              </div>
+              <button
+                onClick={exitGuestMode}
+                style={{
+                  width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
+                  background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
+                }}
+              >Exit guest mode</button>
+            </div>
+          ) : (
+            <SettingsView
+              userEmail={session.user.email}
+              recipes={recipes}
+              theme={theme} onThemeChange={updateTheme}
+              defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
+              pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
+              unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
+            />
+          )
         )}
       </PullToRefresh>
-      <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />
+      {!isGuest && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
-      {showQuickLog && (
+      {showQuickLog && !isGuest && (
         <QuickLogCook
           recipes={recipes}
           onClose={() => setShowQuickLog(false)}

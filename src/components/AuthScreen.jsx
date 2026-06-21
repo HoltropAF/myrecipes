@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function AuthScreen() {
+export default function AuthScreen({ onGuest }) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState(null) // { type: 'error'|'info', text }
   const [loading, setLoading] = useState(false)
@@ -86,6 +86,30 @@ export default function AuthScreen() {
               Open the link on this device to stay signed in.
             </div>
           </form>
+
+          {onGuest && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              </div>
+              <button
+                onClick={onGuest}
+                style={{
+                  width: '100%', padding: '11px 0', borderRadius: 8, border: '1px solid var(--line)',
+                  background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)',
+                  fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                }}
+              >Continue as guest</button>
+              <div style={{
+                fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)',
+                textAlign: 'center', marginTop: 8, lineHeight: 1.5,
+              }}>
+                Browse a demo cookbook. Nothing you do is saved.
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

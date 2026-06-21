@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function CookLogSection({ recipeId, variants = [] }) {
+export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -13,6 +13,11 @@ export default function CookLogSection({ recipeId, variants = [] }) {
   const [error, setError] = useState(null)
 
   const load = async () => {
+    if (isGuest) {
+      setEntries(demoEntries || [])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const { data } = await supabase
       .from('cook_log')
@@ -69,9 +74,11 @@ export default function CookLogSection({ recipeId, variants = [] }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <SectionLabel>Cook log {entries.length > 0 && `· ${entries.length}x`}</SectionLabel>
-        <button onClick={() => setShowForm(s => !s)} style={addBtnStyle}>
-          {showForm ? 'Cancel' : '+ Log a cook'}
-        </button>
+        {!isGuest && (
+          <button onClick={() => setShowForm(s => !s)} style={addBtnStyle}>
+            {showForm ? 'Cancel' : '+ Log a cook'}
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -132,7 +139,7 @@ export default function CookLogSection({ recipeId, variants = [] }) {
 
       {!loading && entries.length === 0 && !showForm && (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-          Not logged yet — tap "+ Log a cook" after you make it.
+          {isGuest ? 'Not cooked in this demo yet.' : 'Not logged yet — tap "+ Log a cook" after you make it.'}
         </div>
       )}
 
@@ -152,10 +159,12 @@ export default function CookLogSection({ recipeId, variants = [] }) {
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 3 }}>{entry.notes}</div>
                 )}
               </div>
-              <button
-                onClick={() => handleDeleteEntry(entry.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 15, flexShrink: 0 }}
-              >×</button>
+              {!isGuest && (
+                <button
+                  onClick={() => handleDeleteEntry(entry.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 15, flexShrink: 0 }}
+                >×</button>
+              )}
             </div>
           ))}
         </div>

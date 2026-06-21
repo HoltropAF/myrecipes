@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { scaleAmount } from '../lib/ingredientParser'
+import { DEMO_COOK_LOG } from '../lib/demoData'
 import CookingMode from './CookingMode'
 import CookLogSection from './CookLogSection'
 import InfoTab from './recipe_tabs/InfoTab'
@@ -21,7 +22,7 @@ const TABS = [
 const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
 const TAB_SHADES_DARK = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
 
-export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem }) {
+export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false }) {
   const [recipe, setRecipe] = useState(initialRecipe)
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('info')
@@ -59,33 +60,37 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
   const handleToggleWishlist = async () => {
     setTogglingWishlist(true)
     const next = !wishlist
+    if (isGuest) {
+      setWishlist(next)
+      setTogglingWishlist(false)
+      return
+    }
     const { error } = await supabase.from('recipes').update({ wishlist: next }).eq('id', recipe.id)
     if (!error) setWishlist(next)
     setTogglingWishlist(false)
   }
 
   const handleAddToShoppingList = async () => {
-    const { data: userData } = await supabase.auth.getUser()
-    const user_id = userData?.user?.id
-    if (!user_id) return
-
     const rows = active.ingredients.flatMap(group =>
       group.items
         .filter(item => item.name.trim())
         .map(item => {
           const scaled = baseServings && servings ? scaleAmount(item.amount, baseServings, servings) : item.amount
-          return {
-            user_id,
-            recipe_id: recipe.id,
-            name: item.name,
-            amount: scaled,
-            unit: item.unit,
-            checked: false,
-          }
+          return { name: item.name, amount: scaled, unit: item.unit, checked: false }
         })
     )
     if (rows.length === 0) return
-    await supabase.from('shopping_list').insert(rows)
+
+    if (isGuest) {
+      setAddedToList(true)
+      setTimeout(() => setAddedToList(false), 2000)
+      return
+    }
+
+    const { data: userData } = await supabase.auth.getUser()
+    const user_id = userData?.user?.id
+    if (!user_id) return
+    await supabase.from('shopping_list').insert(rows.map(r => ({ ...r, user_id, recipe_id: recipe.id })))
     setAddedToList(true)
     setTimeout(() => setAddedToList(false), 2000)
   }
@@ -185,7 +190,7 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
           <InfoTab
             recipe={recipe} variants={variants} activeVariant={activeVariant} onVariantChange={setActiveVariant}
             servings={servings} baseServings={baseServings}
-            onServingsChange={setServings} onUpdated={setRecipe}
+            onServingsChange={setServings} onUpdated={setRecipe} isGuest={isGuest}
           />
         )}
         {activeTab === 'ingredients' && (
@@ -199,7 +204,10 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
           <StepsTab steps={active.steps} unitSystem={unitSystem} onStartCooking={() => setShowCookingMode(true)} />
         )}
         {activeTab === 'cooklog' && (
-          <CookLogSection recipeId={recipe.id} variants={variants} />
+          <CookLogSection
+            recipeId={recipe.id} variants={variants} isGuest={isGuest}
+            demoEntries={isGuest ? DEMO_COOK_LOG.filter(e => e.recipe_id === recipe.id) : null}
+          />
         )}
         {activeTab === 'storage' && (
           <StorageTab recipe={recipe} />

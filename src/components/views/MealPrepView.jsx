@@ -73,12 +73,17 @@ function buildSuggestions(recipes) {
   return { byMain, byCategory, byIngredientOverlap, byFreezerBatch }
 }
 
-export default function MealPrepView({ recipes, onSelectRecipe }) {
+export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null }) {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [showBuilder, setShowBuilder] = useState(false)
 
   const loadGroups = async () => {
+    if (isGuest) {
+      setGroups(demoMealGroups || [])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const { data } = await supabase.from('meal_groups').select('*').order('created_at', { ascending: false })
     setGroups(data || [])
@@ -110,10 +115,10 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Meal Prep</h1>
-        <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>
+        {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>}
       </div>
 
-      {showBuilder && (
+      {showBuilder && !isGuest && (
         <GroupBuilder
           recipes={recipes}
           onClose={() => setShowBuilder(false)}
@@ -127,12 +132,12 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
         <LoadingGyoza />
       ) : groups.length === 0 ? (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 20 }}>
-          No groups yet — tap "+ New group", or save one of the suggestions below.
+          {isGuest ? 'No groups in this demo.' : 'No groups yet — tap "+ New group", or save one of the suggestions below.'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
           {groups.map(g => (
-            <GroupCard key={g.id} group={g} recipes={recipes} onSelectRecipe={onSelectRecipe} onDelete={() => handleDeleteGroup(g.id)} />
+            <GroupCard key={g.id} group={g} recipes={recipes} onSelectRecipe={onSelectRecipe} onDelete={isGuest ? null : (() => handleDeleteGroup(g.id))} />
           ))}
         </div>
       )}
@@ -144,7 +149,7 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
           description="These freeze well and share a main ingredient — cook once, freeze portions."
           suggestions={byFreezerBatch}
           onSelectRecipe={onSelectRecipe}
-          onSave={saveSuggestionAsGroup}
+          onSave={isGuest ? null : saveSuggestionAsGroup}
         />
       )}
 
@@ -155,7 +160,7 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
           description="3 or more recipes built around the same main ingredient."
           suggestions={byMain}
           onSelectRecipe={onSelectRecipe}
-          onSave={saveSuggestionAsGroup}
+          onSave={isGuest ? null : saveSuggestionAsGroup}
         />
       )}
 
@@ -166,7 +171,7 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
           description="A rotation of recipes from the same part of your cookbook."
           suggestions={byCategory}
           onSelectRecipe={onSelectRecipe}
-          onSave={saveSuggestionAsGroup}
+          onSave={isGuest ? null : saveSuggestionAsGroup}
         />
       )}
 
@@ -177,16 +182,16 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
           description="Recipes that all use the same less-common ingredient — buy once, use across meals."
           suggestions={byIngredientOverlap}
           onSelectRecipe={onSelectRecipe}
-          onSave={saveSuggestionAsGroup}
+          onSave={isGuest ? null : saveSuggestionAsGroup}
         />
       )}
 
       {byMain.length === 0 && byCategory.length === 0 && byIngredientOverlap.length === 0 && byFreezerBatch.length === 0 && (
         <div style={{ textAlign: 'center', padding: '10px 0 30px' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 14, lineHeight: 1.6 }}>
-            No automatic groupings of 3+ recipes found yet — but you can still bundle any recipes together yourself.
+            No automatic groupings of 3+ recipes found yet{isGuest ? '.' : ' — but you can still bundle any recipes together yourself.'}
           </div>
-          <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>
+          {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>}
         </div>
       )}
     </div>
@@ -214,7 +219,7 @@ function SuggestionSection({ title, description, suggestions, onSelectRecipe, on
               <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>
                 {suggestionTitle(s)} <span style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>({s.recipes.length})</span>
               </div>
-              <button onClick={() => onSave(s)} style={savePillStyle}>+ Save as group</button>
+              {onSave && <button onClick={() => onSave(s)} style={savePillStyle}>+ Save as group</button>}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {s.recipes.map(r => (
@@ -234,7 +239,7 @@ function GroupCard({ group, recipes, onSelectRecipe, onDelete }) {
     <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--charcoal)' }}>{group.name}</div>
-        <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 16 }}>×</button>
+        {onDelete && <button onClick={onDelete} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 16 }}>×</button>}
       </div>
       {group.notes && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 8 }}>{group.notes}</div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

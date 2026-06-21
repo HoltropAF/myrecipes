@@ -2,11 +2,16 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import LoadingGyoza from '../LoadingGyoza'
 
-export default function StatsView({ recipes }) {
+export default function StatsView({ recipes, isGuest = false, demoCookLog = null }) {
   const [cookLog, setCookLog] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isGuest) {
+      setCookLog(demoCookLog || [])
+      setLoading(false)
+      return
+    }
     supabase.from('cook_log').select('*').then(({ data }) => {
       setCookLog(data || [])
       setLoading(false)
@@ -82,7 +87,7 @@ export default function StatsView({ recipes }) {
         <Tile value={stats.neverCooked} label="never made" />
       </div>
 
-      {stats.totalCooks === 0 && (
+      {stats.totalCooks === 0 && !isGuest && (
         <div style={{
           background: 'var(--sage-light)', borderRadius: 12, padding: '14px 16px', marginBottom: 20,
           fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', lineHeight: 1.5,

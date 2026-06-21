@@ -1,6 +1,6 @@
 import NutritionSection from '../NutritionSection'
 
-export default function InfoTab({ recipe, variants, activeVariant, onVariantChange, servings, baseServings, onServingsChange, onUpdated }) {
+export default function InfoTab({ recipe, variants, activeVariant, onVariantChange, servings, baseServings, onServingsChange, onUpdated, isGuest = false }) {
   return (
     <div>
       {recipe.photo_url && (
@@ -64,7 +64,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
       {/* Nutrition */}
       <SectionLabel>Nutrition</SectionLabel>
       <div>
-        <NutritionSection recipe={recipe} onUpdated={onUpdated} />
+        <NutritionSection recipe={recipe} onUpdated={onUpdated} isGuest={isGuest} />
       </div>
     </div>
   )

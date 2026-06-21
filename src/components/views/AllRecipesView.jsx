@@ -71,7 +71,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Recipes</h1>
-        <button onClick={() => onAdd()} style={addBtnStyle}>+ Add</button>
+        {onAdd && <button onClick={() => onAdd()} style={addBtnStyle}>+ Add</button>}
       </div>
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />

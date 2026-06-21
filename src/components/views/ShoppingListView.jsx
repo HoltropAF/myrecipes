@@ -4,12 +4,17 @@ import { normalizeName } from '../../lib/ingredientParser'
 import LoadingGyoza from '../LoadingGyoza'
 import SwipeToDelete from '../SwipeToDelete'
 
-export default function ShoppingListView({ userId }) {
+export default function ShoppingListView({ userId, isGuest = false }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [manualInput, setManualInput] = useState('')
 
   const loadItems = async () => {
+    if (isGuest) {
+      setItems([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const { data } = await supabase.from('shopping_list').select('*').order('created_at', { ascending: true })
     setItems(data || [])
@@ -19,12 +24,18 @@ export default function ShoppingListView({ userId }) {
   useEffect(() => { loadItems() }, [])
 
   const toggleChecked = async (item) => {
-    await supabase.from('shopping_list').update({ checked: !item.checked }).eq('id', item.id)
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, checked: !i.checked } : i))
+    if (isGuest) return
+    await supabase.from('shopping_list').update({ checked: !item.checked }).eq('id', item.id)
   }
 
   const addManualItem = async () => {
     if (!manualInput.trim()) return
+    if (isGuest) {
+      setItems(prev => [...prev, { id: `guest-${Date.now()}`, name: manualInput.trim(), amount: null, unit: null, recipe_id: null, checked: false }])
+      setManualInput('')
+      return
+    }
     const { data, error } = await supabase.from('shopping_list').insert({
       user_id: userId, name: manualInput.trim(), amount: null, unit: null, recipe_id: null,
     }).select().single()
@@ -37,13 +48,15 @@ export default function ShoppingListView({ userId }) {
   const clearChecked = async () => {
     const checkedIds = items.filter(i => i.checked).map(i => i.id)
     if (checkedIds.length === 0) return
-    await supabase.from('shopping_list').delete().in('id', checkedIds)
     setItems(prev => prev.filter(i => !i.checked))
+    if (isGuest) return
+    await supabase.from('shopping_list').delete().in('id', checkedIds)
   }
 
   const removeItem = async (item) => {
-    await supabase.from('shopping_list').delete().eq('id', item.id)
     setItems(prev => prev.filter(i => i.id !== item.id))
+    if (isGuest) return
+    await supabase.from('shopping_list').delete().eq('id', item.id)
   }
 
   // Group + merge by normalized name

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { estimateNutrition } from '../lib/nutritionEstimator'
 
-export default function NutritionSection({ recipe, onUpdated }) {
+export default function NutritionSection({ recipe, onUpdated, isGuest = false }) {
   const [estimating, setEstimating] = useState(false)
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState(null)
@@ -77,6 +77,9 @@ export default function NutritionSection({ recipe, onUpdated }) {
   }
 
   if (!hasData) {
+    if (isGuest) {
+      return <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>No nutrition data for this demo recipe.</div>
+    }
     return (
       <div>
         {error && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
@@ -104,9 +107,11 @@ export default function NutritionSection({ recipe, onUpdated }) {
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
           {recipe.nutrition_is_estimate ? '📊 rough estimate' : 'manually entered'} · per serving shown below total
         </span>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => setEditing(true)} style={linkBtnStyle}>Edit</button>
-        </div>
+        {!isGuest && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setEditing(true)} style={linkBtnStyle}>Edit</button>
+          </div>
+        )}
       </div>
     </div>
   )
