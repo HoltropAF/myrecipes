@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
 
 export default function SettingsView({
   userEmail, recipes = [],
@@ -8,6 +9,25 @@ export default function SettingsView({
   pinWishlistFirst, onPinWishlistFirstChange,
   unitSystem, onToggleUnitSystem,
 }) {
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
+
+  const handleExportBackup = async () => {
+    setExporting(true)
+    setExportError(null)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      await exportFullBackup(supabase, userData?.user?.id)
+    } catch (err) {
+      setExportError('Could not export backup — try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportPDF = () => {
+    exportCookbookPDF(recipes)
+  }
   const categories = useMemo(
     () => [...new Set(recipes.map(r => r.category).filter(Boolean))].sort(),
     [recipes]
@@ -83,6 +103,31 @@ export default function SettingsView({
           checked={pinWishlistFirst}
           onChange={onPinWishlistFirstChange}
         />
+      </div>
+
+      {/* Backup & export */}
+      <SectionLabel>Backup & export</SectionLabel>
+      <div style={cardStyle}>
+        <RowLabel>Full data backup</RowLabel>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
+          A JSON file with every recipe, cook log, shopping list, and meal group — for safekeeping or moving your data.
+        </div>
+        <button onClick={handleExportBackup} disabled={exporting} style={secondaryBtnStyle}>
+          {exporting ? 'Exporting…' : '⬇ Download backup (.json)'}
+        </button>
+        {exportError && (
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 6 }}>{exportError}</div>
+        )}
+
+        <div style={{ height: 1, background: 'var(--line)', margin: '16px 0' }} />
+
+        <RowLabel>Printable cookbook</RowLabel>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
+          All {recipes.length} recipes as a print-ready PDF, organized by category with a table of contents.
+        </div>
+        <button onClick={handleExportPDF} style={secondaryBtnStyle}>
+          🖨 Export cookbook (PDF)
+        </button>
       </div>
 
       <button
@@ -163,4 +208,8 @@ const cardStyle = {
 const selectStyle = {
   width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid var(--line)',
   background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
+}
+const secondaryBtnStyle = {
+  width: '100%', padding: '10px 0', borderRadius: 9, border: '1px solid var(--tomato)',
+  background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
 }
