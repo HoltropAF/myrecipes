@@ -23,6 +23,8 @@ create table if not exists recipes (
   nutrition_is_estimate boolean not null default true,  -- false once user edits/confirms manually
   -- Wishlist: "want to try", independent of cook_log history
   wishlist boolean not null default false,
+  -- Freezer-friendliness: true = freezes well, false = not recommended, null = not yet assessed
+  freezer_friendly boolean,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

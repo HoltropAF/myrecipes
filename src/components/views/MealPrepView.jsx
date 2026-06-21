@@ -9,6 +9,20 @@ const PANTRY_STAPLES = new Set([
   'salt', 'pepper', 'oil', 'sugar', 'butter', 'flour', 'ui', 'onion', 'knoflook', 'garlic',
 ])
 
+// Main proteins / key ingredients worth grouping recipes by — "stock up on X, make these"
+const MAIN_INGREDIENTS = [
+  { key: 'kip', label: 'Chicken', match: /kipfilet|chicken breast|chicken fillet|\bkip\b|\bchicken\b/i },
+  { key: 'rundvlees', label: 'Beef', match: /rundvlees|\bbeef\b|short rib|sukade|ground beef|gehakt/i },
+  { key: 'varkensvlees', label: 'Pork', match: /pork belly|pork shoulder|\bspek\b|\bbacon\b|spekjes|ground pork/i },
+  { key: 'zalm', label: 'Salmon', match: /\bzalm\b|\bsalmon\b/i },
+  { key: 'tofu', label: 'Tofu', match: /\btofu\b/i },
+  { key: 'kikkererwten', label: 'Chickpeas', match: /kikkererwten|chickpea/i },
+  { key: 'kaas', label: 'Cheese', match: /\bkaas\b|\bcheese\b|mozzarella|feta|mascarpone/i },
+  { key: 'pasta', label: 'Pasta', match: /\bpasta\b|tagliatelle|lasagne/i },
+  { key: 'rijst', label: 'Rice', match: /\brijst\b|\brice\b/i },
+  { key: 'aardappel', label: 'Potato', match: /aardappel|\bpotato/i },
+]
+
 function getIngredientSet(recipe) {
   const names = new Set()
   for (const group of recipe.ingredients || []) {
@@ -18,6 +32,65 @@ function getIngredientSet(recipe) {
     }
   }
   return names
+}
+
+function getMainIngredientKeys(recipe) {
+  const allText = (recipe.ingredients || [])
+    .flatMap(g => g.items || [])
+    .map(item => item.name)
+    .join(' | ')
+  return MAIN_INGREDIENTS.filter(m => m.match.test(allText)).map(m => m.key)
+}
+
+const MIN_GROUP_SIZE = 3
+
+function buildSuggestions(recipes) {
+  // 1. By shared main ingredient/protein (3+ recipes)
+  const byMain = []
+  for (const main of MAIN_INGREDIENTS) {
+    const matches = recipes.filter(r => getMainIngredientKeys(r).includes(main.key))
+    if (matches.length >= MIN_GROUP_SIZE) {
+      byMain.push({ type: 'ingredient', label: main.label, recipes: matches })
+    }
+  }
+
+  // 2. By category + subcategory (3+ recipes)
+  const catMap = {}
+  for (const r of recipes) {
+    const key = r.subcategory ? `${r.category} · ${r.subcategory}` : r.category
+    if (!key) continue
+    if (!catMap[key]) catMap[key] = []
+    catMap[key].push(r)
+  }
+  const byCategory = Object.entries(catMap)
+    .filter(([, list]) => list.length >= MIN_GROUP_SIZE)
+    .map(([key, list]) => ({ type: 'category', label: key, recipes: list }))
+
+  // 3. By shared distinctive ingredients across 3+ recipes (not just pairs)
+  const sets = recipes.map(r => ({ recipe: r, set: getIngredientSet(r) }))
+  const ingredientToRecipes = {}
+  for (const { recipe, set } of sets) {
+    for (const ing of set) {
+      if (!ingredientToRecipes[ing]) ingredientToRecipes[ing] = []
+      ingredientToRecipes[ing].push(recipe)
+    }
+  }
+  const byIngredientOverlap = Object.entries(ingredientToRecipes)
+    .filter(([, list]) => list.length >= MIN_GROUP_SIZE && list.length <= 8)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 6)
+    .map(([ingredient, list]) => ({ type: 'overlap', label: ingredient, recipes: list }))
+
+  // 4. Freezer batch-cook combos: freezer-friendly AND share a main ingredient (3+ recipes)
+  const byFreezerBatch = []
+  for (const main of MAIN_INGREDIENTS) {
+    const matches = recipes.filter(r => r.freezer_friendly === true && getMainIngredientKeys(r).includes(main.key))
+    if (matches.length >= MIN_GROUP_SIZE) {
+      byFreezerBatch.push({ type: 'freezer', label: main.label, recipes: matches })
+    }
+  }
+
+  return { byMain, byCategory, byIngredientOverlap, byFreezerBatch }
 }
 
 export default function MealPrepView({ recipes, onSelectRecipe }) {
@@ -34,23 +107,22 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
 
   useEffect(() => { loadGroups() }, [])
 
-  // Auto-suggest pairings: recipes that share 2+ significant ingredients
-  const suggestions = useMemo(() => {
-    const sets = recipes.map(r => ({ recipe: r, set: getIngredientSet(r) }))
-    const pairs = []
-    for (let i = 0; i < sets.length; i++) {
-      for (let j = i + 1; j < sets.length; j++) {
-        const shared = [...sets[i].set].filter(x => sets[j].set.has(x))
-        if (shared.length >= 2) {
-          pairs.push({ a: sets[i].recipe, b: sets[j].recipe, shared })
-        }
-      }
-    }
-    return pairs.sort((x, y) => y.shared.length - x.shared.length).slice(0, 8)
-  }, [recipes])
+  const { byMain, byCategory, byIngredientOverlap, byFreezerBatch } = useMemo(() => buildSuggestions(recipes), [recipes])
 
   const handleDeleteGroup = async (id) => {
     await supabase.from('meal_groups').delete().eq('id', id)
+    loadGroups()
+  }
+
+  const saveSuggestionAsGroup = async (suggestion) => {
+    const { data: userData } = await supabase.auth.getUser()
+    const user_id = userData?.user?.id
+    if (!user_id) return
+    await supabase.from('meal_groups').insert({
+      user_id,
+      name: suggestionTitle(suggestion),
+      recipe_ids: suggestion.recipes.map(r => r.id),
+    })
     loadGroups()
   }
 
@@ -75,7 +147,7 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>loading…</div>
       ) : groups.length === 0 ? (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 20 }}>
-          No groups yet — tap "+ New group" to bundle recipes together, or check the suggestions below.
+          No groups yet — tap "+ New group", or save one of the suggestions below.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
@@ -85,29 +157,90 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
         </div>
       )}
 
-      {/* Auto-suggested pairings */}
-      <SectionLabel>Suggested pairings</SectionLabel>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10, lineHeight: 1.5 }}>
-        Recipes that share several ingredients — good candidates for a shared shopping trip.
-      </div>
-      {suggestions.length === 0 ? (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>No strong overlaps found yet.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {suggestions.map((s, i) => (
-            <div key={i} style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <button onClick={() => onSelectRecipe(s.a)} style={linkTitleStyle}>{s.a.title}</button>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)' }}>+</span>
-                <button onClick={() => onSelectRecipe(s.b)} style={linkTitleStyle}>{s.b.title}</button>
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-                shared: {s.shared.slice(0, 5).join(', ')}{s.shared.length > 5 ? `, +${s.shared.length - 5} more` : ''}
-              </div>
-            </div>
-          ))}
+      {/* Freezer batch-cook combos */}
+      {byFreezerBatch.length > 0 && (
+        <SuggestionSection
+          title="🧊 Batch-cook & freeze"
+          description="These freeze well and share a main ingredient — cook once, freeze portions."
+          suggestions={byFreezerBatch}
+          onSelectRecipe={onSelectRecipe}
+          onSave={saveSuggestionAsGroup}
+        />
+      )}
+
+      {/* By shared protein/main ingredient */}
+      {byMain.length > 0 && (
+        <SuggestionSection
+          title="🥩 Stock up on one ingredient"
+          description="3 or more recipes built around the same main ingredient."
+          suggestions={byMain}
+          onSelectRecipe={onSelectRecipe}
+          onSave={saveSuggestionAsGroup}
+        />
+      )}
+
+      {/* By category */}
+      {byCategory.length > 0 && (
+        <SuggestionSection
+          title="📂 Same category"
+          description="A rotation of recipes from the same part of your cookbook."
+          suggestions={byCategory}
+          onSelectRecipe={onSelectRecipe}
+          onSave={saveSuggestionAsGroup}
+        />
+      )}
+
+      {/* By shared distinctive ingredients */}
+      {byIngredientOverlap.length > 0 && (
+        <SuggestionSection
+          title="🛒 Shared shopping list"
+          description="Recipes that all use the same less-common ingredient — buy once, use across meals."
+          suggestions={byIngredientOverlap}
+          onSelectRecipe={onSelectRecipe}
+          onSave={saveSuggestionAsGroup}
+        />
+      )}
+
+      {byMain.length === 0 && byCategory.length === 0 && byIngredientOverlap.length === 0 && byFreezerBatch.length === 0 && (
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
+          No groupings of 3+ recipes found yet — add more recipes to unlock suggestions.
         </div>
       )}
+    </div>
+  )
+}
+
+function suggestionTitle(s) {
+  if (s.type === 'ingredient') return `${s.label} recipes`
+  if (s.type === 'freezer') return `${s.label} batch-cook & freeze`
+  if (s.type === 'category') return s.label
+  return `Recipes with ${s.label}`
+}
+
+function SuggestionSection({ title, description, suggestions, onSelectRecipe, onSave }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <SectionLabel>{title}</SectionLabel>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10, lineHeight: 1.5 }}>
+        {description}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {suggestions.map((s, i) => (
+          <div key={i} style={{ background: '#fffdf9', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>
+                {suggestionTitle(s)} <span style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>({s.recipes.length})</span>
+              </div>
+              <button onClick={() => onSave(s)} style={savePillStyle}>+ Save as group</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {s.recipes.map(r => (
+                <button key={r.id} onClick={() => onSelectRecipe(r)} style={chipStyle}>{r.title}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -234,6 +367,10 @@ const cancelBtnStyle = {
 const chipStyle = {
   padding: '6px 11px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--parchment-dim)',
   color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+}
+const savePillStyle = {
+  padding: '5px 10px', borderRadius: 99, border: '1px solid var(--sage)', background: 'none',
+  color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
 }
 const linkTitleStyle = {
   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal)',

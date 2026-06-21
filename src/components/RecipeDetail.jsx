@@ -99,6 +99,8 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
         <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
           {recipe.category && <MetaChip>{recipe.category}{recipe.subcategory ? ` · ${recipe.subcategory}` : ''}</MetaChip>}
           {recipe.total_minutes && <MetaChip>⏱ {recipe.total_minutes} min</MetaChip>}
+          {recipe.freezer_friendly === true && <MetaChip>🧊 Freezes well</MetaChip>}
+          {recipe.freezer_friendly === false && <MetaChip>🚫 Not freezer-friendly</MetaChip>}
         </div>
 
         {/* Nutrition */}
