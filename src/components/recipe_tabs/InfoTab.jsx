@@ -7,13 +7,6 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
         <img src={recipe.photo_url} alt="" style={{ width: '100%', borderRadius: 12, maxHeight: 240, objectFit: 'cover', marginBottom: 16 }} />
       )}
 
-      <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 28, color: 'var(--tomato-deep)', lineHeight: 1.15, marginBottom: 4 }}>
-        {recipe.title}
-      </h1>
-      {recipe.tagline && (
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal-soft)', marginBottom: 10 }}>{recipe.tagline}</div>
-      )}
-
       {/* Meta row */}
       <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
         {recipe.category && <MetaChip>{recipe.category}{recipe.subcategory ? ` · ${recipe.subcategory}` : ''}</MetaChip>}
@@ -22,20 +15,37 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
         {recipe.freezer_friendly === false && <MetaChip>Not freezer-friendly</MetaChip>}
       </div>
 
-      {/* Version picker */}
+      {/* Version picker — pills for a few versions, dropdown once there are many */}
       {variants.length > 0 && (
         <div style={{ marginBottom: 18 }}>
           <SectionLabel>Which version?</SectionLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <VersionPill active={activeVariant === 'main'} onClick={() => onVariantChange('main')}>
-              Origineel
-            </VersionPill>
-            {variants.map(v => (
-              <VersionPill key={v.id} active={activeVariant === v.id} onClick={() => onVariantChange(v.id)}>
-                {v.label}
+          {variants.length > 3 ? (
+            <select
+              value={activeVariant}
+              onChange={e => onVariantChange(e.target.value)}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--line)',
+                background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)',
+                fontWeight: 600, fontSize: 15, cursor: 'pointer',
+              }}
+            >
+              <option value="main">Origineel</option>
+              {variants.map(v => (
+                <option key={v.id} value={v.id}>{v.label}</option>
+              ))}
+            </select>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <VersionPill active={activeVariant === 'main'} onClick={() => onVariantChange('main')}>
+                Origineel
               </VersionPill>
-            ))}
-          </div>
+              {variants.map(v => (
+                <VersionPill key={v.id} active={activeVariant === v.id} onClick={() => onVariantChange(v.id)}>
+                  {v.label}
+                </VersionPill>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -125,6 +125,16 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
           </div>
         </div>
 
+        {/* Title — always visible, independent of active tab */}
+        <div style={{ marginBottom: 14 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 22, color: 'var(--tomato-deep)', lineHeight: 1.2 }}>
+            {recipe.title}
+          </h1>
+          {recipe.tagline && (
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{recipe.tagline}</div>
+          )}
+        </div>
+
         {/* Cookbook-divider style tab bar */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, overflowX: 'auto', paddingBottom: 0 }}>
           {TABS.map((tab, i) => {
