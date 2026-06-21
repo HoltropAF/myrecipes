@@ -61,23 +61,25 @@ alter table cook_log enable row level security;
 
 create policy "Users manage their own recipes"
   on recipes for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users manage their own shopping list"
   on shopping_list for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users manage their own cook log"
   on cook_log for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create index if not exists idx_recipes_user on recipes(user_id);
 create index if not exists idx_recipes_category on recipes(category);
 create index if not exists idx_shopping_list_user on shopping_list(user_id);
+create index if not exists idx_shopping_list_recipe_id on shopping_list(recipe_id);
 create index if not exists idx_cook_log_user_recipe on cook_log(user_id, recipe_id);
+create index if not exists idx_cook_log_recipe_id on cook_log(recipe_id);
 create index if not exists idx_cook_log_date on cook_log(user_id, cooked_date);
 
 -- Per-user preference for measurement system (metric vs us), used by the unit-toggle button
@@ -94,8 +96,8 @@ alter table user_preferences enable row level security;
 
 create policy "Users manage their own preferences"
   on user_preferences for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- Meal prep groups: user-curated bundles of recipes that go well together
 create table if not exists meal_groups (
@@ -111,7 +113,7 @@ alter table meal_groups enable row level security;
 
 create policy "Users manage their own meal groups"
   on meal_groups for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 create index if not exists idx_meal_groups_user on meal_groups(user_id);
