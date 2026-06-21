@@ -75,12 +75,7 @@ export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCate
                 {/* Expanded content */}
                 {isOpen && (
                   <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Direct recipes (no subcategory) */}
-                    {direct.map(r => (
-                      <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} />
-                    ))}
-
-                    {/* Subcategory toggles */}
+                    {/* Subcategory toggles shown first */}
                     {subEntries.map(([subcat, items]) => {
                       const subKey = `${cat}::${subcat}`
                       const subOpen = !!openSubcategories[subKey]
@@ -110,6 +105,17 @@ export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCate
                         </div>
                       )
                     })}
+
+                    {/* Direct recipes (no subcategory) shown after, optionally under their own label
+                        if this category also has subcategories, so they don't get confused with them */}
+                    {direct.length > 0 && subEntries.length > 0 && (
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
+                        Other {cat.toLowerCase()}
+                      </div>
+                    )}
+                    {direct.map(r => (
+                      <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} />
+                    ))}
                   </div>
                 )}
               </div>
