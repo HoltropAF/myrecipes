@@ -82,6 +82,15 @@ export default function StatsView({ recipes }) {
         <Tile value={stats.neverCooked} label="never made" />
       </div>
 
+      {stats.totalCooks === 0 && (
+        <div style={{
+          background: 'var(--sage-light)', borderRadius: 12, padding: '14px 16px', marginBottom: 20,
+          fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', lineHeight: 1.5,
+        }}>
+          🥟 Once you start logging cooks (tap the <strong>+</strong> button → "Log a cook"), this page fills up with your most-made and top-rated recipes.
+        </div>
+      )}
+
       <SectionLabel>Cooking activity (last 6 months)</SectionLabel>
       <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 14px 12px', marginBottom: 22 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>

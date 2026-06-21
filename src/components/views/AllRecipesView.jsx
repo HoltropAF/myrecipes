@@ -1,30 +1,41 @@
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
+import { CATEGORY_ICONS } from './CookbookView'
 
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
   const [query, setQuery] = useState('')
   const [searchMode, setSearchMode] = useState('title') // 'title' | 'ingredient'
   const [wishlistOnly, setWishlistOnly] = useState(false)
+  const [sortBy, setSortBy] = useState('recent') // 'recent' | 'name' | 'category'
 
   const filtered = useMemo(() => {
     let base = wishlistOnly ? recipes.filter(r => r.wishlist) : recipes
-    if (!query.trim()) return base
-    const q = query.trim().toLowerCase()
-    if (searchMode === 'ingredient') {
-      return base.filter(r => {
-        const allIngredients = [
-          ...(r.ingredients || []),
-          ...(r.variants || []).flatMap(v => v.ingredients || []),
-        ]
-        return allIngredients.some(group => group.items.some(item => item.name.toLowerCase().includes(q)))
-      })
+    if (query.trim()) {
+      const q = query.trim().toLowerCase()
+      if (searchMode === 'ingredient') {
+        base = base.filter(r => {
+          const allIngredients = [
+            ...(r.ingredients || []),
+            ...(r.variants || []).flatMap(v => v.ingredients || []),
+          ]
+          return allIngredients.some(group => group.items.some(item => item.name.toLowerCase().includes(q)))
+        })
+      } else {
+        base = base.filter(r =>
+          r.title.toLowerCase().includes(q) ||
+          (r.tagline || '').toLowerCase().includes(q) ||
+          (r.category || '').toLowerCase().includes(q) ||
+          (r.subcategory || '').toLowerCase().includes(q) ||
+          (r.notes || '').toLowerCase().includes(q)
+        )
+      }
     }
-    return base.filter(r =>
-      r.title.toLowerCase().includes(q) ||
-      (r.tagline || '').toLowerCase().includes(q) ||
-      (r.category || '').toLowerCase().includes(q)
-    )
-  }, [recipes, query, searchMode, wishlistOnly])
+    const sorted = [...base]
+    if (sortBy === 'name') sorted.sort((a, b) => a.title.localeCompare(b.title))
+    else if (sortBy === 'category') sorted.sort((a, b) => (a.category || '').localeCompare(b.category || ''))
+    else sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) // recent first
+    return sorted
+  }, [recipes, query, searchMode, wishlistOnly, sortBy])
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
@@ -60,17 +71,30 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         }}
       />
 
-      <button
-        onClick={() => setWishlistOnly(w => !w)}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 99,
-          border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
-          background: wishlistOnly ? 'var(--tomato)' : 'var(--card)',
-          color: wishlistOnly ? 'var(--card)' : 'var(--charcoal-soft)',
-          fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 16,
-        }}
-      >⭐ Wishlist only</button>
-      <br />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 8 }}>
+        <button
+          onClick={() => setWishlistOnly(w => !w)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 99,
+            border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
+            background: wishlistOnly ? 'var(--tomato)' : 'var(--card)',
+            color: wishlistOnly ? 'var(--card)' : 'var(--charcoal-soft)',
+            fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+          }}
+        >⭐ Wishlist only</button>
+
+        <select
+          value={sortBy} onChange={e => setSortBy(e.target.value)}
+          style={{
+            padding: '6px 10px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--card)',
+            color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+          }}
+        >
+          <option value="recent">Recently added</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="category">Category</option>
+        </select>
+      </div>
 
       {loading ? (
         <LoadingGyoza label="loading recipes…" />
@@ -97,8 +121,13 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient }) {
       background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
       display: 'flex', gap: 12, alignItems: 'center',
     }}>
-      {r.photo_url && (
+      {r.photo_url ? (
         <img src={r.photo_url} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+      ) : (
+        <div style={{
+          width: 48, height: 48, borderRadius: 8, flexShrink: 0, background: 'var(--parchment-dim)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+        }}>{CATEGORY_ICONS[r.category] || '🍽'}</div>
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--charcoal)' }}>

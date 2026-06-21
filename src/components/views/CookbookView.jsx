@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { RecipeCard } from './AllRecipesView'
 
-const CATEGORY_ICONS = {
+export const CATEGORY_ICONS = {
   'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
   'Main dishes': '🍽', 'Sides': '🍚', 'Desserts': '🍰', 'Baking': '🥐',
   'Drinks': '🍹', 'Household': '🧴',
@@ -57,8 +57,11 @@ export default function CookbookView({ recipes, onSelect, onAdd, defaultOpenCate
       </div>
 
       {tree.length === 0 ? (
-        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
-          No recipes yet.
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 13, marginBottom: 14 }}>
+            No recipes yet.
+          </div>
+          <button onClick={() => onAdd(lastOpened)} style={addBtnStyle}>+ Add your first recipe</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -203,8 +203,11 @@ export default function MealPrepView({ recipes, onSelectRecipe }) {
       )}
 
       {byMain.length === 0 && byCategory.length === 0 && byIngredientOverlap.length === 0 && byFreezerBatch.length === 0 && (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-          No groupings of 3+ recipes found yet — add more recipes to unlock suggestions.
+        <div style={{ textAlign: 'center', padding: '10px 0 30px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 14, lineHeight: 1.6 }}>
+            No automatic groupings of 3+ recipes found yet — but you can still bundle any recipes together yourself.
+          </div>
+          <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>
         </div>
       )}
     </div>
