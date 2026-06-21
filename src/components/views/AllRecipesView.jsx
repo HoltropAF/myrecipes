@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import { CATEGORY_ICONS } from './CookbookView'
+import WhatCanIMake from '../WhatCanIMake'
 
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
   const [query, setQuery] = useState('')
@@ -43,6 +44,8 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd }) {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>All recipes</h1>
         <button onClick={onAdd} style={addBtnStyle}>+ Add</button>
       </div>
+
+      <WhatCanIMake recipes={recipes} onSelect={onSelect} />
 
       {/* Search mode toggle */}
       <div style={{ display: 'flex', background: 'var(--parchment-dim)', borderRadius: 10, padding: 3, marginBottom: 10, gap: 2 }}>
