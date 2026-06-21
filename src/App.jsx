@@ -13,6 +13,7 @@ import StatsView from './components/views/StatsView'
 import MealPrepView from './components/views/MealPrepView'
 import SettingsView from './components/views/SettingsView'
 import UndoToast from './components/UndoToast'
+import PullToRefresh from './components/PullToRefresh'
 import './App.css'
 
 function App() {
@@ -237,7 +238,7 @@ function App() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
+      <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 20px 4px' }}>
           <button
             onClick={() => setShowSettings(true)}
@@ -270,7 +271,7 @@ function App() {
         {activeTab === 'mealprep' && (
           <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} />
         )}
-      </div>
+      </PullToRefresh>
       <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
