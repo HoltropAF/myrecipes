@@ -224,3 +224,6 @@ create index if not exists idx_meal_groups_user        on meal_groups(user_id);
 
 -- Create ingredient_tags + views (if missing):
 -- (copy the CREATE TABLE and CREATE VIEW blocks from above)
+
+-- Add language preference column (if missing):
+-- alter table user_preferences add column if not exists language text not null default 'en' check (language in ('en', 'nl'));

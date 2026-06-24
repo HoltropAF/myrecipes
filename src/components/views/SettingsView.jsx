@@ -1,33 +1,36 @@
 import { useMemo, useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
-
-const SECTIONS = [
-  { id: 'general', label: 'General' },
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'recipes', label: 'Recipes' },
-  { id: 'tags', label: 'Tags' },
-  { id: 'backup', label: 'Backup' },
-]
+import { useT } from '../../lib/i18n'
 
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
   theme, defaultCategory, unitSystem,
   recipeViewMode, recipeSearchMode, compactMode,
+  language,
   onSavePreferences,
 }) {
+  const { t } = useT()
+
+  const SECTIONS = [
+    { id: 'general',    label: t('settings.general') },
+    { id: 'appearance', label: t('settings.appearance') },
+    { id: 'recipes',    label: t('settings.recipes') },
+    { id: 'tags',       label: t('settings.tags') },
+    { id: 'backup',     label: t('settings.backup') },
+  ]
+
   const [activeSection, setActiveSection] = useState('general')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Local draft copies — only written back via the Save bar, not on every change.
   const [draft, setDraft] = useState({
-    theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode,
+    theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language,
   })
   useEffect(() => {
-    setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode })
-  }, [theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode])
+    setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language })
+  }, [theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language])
 
   const isDirty = (
     draft.theme !== theme ||
@@ -35,7 +38,8 @@ export default function SettingsView({
     draft.unitSystem !== unitSystem ||
     draft.recipeViewMode !== recipeViewMode ||
     draft.recipeSearchMode !== recipeSearchMode ||
-    draft.compactMode !== compactMode
+    draft.compactMode !== compactMode ||
+    draft.language !== language
   )
 
   const patch = (key, value) => setDraft(d => ({ ...d, [key]: value }))
@@ -53,7 +57,7 @@ export default function SettingsView({
       const { data: userData } = await supabase.auth.getUser()
       await exportFullBackup(supabase, userData?.user?.id)
     } catch (err) {
-      setExportError('Could not export backup — try again.')
+      setExportError(t('settings.backupError'))
     } finally {
       setExporting(false)
     }
@@ -71,7 +75,7 @@ export default function SettingsView({
   return (
     <div style={{ padding: '0 20px 100px' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>
-        Settings
+        {t('settings.title')}
       </h1>
 
       {/* Section tabs */}
@@ -91,39 +95,45 @@ export default function SettingsView({
         ))}
       </div>
 
-      {activeSection === 'general' && <GeneralSection userEmail={userEmail} />}
+      {activeSection === 'general' && (
+        <GeneralSection
+          userEmail={userEmail}
+          language={draft.language}
+          onLanguageChange={v => patch('language', v)}
+        />
+      )}
 
       {activeSection === 'appearance' && (
         <>
-          <SectionLabel>Theme</SectionLabel>
+          <SectionLabel>{t('settings.themeLabel')}</SectionLabel>
           <div style={cardStyle}>
             <SegmentedControl
               value={draft.theme}
               onChange={(v) => patch('theme', v)}
               options={[
-                { value: 'light', label: '☀️ Light' },
-                { value: 'dark', label: '🌙 Dark' },
-                { value: 'auto', label: '⚙️ Auto' },
+                { value: 'light', label: t('settings.themeLight') },
+                { value: 'dark',  label: t('settings.themeDark') },
+                { value: 'auto',  label: t('settings.themeAuto') },
               ]}
             />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              Auto follows your phone's system setting.
+              {t('settings.themeHint')}
             </div>
           </div>
 
-          <SectionLabel>Measurements</SectionLabel>
+          <SectionLabel>{t('settings.measurementsLabel')}</SectionLabel>
           <div style={cardStyle}>
-            <RowLabel>Default units</RowLabel>
+            <RowLabel>{t('settings.defaultUnits')}</RowLabel>
             <SegmentedControl
               value={draft.unitSystem}
               onChange={(v) => patch('unitSystem', v)}
               options={[
                 { value: 'metric', label: 'g / ml' },
-                { value: 'us', label: 'cup / oz' },
+                { value: 'us',     label: 'cup / oz' },
               ]}
             />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              You can still switch per-recipe with the button on any recipe page.
+              {t('settings.unitsHint')}
             </div>
           </div>
         </>
@@ -131,55 +141,55 @@ export default function SettingsView({
 
       {activeSection === 'recipes' && (
         <>
-          <SectionLabel>Default view</SectionLabel>
+          <SectionLabel>{t('settings.defaultViewLabel')}</SectionLabel>
           <div style={cardStyle}>
-            <RowLabel>Browse as</RowLabel>
+            <RowLabel>{t('settings.browseAs')}</RowLabel>
             <SegmentedControl
               value={draft.recipeViewMode}
               onChange={(v) => patch('recipeViewMode', v)}
               options={[
-                { value: 'folders', label: 'Cookbook' },
-                { value: 'list', label: 'List' },
+                { value: 'folders', label: t('settings.viewCookbook') },
+                { value: 'list',    label: t('settings.viewList') },
               ]}
             />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8, marginBottom: 16 }}>
-              Cookbook groups recipes by category into folders. List shows a flat searchable list.
+              {t('settings.viewHint')}
             </div>
 
-            <RowLabel>Search by</RowLabel>
+            <RowLabel>{t('settings.searchBy')}</RowLabel>
             <SegmentedControl
               value={draft.recipeSearchMode}
               onChange={(v) => patch('recipeSearchMode', v)}
               options={[
-                { value: 'title', label: 'Name' },
-                { value: 'ingredient', label: 'Ingredient' },
+                { value: 'title',      label: t('settings.searchByName') },
+                { value: 'ingredient', label: t('settings.searchByIngredient') },
               ]}
             />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8, marginBottom: 16 }}>
-              How the search box on the Recipes tab matches your query.
+              {t('settings.searchHint')}
             </div>
 
             <ToggleRow
-              label="Compact mode"
-              sub="Show only title, subtitle, and times cooked on recipe cards"
+              label={t('settings.compactMode')}
+              sub={t('settings.compactSub')}
               checked={draft.compactMode}
               onChange={(v) => patch('compactMode', v)}
             />
           </div>
 
-          <SectionLabel>Cookbook</SectionLabel>
+          <SectionLabel>{t('settings.cookbookLabel')}</SectionLabel>
           <div style={cardStyle}>
-            <RowLabel>Default open category</RowLabel>
+            <RowLabel>{t('settings.defaultOpenCategory')}</RowLabel>
             <select
               value={draft.defaultCategory || ''}
               onChange={e => patch('defaultCategory', e.target.value || null)}
               style={selectStyle}
             >
-              <option value="">None — show all collapsed</option>
+              <option value="">{t('settings.defaultCategoryNone')}</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              This category opens automatically when you visit the Cookbook view.
+              {t('settings.defaultCategoryHint')}
             </div>
           </div>
         </>
@@ -191,14 +201,14 @@ export default function SettingsView({
 
       {activeSection === 'backup' && (
         <>
-          <SectionLabel>Backup & export</SectionLabel>
+          <SectionLabel>{t('settings.backupLabel')}</SectionLabel>
           <div style={cardStyle}>
-            <RowLabel>Full data backup</RowLabel>
+            <RowLabel>{t('settings.fullBackup')}</RowLabel>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
-              A JSON file with every recipe, cook log, shopping list, and meal group — for safekeeping or moving your data.
+              {t('settings.fullBackupDesc')}
             </div>
             <button onClick={handleExportBackup} disabled={exporting} style={{ ...secondaryBtnStyle, width: '100%' }}>
-              {exporting ? 'Exporting…' : '⬇ Download backup (.json)'}
+              {exporting ? t('settings.exporting') : t('settings.downloadBackup')}
             </button>
             {exportError && (
               <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 6 }}>{exportError}</div>
@@ -206,12 +216,12 @@ export default function SettingsView({
 
             <div style={{ height: 1, background: 'var(--line)', margin: '16px 0' }} />
 
-            <RowLabel>Printable cookbook</RowLabel>
+            <RowLabel>{t('settings.printableCookbook')}</RowLabel>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
-              All {recipes.length} recipes as a print-ready PDF, organized by category with a table of contents.
+              {t('settings.printableDesc')(recipes.length)}
             </div>
             <button onClick={handleExportPDF} style={{ ...secondaryBtnStyle, width: '100%' }}>
-              🖨 Export cookbook (PDF)
+              {t('settings.exportPDF')}
             </button>
           </div>
         </>
@@ -225,9 +235,9 @@ export default function SettingsView({
           display: 'flex', gap: 10, boxShadow: '0 -4px 16px rgba(42,36,32,0.1)',
         }}>
           <button
-            onClick={() => setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode })}
+            onClick={() => setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language })}
             style={{ ...secondaryBtnStyle, flex: 1 }}
-          >Discard</button>
+          >{t('settings.discard')}</button>
           <button
             onClick={handleSave} disabled={saving}
             style={{
@@ -235,30 +245,43 @@ export default function SettingsView({
               background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)',
               fontWeight: 700, fontSize: 14, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1,
             }}
-          >{saving ? 'Saving…' : 'Save changes'}</button>
+          >{saving ? t('settings.savingBtn') : t('settings.saveChanges')}</button>
         </div>
       )}
     </div>
   )
 }
 
-function GeneralSection({ userEmail }) {
+function GeneralSection({ userEmail, language, onLanguageChange }) {
+  const { t } = useT()
   return (
     <>
-      <SectionLabel>About</SectionLabel>
+      <SectionLabel>{t('settings.aboutLabel')}</SectionLabel>
       <div style={cardStyle}>
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6, marginBottom: 14 }}>
-          myrecipes — your personal cookbook. Log what you cook, track what's worth making again, and keep every recipe organized in one place.
+          {t('settings.aboutText')}
         </div>
         {userEmail && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--line)', marginTop: 4 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>signed in as</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>{t('settings.signedInAs')}</span>
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>{userEmail}</span>
           </div>
         )}
       </div>
 
-      <SectionLabel>Links</SectionLabel>
+      <SectionLabel>{t('settings.languageLabel')}</SectionLabel>
+      <div style={cardStyle}>
+        <SegmentedControl
+          value={language || 'en'}
+          onChange={onLanguageChange}
+          options={[
+            { value: 'en', label: t('settings.langEn') },
+            { value: 'nl', label: t('settings.langNl') },
+          ]}
+        />
+      </div>
+
+      <SectionLabel>{t('settings.linksLabel')}</SectionLabel>
       <div style={cardStyle}>
         <a href="https://github.com/HoltropAF/myrecipes" target="_blank" rel="noreferrer" style={linkRowStyle}>
           <GitHubIcon />
@@ -276,7 +299,7 @@ function GeneralSection({ userEmail }) {
           width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
           background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
         }}
-      >Sign out</button>
+      >{t('settings.signOut')}</button>
     </>
   )
 }
@@ -300,14 +323,15 @@ function InstagramIcon() {
 }
 
 function TagsSection({ recipes, onRecipesChanged }) {
-  const [renaming, setRenaming] = useState(null) // tag string being renamed
+  const { t } = useT()
+  const [renaming, setRenaming] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [busy, setBusy] = useState(false)
 
   const tagCounts = useMemo(() => {
     const counts = {}
     for (const r of recipes) {
-      for (const t of (r.tags || [])) counts[t] = (counts[t] || 0) + 1
+      for (const tag of (r.tags || [])) counts[tag] = (counts[tag] || 0) + 1
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [recipes])
@@ -333,7 +357,7 @@ function TagsSection({ recipes, onRecipesChanged }) {
     if (!clean || clean === oldTag) return
     await applyToRecipes(tags => {
       if (!tags.includes(oldTag)) return tags
-      const next = tags.filter(t => t !== oldTag)
+      const next = tags.filter(tag => tag !== oldTag)
       if (!next.includes(clean)) next.push(clean)
       return next
     })
@@ -345,11 +369,11 @@ function TagsSection({ recipes, onRecipesChanged }) {
 
   return (
     <>
-      <SectionLabel>Manage tags</SectionLabel>
+      <SectionLabel>{t('settings.manageTags')}</SectionLabel>
       <div style={cardStyle}>
         {tagCounts.length === 0 && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-            No tags yet — add some while editing a recipe (e.g. "freezes well", "quick meal", "meal prep").
+            {t('settings.noTagsYet')}
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -362,8 +386,8 @@ function TagsSection({ recipes, onRecipesChanged }) {
                     onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setRenaming(null) }}
                     style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--tomato)', fontFamily: 'var(--font-body)', fontSize: 13 }}
                   />
-                  <button onClick={commitRename} disabled={busy} style={linkBtnStyle}>Save</button>
-                  <button onClick={() => setRenaming(null)} style={linkBtnStyle}>Cancel</button>
+                  <button onClick={commitRename} disabled={busy} style={linkBtnStyle}>{t('settings.save')}</button>
+                  <button onClick={() => setRenaming(null)} style={linkBtnStyle}>{t('settings.cancel')}</button>
                 </>
               ) : (
                 <>
@@ -373,8 +397,8 @@ function TagsSection({ recipes, onRecipesChanged }) {
                   }}>{tag}</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>×{count}</span>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-                    <button onClick={() => startRename(tag)} disabled={busy} style={linkBtnStyle}>Rename</button>
-                    <button onClick={() => deleteTag(tag)} disabled={busy} style={{ ...linkBtnStyle, color: 'var(--tomato)' }}>Delete</button>
+                    <button onClick={() => startRename(tag)} disabled={busy} style={linkBtnStyle}>{t('settings.rename')}</button>
+                    <button onClick={() => deleteTag(tag)} disabled={busy} style={{ ...linkBtnStyle, color: 'var(--tomato)' }}>{t('settings.delete')}</button>
                   </div>
                 </>
               )}
@@ -383,7 +407,7 @@ function TagsSection({ recipes, onRecipesChanged }) {
         </div>
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', padding: '0 4px' }}>
-        Renaming or deleting here updates the tag on every recipe that has it. To add new tags, use the tag field when creating or editing a recipe.
+        {t('settings.tagsHint')}
       </div>
     </>
   )

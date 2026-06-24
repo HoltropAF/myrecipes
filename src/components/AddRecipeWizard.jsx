@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useT } from '../lib/i18n'
 import TitleStep from './wizard/TitleStep'
 import IngredientsStep from './wizard/IngredientsStep'
 import StepsStep from './wizard/StepsStep'
@@ -11,6 +12,7 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 const emptyGroup = () => ({ group: null, items: [] })
 
 export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null }) {
+  const { t } = useT()
   const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -29,7 +31,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   )
 
   const [stepGroups, setStepGroups] = useState(
-    existingRecipe?.steps?.length ? existingRecipe.steps : [{ group: 'Bereiding', items: [] }]
+    existingRecipe?.steps?.length ? existingRecipe.steps : [{ group: t('stepsStep.commonSections')[0], items: [] }]
   )
   const [stepPaste, setStepPaste] = useState('')
 
@@ -48,7 +50,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [variantLabel, setVariantLabel] = useState('')
   const [variantIngredientGroups, setVariantIngredientGroups] = useState([emptyGroup()])
   const [variantIngredientPaste, setVariantIngredientPaste] = useState('')
-  const [variantStepGroups, setVariantStepGroups] = useState([{ group: 'Bereiding', items: [] }])
+  const [variantStepGroups, setVariantStepGroups] = useState([{ group: t('stepsStep.commonSections')[0], items: [] }])
   const [variantStepPaste, setVariantStepPaste] = useState('')
 
   const step = STEPS[stepIndex]
@@ -80,7 +82,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     }])
     setVariantLabel('')
     setVariantIngredientGroups([emptyGroup()])
-    setVariantStepGroups([{ group: 'Bereiding', items: [] }])
+    setVariantStepGroups([{ group: t('stepsStep.commonSections')[0], items: [] }])
   }
 
   const removeVariant = (id) => setVariants(prev => prev.filter(v => v.id !== id))
@@ -221,17 +223,18 @@ function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, v
 }
 
 function WizardHeader({ stepIndex, total, onClose, onBack, isEditing }) {
-  const labels = ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants']
+  const { t } = useT()
+  const labels = t('wizard.steps')
   return (
     <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--line)', background: 'var(--card)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         {onBack
-          ? <button onClick={onBack} style={navBtnStyle}>‹ Back</button>
+          ? <button onClick={onBack} style={navBtnStyle}>{t('wizard.back')}</button>
           : <div style={{ width: 50 }} />}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-          {isEditing ? 'Editing — ' : ''}{stepIndex + 1} / {total} — {labels[stepIndex]}
+          {isEditing ? t('wizard.editing') : ''}{stepIndex + 1} / {total} — {labels[stepIndex]}
         </div>
-        <button onClick={onClose} style={navBtnStyle}>Close</button>
+        <button onClick={onClose} style={navBtnStyle}>{t('wizard.close')}</button>
       </div>
       <div style={{ display: 'flex', gap: 4 }}>
         {Array.from({ length: total }).map((_, i) => (
@@ -251,6 +254,7 @@ const navBtnStyle = {
 }
 
 function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isEditing }) {
+  const { t } = useT()
   return (
     <div style={{
       position: 'sticky', bottom: 0, padding: '14px 20px', background: 'var(--card)',
@@ -266,7 +270,7 @@ function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isE
           opacity: canGoNext && !saving ? 1 : 0.5,
         }}
       >
-        {saving ? 'Saving…' : isLast ? (isEditing ? 'Save changes' : 'Save recipe') : 'Continue'}
+        {saving ? t('wizard.saving') : isLast ? (isEditing ? t('wizard.saveChanges') : t('wizard.saveRecipe')) : t('wizard.continue')}
       </button>
     </div>
   )

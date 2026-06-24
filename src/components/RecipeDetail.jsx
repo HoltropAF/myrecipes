@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { scaleAmount } from '../lib/ingredientParser'
 import { DEMO_COOK_LOG } from '../lib/demoData'
+import { useT } from '../lib/i18n'
 import CookingMode from './CookingMode'
 import CookLogSection from './CookLogSection'
 import InfoTab from './recipe_tabs/InfoTab'
@@ -9,20 +10,22 @@ import IngredientsTab from './recipe_tabs/IngredientsTab'
 import StepsTab from './recipe_tabs/StepsTab'
 import StorageTab from './recipe_tabs/StorageTab'
 
-const TABS = [
-  { id: 'info', label: 'Info' },
-  { id: 'ingredients', label: 'Ingredients' },
-  { id: 'steps', label: 'Steps' },
-  { id: 'cooklog', label: 'Log' },
-  { id: 'storage', label: 'Notes' },
-]
-
 // A palette of subtly differing card shades, like colored index dividers in a real binder.
 // Defined per-theme since the light parchment shades would clash against a dark background.
 const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
 const TAB_SHADES_DARK = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false }) {
+  const { t } = useT()
+
+  const TABS = [
+    { id: 'info',        label: t('recipeTabs.info') },
+    { id: 'ingredients', label: t('recipeTabs.ingredients') },
+    { id: 'steps',       label: t('recipeTabs.steps') },
+    { id: 'cooklog',     label: t('recipeTabs.log') },
+    { id: 'storage',     label: t('recipeTabs.storage') },
+  ]
+
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('info')
   const [activeVariant, setActiveVariant] = useState('main')
@@ -99,7 +102,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
       {/* Header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '14px 16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <button onClick={onClose} style={navBtnStyle}>‹ Back</button>
+          <button onClick={onClose} style={navBtnStyle}>{t('recipeDetail.back')}</button>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             {onToggleUnitSystem && (
               <button
@@ -112,8 +115,8 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
                 }}
               >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
             )}
-            {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>Edit</button>}
-            {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>Delete</button>}
+            {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>{t('recipeDetail.edit')}</button>}
+            {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>{t('recipeDetail.delete')}</button>}
           </div>
         </div>
 

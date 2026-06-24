@@ -1,6 +1,7 @@
 import ComboInput from '../ComboInput'
 import TagPicker from '../TagPicker'
 import { titleStyle, labelStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { useT } from '../../lib/i18n'
 
 export default function ExtrasStep({
   title, servings, setServings, totalMinutes, setTotalMinutes,
@@ -8,17 +9,18 @@ export default function ExtrasStep({
   existingCategories, photoPreview, onPhotoChange,
   notes, setNotes, tags, setTags, existingTags,
 }) {
+  const { t } = useT()
   const imageSearchUrl = title?.trim()
     ? `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(title.trim())}`
     : null
 
   return (
     <div>
-      <h2 style={titleStyle}>A few extras (all optional)</h2>
+      <h2 style={titleStyle}>{t('extrasStep.heading')}</h2>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
         <label style={{ ...labelStyle, flex: 1 }}>
-          <span style={labelTextStyle}>servings</span>
+          <span style={labelTextStyle}>{t('extrasStep.servingsLabel')}</span>
           <input
             type="number" inputMode="numeric" value={servings} onChange={e => setServings(e.target.value)}
             placeholder="4" min="1"
@@ -26,7 +28,7 @@ export default function ExtrasStep({
           />
         </label>
         <label style={{ ...labelStyle, flex: 1 }}>
-          <span style={labelTextStyle}>total minutes</span>
+          <span style={labelTextStyle}>{t('extrasStep.minutesLabel')}</span>
           <input
             type="number" inputMode="numeric" value={totalMinutes} onChange={e => setTotalMinutes(e.target.value)}
             placeholder="30" min="1"
@@ -36,12 +38,12 @@ export default function ExtrasStep({
       </div>
 
       <label style={{ ...labelStyle, marginBottom: 14 }}>
-        <span style={labelTextStyle}>category</span>
+        <span style={labelTextStyle}>{t('extrasStep.categoryLabel')}</span>
         <ComboInput value={category} onChange={setCategory} suggestions={existingCategories} placeholder="e.g. Pasta" />
       </label>
 
       <label style={{ ...labelStyle, marginBottom: 18 }}>
-        <span style={labelTextStyle}>subcategory (optional)</span>
+        <span style={labelTextStyle}>{t('extrasStep.subcategoryLabel')}</span>
         <input
           type="text" value={subcategory} onChange={e => setSubcategory(e.target.value)}
           placeholder="e.g. Weeknight"
@@ -51,12 +53,12 @@ export default function ExtrasStep({
 
       <label style={labelStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={labelTextStyle}>photo</span>
+          <span style={labelTextStyle}>{t('extrasStep.photoLabel')}</span>
           {imageSearchUrl && (
             <a
               href={imageSearchUrl} target="_blank" rel="noreferrer"
               style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--tomato-deep)', textDecoration: 'none' }}
-            >🔍 search Google Images</a>
+            >{t('extrasStep.searchImages')}</a>
           )}
         </div>
         {photoPreview ? (
@@ -76,24 +78,24 @@ export default function ExtrasStep({
             borderRadius: 10, border: '2px dashed var(--line)', cursor: 'pointer', marginTop: 4,
             color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 13,
           }}>
-            tap to add a photo
+            {t('extrasStep.tapToAddPhoto')}
             <input type="file" accept="image/*" onChange={e => onPhotoChange(e.target.files?.[0] || null)} style={{ display: 'none' }} />
           </label>
         )}
       </label>
 
       <label style={{ ...labelStyle, marginTop: 18 }}>
-        <span style={labelTextStyle}>notes (optional)</span>
+        <span style={labelTextStyle}>{t('extrasStep.notesLabel')}</span>
         <textarea
           value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="Tips, substitutions, variations…"
+          placeholder={t('extrasStep.notesPlaceholder')}
           rows={3}
           style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
         />
       </label>
 
       <label style={{ ...labelStyle, marginTop: 18 }}>
-        <span style={labelTextStyle}>tags (optional)</span>
+        <span style={labelTextStyle}>{t('extrasStep.tagsLabel')}</span>
         <TagPicker tags={tags} setTags={setTags} existingTags={existingTags} />
       </label>
     </div>

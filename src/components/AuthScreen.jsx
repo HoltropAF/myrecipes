@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useT } from '../lib/i18n'
 
 export default function AuthScreen({ onGuest }) {
+  const { t } = useT()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState(null) // { type: 'error'|'info', text }
   const [loading, setLoading] = useState(false)
@@ -13,7 +15,7 @@ export default function AuthScreen({ onGuest }) {
     const { error } = await supabase.auth.signInWithOtp({ email })
     setLoading(false)
     if (error) setStatus({ type: 'error', text: error.message })
-    else setStatus({ type: 'info', text: `Link sent to ${email}. Check your inbox and tap it on this device.` })
+    else setStatus({ type: 'info', text: t('auth.linkSent')(email) })
   }
 
   return (
@@ -42,12 +44,12 @@ export default function AuthScreen({ onGuest }) {
             <div style={{
               fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)',
               marginTop: 4, letterSpacing: '0.02em',
-            }}>recipe no. 001 — sign in</div>
+            }}>{t('auth.subtitle')}</div>
           </div>
 
           <form onSubmit={handleMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }}>email</span>
+              <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }}>{t('auth.emailLabel')}</span>
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -76,14 +78,14 @@ export default function AuthScreen({ onGuest }) {
                 fontWeight: 700, fontSize: 15, opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Sending…' : 'Send magic link'}
+              {loading ? t('auth.sendingBtn') : t('auth.sendBtn')}
             </button>
 
             <div style={{
               fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)',
               textAlign: 'center', marginTop: 2, lineHeight: 1.5,
             }}>
-              Open the link on this device to stay signed in.
+              {t('auth.hint')}
             </div>
           </form>
 
@@ -91,7 +93,7 @@ export default function AuthScreen({ onGuest }) {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
                 <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>or</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>{t('auth.or')}</span>
                 <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
               </div>
               <button
@@ -101,12 +103,12 @@ export default function AuthScreen({ onGuest }) {
                   background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)',
                   fontWeight: 600, fontSize: 14, cursor: 'pointer',
                 }}
-              >Continue as guest</button>
+              >{t('auth.guestBtn')}</button>
               <div style={{
                 fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)',
                 textAlign: 'center', marginTop: 8, lineHeight: 1.5,
               }}>
-                Browse a demo cookbook. Nothing you do is saved.
+                {t('auth.guestHint')}
               </div>
             </>
           )}

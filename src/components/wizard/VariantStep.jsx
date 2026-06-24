@@ -1,6 +1,7 @@
 import { parseIngredientBlock } from '../../lib/ingredientParser'
 import { parseStepBlock } from '../../lib/stepParser'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { useT } from '../../lib/i18n'
 
 export default function VariantStep({
   wantsVariant, setWantsVariant, variantLabel, setVariantLabel,
@@ -30,15 +31,16 @@ export default function VariantStep({
     setStepPaste('')
   }
 
+  const { t } = useT()
   const totalIngredients = groups.reduce((s, g) => s + g.items.length, 0)
   const totalSteps = stepGroups.reduce((s, g) => s + g.items.length, 0)
   const canAdd = variantLabel.trim().length > 0 && (totalIngredients > 0 || totalSteps > 0)
 
   return (
     <div>
-      <h2 style={titleStyle}>Other versions of this recipe</h2>
+      <h2 style={titleStyle}>{t('variantStep.heading')}</h2>
       <p style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontSize: 14, marginBottom: 18, lineHeight: 1.5 }}>
-        Optional — like a different topping combo or a meal-prep version. Saved as tabs on this recipe.
+        {t('variantStep.description')}
       </p>
 
       {/* List of already-saved variants */}
@@ -52,7 +54,7 @@ export default function VariantStep({
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>{v.label}</div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 2 }}>
-                  {(v.ingredients || []).reduce((s, g) => s + g.items.length, 0)} ingredients · {(v.steps || []).reduce((s, g) => s + g.items.length, 0)} steps
+                  {t('variantStep.ingredientCount')((v.ingredients || []).reduce((s, g) => s + g.items.length, 0))} · {t('variantStep.stepCount')((v.steps || []).reduce((s, g) => s + g.items.length, 0))}
                 </div>
               </div>
               <button
@@ -67,42 +69,42 @@ export default function VariantStep({
       {/* Form to add a new variant */}
       <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14 }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-          <span style={labelTextStyle}>variant name</span>
+          <span style={labelTextStyle}>{t('variantStep.variantNameLabel')}</span>
           <input
             type="text" value={variantLabel} onChange={e => setVariantLabel(e.target.value)}
-            placeholder="e.g. Met spek"
+            placeholder={t('variantStep.variantNamePlaceholder')}
             style={inputStyle}
           />
         </label>
 
         <div style={{ marginBottom: 14 }}>
-          <span style={labelTextStyle}>ingredients for this variant</span>
+          <span style={labelTextStyle}>{t('variantStep.ingredientsLabel')}</span>
           <textarea
             value={paste} onChange={e => setPaste(e.target.value)}
-            placeholder={'paste ingredients, one per line'}
+            placeholder={t('variantStep.ingredientsPaste')}
             rows={3}
             style={{ ...inputStyle, width: '100%', marginTop: 6, resize: 'vertical', fontFamily: 'var(--font-mono)', fontSize: 13 }}
           />
-          <button onClick={handleParseIngredients} disabled={!paste.trim()} style={smallBtnStyle(paste.trim())}>Parse & add</button>
+          <button onClick={handleParseIngredients} disabled={!paste.trim()} style={smallBtnStyle(paste.trim())}>{t('variantStep.parseBtn')}</button>
           {totalIngredients > 0 && (
             <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-              {totalIngredients} ingredient{totalIngredients !== 1 ? 's' : ''} added
+              {t('variantStep.ingredientCount')(totalIngredients)}
             </div>
           )}
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <span style={labelTextStyle}>steps for this variant</span>
+          <span style={labelTextStyle}>{t('variantStep.stepsLabel')}</span>
           <textarea
             value={stepPaste} onChange={e => setStepPaste(e.target.value)}
-            placeholder={'paste steps, one per line'}
+            placeholder={t('variantStep.stepsPaste')}
             rows={3}
             style={{ ...inputStyle, width: '100%', marginTop: 6, resize: 'vertical', fontFamily: 'var(--font-mono)', fontSize: 13 }}
           />
-          <button onClick={handleParseSteps} disabled={!stepPaste.trim()} style={smallBtnStyle(stepPaste.trim())}>Parse & add</button>
+          <button onClick={handleParseSteps} disabled={!stepPaste.trim()} style={smallBtnStyle(stepPaste.trim())}>{t('variantStep.parseBtn')}</button>
           {totalSteps > 0 && (
             <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-              {totalSteps} step{totalSteps !== 1 ? 's' : ''} added
+              {t('variantStep.stepCount')(totalSteps)}
             </div>
           )}
         </div>
@@ -115,7 +117,7 @@ export default function VariantStep({
             fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
             cursor: canAdd ? 'pointer' : 'default',
           }}
-        >+ Add this variant</button>
+        >{t('variantStep.addVariantBtn')}</button>
       </div>
     </div>
   )

@@ -1,6 +1,9 @@
 import { ALLERGEN_LABELS, DIET_TAGS } from '../../lib/recipeTags'
+import { useT } from '../../lib/i18n'
 
 export default function InfoTab({ recipe, variants, activeVariant, onVariantChange }) {
+  const { t } = useT()
+
   return (
     <div>
       {recipe.photo_url ? (
@@ -16,18 +19,18 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
       <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
         {recipe.category && <MetaChip>{recipe.category}{recipe.subcategory ? ` · ${recipe.subcategory}` : ''}</MetaChip>}
         {recipe.total_minutes && <MetaChip>{recipe.total_minutes} min</MetaChip>}
-        {recipe.freezer_friendly === true && <MetaChip>Freezes well</MetaChip>}
-        {recipe.freezer_friendly === false && <MetaChip>Not freezer-friendly</MetaChip>}
+        {recipe.freezer_friendly === true && <MetaChip>{t('infoTab.freezesWell')}</MetaChip>}
+        {recipe.freezer_friendly === false && <MetaChip>{t('infoTab.notFreezer')}</MetaChip>}
       </div>
 
       {/* Allergen + diet badges — computed server-side from ingredient_tags */}
       {(recipe.allergen_tags?.length > 0 || recipe.is_vegan || recipe.is_vegetarian || recipe.is_pescatarian_or_better) && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-          {recipe.is_vegan && <ComputedBadge diet>{DIET_TAGS[0].label}</ComputedBadge>}
-          {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{DIET_TAGS[1].label}</ComputedBadge>}
-          {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{DIET_TAGS[2].label}</ComputedBadge>}
+          {recipe.is_vegan && <ComputedBadge diet>{t('diet.vegan')}</ComputedBadge>}
+          {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{t('diet.vegetarian')}</ComputedBadge>}
+          {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{t('diet.pescatarian')}</ComputedBadge>}
           {(recipe.allergen_tags || []).map(tag => (
-            <ComputedBadge key={tag}>{ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
+            <ComputedBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
           ))}
         </div>
       )}
@@ -35,7 +38,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
       {/* Version picker — pills for a few versions, dropdown once there are many */}
       {variants.length > 0 && (
         <div>
-          <SectionLabel>Which version?</SectionLabel>
+          <SectionLabel>{t('infoTab.whichVersion')}</SectionLabel>
           {variants.length > 3 ? (
             <select
               value={activeVariant}
@@ -46,7 +49,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
                 fontWeight: 600, fontSize: 15, cursor: 'pointer',
               }}
             >
-              <option value="main">Origineel</option>
+              <option value="main">{t('infoTab.original')}</option>
               {variants.map(v => (
                 <option key={v.id} value={v.id}>{v.label}</option>
               ))}
@@ -54,7 +57,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <VersionPill active={activeVariant === 'main'} onClick={() => onVariantChange('main')}>
-                Origineel
+                {t('infoTab.original')}
               </VersionPill>
               {variants.map(v => (
                 <VersionPill key={v.id} active={activeVariant === v.id} onClick={() => onVariantChange(v.id)}>

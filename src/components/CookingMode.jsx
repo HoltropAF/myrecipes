@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { convertStepTemperatures } from '../lib/unitConverter'
+import { useT } from '../lib/i18n'
 
 export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
+  const { t } = useT()
+
   // Flatten all step groups into one sequential list, remembering section labels
   const flatSteps = useMemo(() => {
     const out = []
@@ -32,13 +35,13 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
   useEffect(() => {
     if (!timerRunning) return
     intervalRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t === null || t <= 1) {
+      setTimeLeft(secs => {
+        if (secs === null || secs <= 1) {
           clearInterval(intervalRef.current)
           setTimerRunning(false)
           return 0
         }
-        return t - 1
+        return secs - 1
       })
     }, 1000)
     return () => clearInterval(intervalRef.current)
@@ -58,8 +61,8 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
   if (flatSteps.length === 0) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontFamily: 'var(--font-body)', color: 'var(--charcoal-soft)' }}>No steps to cook through.</div>
-        <button onClick={onClose} style={closeBtnStyle}>Back to recipe</button>
+        <div style={{ fontFamily: 'var(--font-body)', color: 'var(--charcoal-soft)' }}>{t('cookingMode.noSteps')}</div>
+        <button onClick={onClose} style={closeBtnStyle}>{t('cookingMode.backToRecipe')}</button>
       </div>
     )
   }
@@ -69,7 +72,7 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
       {/* Header */}
       <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--parchment)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, cursor: 'pointer', opacity: 0.8 }}>
-          ✕ Exit
+          {t('cookingMode.exit')}
         </button>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, opacity: 0.6 }}>
           {index + 1} / {flatSteps.length}
@@ -110,18 +113,18 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
                 color: timerRunning ? 'var(--parchment)' : '#fffdf9',
                 fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
               }}
-            >{timerRunning ? '⏸ Pause' : timeLeft === 0 ? '↻ Restart' : '▶ Start timer'}</button>
+            >{timerRunning ? t('cookingMode.pause') : timeLeft === 0 ? t('cookingMode.restart') : t('cookingMode.startTimer')}</button>
           </div>
         )}
       </div>
 
       {/* Nav buttons */}
       <div style={{ display: 'flex', gap: 10, padding: '16px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
-        <button onClick={goBack} disabled={isFirst} style={{ ...navBtnStyle, opacity: isFirst ? 0.3 : 1 }}>‹ Back</button>
+        <button onClick={goBack} disabled={isFirst} style={{ ...navBtnStyle, opacity: isFirst ? 0.3 : 1 }}>{t('cookingMode.back')}</button>
         {isLast ? (
-          <button onClick={onClose} style={{ ...primaryNavBtnStyle, flex: 2 }}>✓ Done cooking</button>
+          <button onClick={onClose} style={{ ...primaryNavBtnStyle, flex: 2 }}>{t('cookingMode.done')}</button>
         ) : (
-          <button onClick={goNext} style={{ ...primaryNavBtnStyle, flex: 2 }}>Next ›</button>
+          <button onClick={goNext} style={{ ...primaryNavBtnStyle, flex: 2 }}>{t('cookingMode.next')}</button>
         )}
       </div>
     </div>

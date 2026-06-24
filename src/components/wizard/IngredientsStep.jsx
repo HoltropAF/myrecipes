@@ -3,8 +3,10 @@ import { parseIngredientBlock, formatIngredientRow } from '../../lib/ingredientP
 import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
 import { supabase } from '../../lib/supabase'
+import { useT } from '../../lib/i18n'
 
 export default function IngredientsStep({ groups, setGroups, paste, setPaste, showGrouping, setShowGrouping, existingGroups }) {
+  const { t } = useT()
   const handleParse = () => {
     const parsed = parseIngredientBlock(paste)
     if (parsed.length === 0) return
@@ -56,10 +58,10 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
 
   return (
     <div>
-      <h2 style={titleStyle}>What goes in it?</h2>
+      <h2 style={titleStyle}>{t('ingredientsStep.heading')}</h2>
 
       <div style={{ marginBottom: 16 }}>
-        <span style={labelTextStyle}>paste ingredients (one per line)</span>
+        <span style={labelTextStyle}>{t('ingredientsStep.pasteLabel')}</span>
         <textarea
           value={paste} onChange={e => setPaste(e.target.value)}
           placeholder={'300g kip\n1 ui\n4 tenen knoflook\nzout naar smaak'}
@@ -74,7 +76,7 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
             fontWeight: 600, fontSize: 13, cursor: paste.trim() ? 'pointer' : 'default',
             opacity: paste.trim() ? 1 : 0.5,
           }}
-        >Parse & add</button>
+        >{t('ingredientsStep.parseBtn')}</button>
       </div>
 
       {totalItems > 0 && (
@@ -87,7 +89,7 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
                     value={group.group || ''}
                     onChange={v => renameGroup(gIdx, v)}
                     suggestions={existingGroups}
-                    placeholder={gIdx === 0 ? 'Group name (optional)' : 'Group name'}
+                    placeholder={gIdx === 0 ? t('ingredientsStep.groupNamePlaceholder0') : t('ingredientsStep.groupNamePlaceholder')}
                   />
                 </div>
               )}
@@ -107,7 +109,7 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
                   marginTop: 8, background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12,
                 }}
-              >+ add row manually</button>
+              >{t('ingredientsStep.addManualBtn')}</button>
             </div>
           ))}
         </div>
@@ -120,7 +122,7 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
             marginTop: 14, background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 12, textDecoration: 'underline',
           }}
-        >+ split into groups (e.g. "Voor serveren")</button>
+        >{t('ingredientsStep.splitGroups')}</button>
       )}
       {showGrouping && (
         <button
@@ -129,13 +131,14 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
             marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 12,
           }}
-        >+ add another group</button>
+        >{t('ingredientsStep.addGroup')}</button>
       )}
     </div>
   )
 }
 
 function IngredientRow({ item, onChange, onRemove }) {
+  const { t } = useT()
   const [showNote, setShowNote] = useState(!!(item.note))
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -228,7 +231,7 @@ function IngredientRow({ item, onChange, onRemove }) {
 
       {showNote ? (
         <input
-          type="text" value={item.note ?? ''} placeholder="note, e.g. Bij voorkeur Unox rookworst"
+          type="text" value={item.note ?? ''} placeholder={t('ingredientsStep.notePlaceholder')}
           onChange={e => onChange({ note: e.target.value || null })}
           style={{
             ...inputStyle, width: '100%', marginTop: 4, padding: '6px 10px', fontSize: 13,
@@ -243,7 +246,7 @@ function IngredientRow({ item, onChange, onRemove }) {
             color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11,
             padding: '2px 0', marginTop: 2,
           }}
-        >+ note</button>
+        >{t('ingredientsStep.addNote')}</button>
       )}
     </div>
   )

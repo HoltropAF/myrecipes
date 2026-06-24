@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
 import { MAIN_INGREDIENTS, getMainIngredientKeys } from '../../lib/recipeTags'
 import LoadingGyoza from '../LoadingGyoza'
+import { useT } from '../../lib/i18n'
 
 // Pantry staples so common to almost every recipe that sharing them is meaningless
 // for a "these go well together" suggestion (would otherwise pair nearly everything).
@@ -30,7 +31,7 @@ function buildSuggestions(recipes) {
   for (const main of MAIN_INGREDIENTS) {
     const matches = recipes.filter(r => getMainIngredientKeys(r).includes(main.key))
     if (matches.length >= MIN_GROUP_SIZE) {
-      byMain.push({ type: 'ingredient', label: main.label, recipes: matches })
+      byMain.push({ type: 'ingredient', key: main.key, label: main.label, recipes: matches })
     }
   }
 
@@ -44,7 +45,7 @@ function buildSuggestions(recipes) {
   }
   const byCategory = Object.entries(catMap)
     .filter(([, list]) => list.length >= MIN_GROUP_SIZE)
-    .map(([key, list]) => ({ type: 'category', label: key, recipes: list }))
+    .map(([key, list]) => ({ type: 'category', key, label: key, recipes: list }))
 
   // 3. By shared distinctive ingredients across 3+ recipes (not just pairs)
   const sets = recipes.map(r => ({ recipe: r, set: getIngredientSet(r) }))
@@ -59,21 +60,29 @@ function buildSuggestions(recipes) {
     .filter(([, list]) => list.length >= MIN_GROUP_SIZE && list.length <= 8)
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, 6)
-    .map(([ingredient, list]) => ({ type: 'overlap', label: ingredient, recipes: list }))
+    .map(([ingredient, list]) => ({ type: 'overlap', key: ingredient, label: ingredient, recipes: list }))
 
   // 4. Freezer batch-cook combos: freezer-friendly AND share a main ingredient (3+ recipes)
   const byFreezerBatch = []
   for (const main of MAIN_INGREDIENTS) {
     const matches = recipes.filter(r => r.freezer_friendly === true && getMainIngredientKeys(r).includes(main.key))
     if (matches.length >= MIN_GROUP_SIZE) {
-      byFreezerBatch.push({ type: 'freezer', label: main.label, recipes: matches })
+      byFreezerBatch.push({ type: 'freezer', key: main.key, label: main.label, recipes: matches })
     }
   }
 
   return { byMain, byCategory, byIngredientOverlap, byFreezerBatch }
 }
 
+function suggestionTitle(s, t) {
+  if (s.type === 'ingredient') return `${t(`mainIngredients.${s.key}`)}${t('mealPrep.recipeSuffix')}`
+  if (s.type === 'freezer') return `${t(`mainIngredients.${s.key}`)}${t('mealPrep.batchFreezeSuffix')}`
+  if (s.type === 'category') return s.label
+  return `${t('mealPrep.recipesWith')}${s.label}`
+}
+
 export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null }) {
+  const { t } = useT()
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [showBuilder, setShowBuilder] = useState(false)
@@ -105,7 +114,7 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
     if (!user_id) return
     await supabase.from('meal_groups').insert({
       user_id,
-      name: suggestionTitle(suggestion),
+      name: suggestionTitle(suggestion, t),
       recipe_ids: suggestion.recipes.map(r => r.id),
     })
     loadGroups()
@@ -114,8 +123,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   return (
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Meal Prep</h1>
-        {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>}
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>{t('mealPrep.title')}</h1>
+        {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>{t('mealPrep.newGroup')}</button>}
       </div>
 
       {showBuilder && !isGuest && (
@@ -127,12 +136,12 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       )}
 
       {/* Your saved groups */}
-      <SectionLabel>Your groups</SectionLabel>
+      <SectionLabel>{t('mealPrep.yourGroups')}</SectionLabel>
       {loading ? (
         <LoadingGyoza />
       ) : groups.length === 0 ? (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 20 }}>
-          {isGuest ? 'No groups in this demo.' : 'No groups yet — tap "+ New group", or save one of the suggestions below.'}
+          {isGuest ? t('mealPrep.noGroupsGuest') : t('mealPrep.noGroupsUser')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
@@ -145,8 +154,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       {/* Freezer batch-cook combos */}
       {byFreezerBatch.length > 0 && (
         <SuggestionSection
-          title="🧊 Batch-cook & freeze"
-          description="These freeze well and share a main ingredient — cook once, freeze portions."
+          title={t('mealPrep.freezerTitle')}
+          description={t('mealPrep.freezerDesc')}
           suggestions={byFreezerBatch}
           onSelectRecipe={onSelectRecipe}
           onSave={isGuest ? null : saveSuggestionAsGroup}
@@ -156,8 +165,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       {/* By shared protein/main ingredient */}
       {byMain.length > 0 && (
         <SuggestionSection
-          title="🥩 Stock up on one ingredient"
-          description="3 or more recipes built around the same main ingredient."
+          title={t('mealPrep.proteinTitle')}
+          description={t('mealPrep.proteinDesc')}
           suggestions={byMain}
           onSelectRecipe={onSelectRecipe}
           onSave={isGuest ? null : saveSuggestionAsGroup}
@@ -167,8 +176,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       {/* By category */}
       {byCategory.length > 0 && (
         <SuggestionSection
-          title="📂 Same category"
-          description="A rotation of recipes from the same part of your cookbook."
+          title={t('mealPrep.categoryTitle')}
+          description={t('mealPrep.categoryDesc')}
           suggestions={byCategory}
           onSelectRecipe={onSelectRecipe}
           onSave={isGuest ? null : saveSuggestionAsGroup}
@@ -178,8 +187,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       {/* By shared distinctive ingredients */}
       {byIngredientOverlap.length > 0 && (
         <SuggestionSection
-          title="🛒 Shared shopping list"
-          description="Recipes that all use the same less-common ingredient — buy once, use across meals."
+          title={t('mealPrep.sharedTitle')}
+          description={t('mealPrep.sharedDesc')}
           suggestions={byIngredientOverlap}
           onSelectRecipe={onSelectRecipe}
           onSave={isGuest ? null : saveSuggestionAsGroup}
@@ -189,23 +198,17 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       {byMain.length === 0 && byCategory.length === 0 && byIngredientOverlap.length === 0 && byFreezerBatch.length === 0 && (
         <div style={{ textAlign: 'center', padding: '10px 0 30px' }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', marginBottom: 14, lineHeight: 1.6 }}>
-            No automatic groupings of 3+ recipes found yet{isGuest ? '.' : ' — but you can still bundle any recipes together yourself.'}
+            {isGuest ? t('mealPrep.noSuggestionsGuest') : t('mealPrep.noSuggestionsUser')}
           </div>
-          {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>+ New group</button>}
+          {!isGuest && <button onClick={() => setShowBuilder(true)} style={addBtnStyle}>{t('mealPrep.newGroup')}</button>}
         </div>
       )}
     </div>
   )
 }
 
-function suggestionTitle(s) {
-  if (s.type === 'ingredient') return `${s.label} recipes`
-  if (s.type === 'freezer') return `${s.label} batch-cook & freeze`
-  if (s.type === 'category') return s.label
-  return `Recipes with ${s.label}`
-}
-
 function SuggestionSection({ title, description, suggestions, onSelectRecipe, onSave }) {
+  const { t } = useT()
   return (
     <div style={{ marginBottom: 22 }}>
       <SectionLabel>{title}</SectionLabel>
@@ -217,9 +220,9 @@ function SuggestionSection({ title, description, suggestions, onSelectRecipe, on
           <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>
-                {suggestionTitle(s)} <span style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>({s.recipes.length})</span>
+                {suggestionTitle(s, t)} <span style={{ color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>({s.recipes.length})</span>
               </div>
-              {onSave && <button onClick={() => onSave(s)} style={savePillStyle}>+ Save as group</button>}
+              {onSave && <button onClick={() => onSave(s)} style={savePillStyle}>{t('mealPrep.saveAsGroup')}</button>}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {s.recipes.map(r => (
@@ -252,6 +255,7 @@ function GroupCard({ group, recipes, onSelectRecipe, onDelete }) {
 }
 
 function GroupBuilder({ recipes, onClose, onSaved }) {
+  const { t } = useT()
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
   const [selected, setSelected] = useState([])
@@ -274,7 +278,7 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
     if (!user_id) {
-      setError('Not signed in — please reload and try again.')
+      setError(t('mealPrep.notSignedIn'))
       setSaving(false)
       return
     }
@@ -283,7 +287,7 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
     })
     setSaving(false)
     if (insertError) {
-      setError('Could not save — check your connection and try again.')
+      setError(t('mealPrep.saveError'))
       return
     }
     onSaved()
@@ -292,16 +296,16 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
   return (
     <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14, marginBottom: 20 }}>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
-        <span style={labelTextStyle}>group name</span>
-        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sunday batch cook" style={inputStyle} />
+        <span style={labelTextStyle}>{t('mealPrep.groupNameLabel')}</span>
+        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={t('mealPrep.groupNamePlaceholder')} style={inputStyle} />
       </label>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
-        <span style={labelTextStyle}>notes (optional)</span>
-        <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. makes 5 lunches" style={inputStyle} />
+        <span style={labelTextStyle}>{t('mealPrep.groupNotesLabel')}</span>
+        <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('mealPrep.groupNotesPlaceholder')} style={inputStyle} />
       </label>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
-        <span style={labelTextStyle}>pick recipes ({selected.length} selected)</span>
-        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search…" style={inputStyle} />
+        <span style={labelTextStyle}>{t('mealPrep.pickRecipes')(selected.length)}</span>
+        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder={t('mealPrep.searchRecipes')} style={inputStyle} />
       </label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto', marginBottom: 12 }}>
         {filtered.map(r => (
@@ -313,9 +317,9 @@ function GroupBuilder({ recipes, onClose, onSaved }) {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={handleSave} disabled={!name.trim() || selected.length === 0 || saving} style={saveBtnStyle}>
-          {saving ? 'Saving…' : 'Save group'}
+          {saving ? t('mealPrep.savingBtn') : t('mealPrep.saveGroupBtn')}
         </button>
-        <button onClick={onClose} style={cancelBtnStyle}>Cancel</button>
+        <button onClick={onClose} style={cancelBtnStyle}>{t('mealPrep.cancelBtn')}</button>
       </div>
       {error && (
         <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)' }}>
@@ -359,8 +363,4 @@ const chipStyle = {
 const savePillStyle = {
   padding: '5px 10px', borderRadius: 99, border: '1px solid var(--sage)', background: 'none',
   color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-}
-const linkTitleStyle = {
-  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal)',
-  fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, textAlign: 'left', flex: 1,
 }

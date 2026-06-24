@@ -3,8 +3,10 @@ import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
 import LoadingGyoza from '../LoadingGyoza'
 import SwipeToDelete from '../SwipeToDelete'
+import { useT } from '../../lib/i18n'
 
 export default function ShoppingListView({ userId, isGuest = false }) {
+  const { t } = useT()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [manualInput, setManualInput] = useState('')
@@ -83,14 +85,14 @@ export default function ShoppingListView({ userId, isGuest = false }) {
   return (
     <div style={{ padding: '0 20px 100px' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>
-        Boodschappenlijst
+        {t('shopping.title')}
       </h1>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input
           type="text" value={manualInput} onChange={e => setManualInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addManualItem()}
-          placeholder="Add an item…"
+          placeholder={t('shopping.addPlaceholder')}
           style={{
             flex: 1, padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
             background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
@@ -99,13 +101,13 @@ export default function ShoppingListView({ userId, isGuest = false }) {
         <button onClick={addManualItem} style={{
           padding: '0 16px', borderRadius: 9, border: 'none', background: 'var(--tomato)',
           color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15, cursor: 'pointer',
-        }}>Add</button>
+        }}>{t('shopping.addBtn')}</button>
       </div>
 
       {loading ? (
-        <LoadingGyoza label="loading your list…" />
+        <LoadingGyoza label={t('shopping.loading')} />
       ) : mergedList.length === 0 ? (
-        <Empty>Your list is empty. Add items above, or add ingredients from a recipe.</Empty>
+        <Empty>{t('shopping.emptyState')}</Empty>
       ) : (
         <>
           <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
@@ -143,7 +145,7 @@ export default function ShoppingListView({ userId, isGuest = false }) {
             <button onClick={clearChecked} style={{
               width: '100%', padding: '11px 0', borderRadius: 9, border: '1px solid var(--line)',
               background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-            }}>Clear {checkedCount} checked item{checkedCount !== 1 ? 's' : ''}</button>
+            }}>{t('shopping.clearChecked')(checkedCount)}</button>
           )}
         </>
       )}

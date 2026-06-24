@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { LanguageContext, useT } from './lib/i18n'
 import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS } from './lib/demoData'
 import AuthScreen from './components/AuthScreen'
 import AddRecipeWizard from './components/AddRecipeWizard'
@@ -16,7 +17,8 @@ import UndoToast from './components/UndoToast'
 import PullToRefresh from './components/PullToRefresh'
 import './App.css'
 
-function App() {
+function AppInner({ setLanguage }) {
+  const { t, lang } = useT()
   const [session, setSession] = useState(undefined)
   const [isGuest, setIsGuest] = useState(false)
   const [recipes, setRecipes] = useState([])
@@ -158,6 +160,7 @@ function App() {
         if (data.recipe_view_mode) setRecipeViewMode(data.recipe_view_mode)
         if (data.recipe_search_mode) setRecipeSearchMode(data.recipe_search_mode)
         if (data.compact_mode !== null && data.compact_mode !== undefined) setCompactMode(data.compact_mode)
+        if (data.language) setLanguage(data.language)
       })
   }, [session])
 
@@ -183,6 +186,7 @@ function App() {
     setRecipeViewMode(draft.recipeViewMode)
     setRecipeSearchMode(draft.recipeSearchMode)
     setCompactMode(draft.compactMode)
+    if (draft.language) setLanguage(draft.language)
     await savePreferences({
       theme: draft.theme,
       default_category: draft.defaultCategory,
@@ -190,6 +194,7 @@ function App() {
       recipe_view_mode: draft.recipeViewMode,
       recipe_search_mode: draft.recipeSearchMode,
       compact_mode: draft.compactMode,
+      language: draft.language,
     })
   }
 
@@ -224,7 +229,7 @@ function App() {
       }}>
         <div style={{ fontSize: 56, animation: 'gyoza-pulse 1.6s ease-in-out infinite' }}>🥟</div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--tomato-deep)' }}>myrecipes</div>
-        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 12 }}>warming up the kitchen…</div>
+        <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 12 }}>{t('app.warmingUp')}</div>
         <style>{`
           @keyframes gyoza-pulse {
             0%, 100% { transform: scale(1) rotate(-3deg); opacity: 0.85; }
@@ -283,12 +288,12 @@ function App() {
           fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)',
         }}>
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Guest mode — nothing is saved
+            {t('app.guestBanner')}
           </span>
           <button
             onClick={exitGuestMode}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sage)', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0 }}
-          >exit</button>
+          >{t('app.guestExit')}</button>
         </div>
       )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
@@ -317,10 +322,10 @@ function App() {
         {activeTab === 'settings' && (
           isGuest ? (
             <div style={{ padding: '0 20px 100px' }}>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>Settings</h1>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>{t('settings.title')}</h1>
               <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
                 <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6 }}>
-                  You're browsing in guest mode. Settings and preferences aren't available until you sign in with a real account.
+                  {t('app.guestSettingsMsg')}
                 </div>
               </div>
               <button
@@ -329,7 +334,7 @@ function App() {
                   width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
                   background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
                 }}
-              >Exit guest mode</button>
+              >{t('app.exitGuestBtn')}</button>
             </div>
           ) : (
             <SettingsView
@@ -342,6 +347,7 @@ function App() {
               recipeViewMode={recipeViewMode}
               recipeSearchMode={recipeSearchMode}
               compactMode={compactMode}
+              language={lang}
               onSavePreferences={handleSaveSettings}
             />
           )
@@ -360,12 +366,21 @@ function App() {
 
       {pendingDelete && (
         <UndoToast
-          message={`"${pendingDelete.recipe.title}" deleted`}
+          message={t('app.deleted')(pendingDelete.recipe.title)}
           onUndo={undoDelete}
           onDismiss={() => setPendingDelete(null)}
         />
       )}
     </div>
+  )
+}
+
+function App() {
+  const [language, setLanguage] = useState('en')
+  return (
+    <LanguageContext.Provider value={language}>
+      <AppInner setLanguage={setLanguage} />
+    </LanguageContext.Provider>
   )
 }
 

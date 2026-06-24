@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { normalizeName } from '../lib/ingredientParser'
+import { useT } from '../lib/i18n'
 
 export default function WhatCanIMake({ recipes, onSelect }) {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
 
@@ -38,7 +40,7 @@ export default function WhatCanIMake({ recipes, onSelect }) {
       >
         <span style={{ fontSize: 18 }}>🥟</span>
         <span style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--charcoal)' }}>
-          What can I make tonight?
+          {t('whatCanIMake.heading')}
         </span>
         <span style={{
           color: 'var(--charcoal-soft)', fontSize: 13, transition: 'transform 0.15s ease',
@@ -50,7 +52,7 @@ export default function WhatCanIMake({ recipes, onSelect }) {
         <div style={{ padding: '0 14px 14px' }}>
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)}
-            placeholder="e.g. kip, knoflook, tomaat"
+            placeholder={t('whatCanIMake.placeholder')}
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid var(--line)',
               background: 'var(--parchment)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
@@ -58,12 +60,12 @@ export default function WhatCanIMake({ recipes, onSelect }) {
             }}
           />
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', marginBottom: matches.length > 0 ? 10 : 0 }}>
-            Separate ingredients with commas.
+            {t('whatCanIMake.hint')}
           </div>
 
           {haveIngredients.length > 0 && matches.length === 0 && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-              No matches yet — try fewer or different ingredients.
+              {t('whatCanIMake.noMatch')}
             </div>
           )}
 
@@ -81,7 +83,7 @@ export default function WhatCanIMake({ recipes, onSelect }) {
                 >
                   <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>{recipe.title}</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)', flexShrink: 0 }}>
-                    {matchCount}/{haveIngredients.length} match
+                    {t('whatCanIMake.matchCount')(matchCount, haveIngredients.length)}
                   </span>
                 </button>
               ))}

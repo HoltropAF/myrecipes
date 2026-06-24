@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
+import { useT } from '../../lib/i18n'
 
 export const CATEGORY_ICONS = {
   'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
@@ -10,6 +11,7 @@ export const CATEGORY_ICONS = {
 }
 
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory, viewMode = 'folders', searchMode = 'title', compactMode = false, cookCounts = {} }) {
+  const { t } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [mealTypeFilter, setMealTypeFilter] = useState(null)
@@ -57,7 +59,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
           (r.category || '').toLowerCase().includes(q) ||
           (r.subcategory || '').toLowerCase().includes(q) ||
           (r.notes || '').toLowerCase().includes(q) ||
-          (r.tags || []).some(t => t.toLowerCase().includes(q))
+          (r.tags || []).some(tag => tag.toLowerCase().includes(q))
         )
       }
     }
@@ -66,22 +68,26 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     else if (sortBy === 'category') sorted.sort((a, b) => (a.category || '').localeCompare(b.category || ''))
     else sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     return sorted
-  }, [recipes, query, searchMode, sortBy, mealTypeFilter, proteinFilter, tagFilter])
+  }, [recipes, query, searchMode, sortBy, mealTypeFilter, proteinFilter, tagFilter, dietFilter])
 
   const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter, dietFilter].filter(Boolean).length
+
+  const translatedMealTypes = MEAL_TYPES.map(m => ({ ...m, label: t(`mealTypes.${m.key}`) }))
+  const translatedMainIngredients = MAIN_INGREDIENTS.map(m => ({ ...m, label: t(`mainIngredients.${m.key}`) }))
+  const translatedDietTags = DIET_TAGS.map(d => ({ ...d, label: t(`diet.${d.key}`) }))
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>Recipes</h1>
-        {onAdd && <button onClick={() => onAdd(viewMode === 'folders' ? lastOpenedFolder : null)} style={addBtnStyle}>+ Add</button>}
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>{t('recipesView.title')}</h1>
+        {onAdd && <button onClick={() => onAdd(viewMode === 'folders' ? lastOpenedFolder : null)} style={addBtnStyle}>{t('recipesView.addBtn')}</button>}
       </div>
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />
 
       <input
         type="text" value={query} onChange={e => setQuery(e.target.value)}
-        placeholder={searchMode === 'ingredient' ? 'e.g. knoflook, kip…' : 'Search recipes, notes, tags…'}
+        placeholder={searchMode === 'ingredient' ? t('recipesView.searchIngredientPlaceholder') : t('recipesView.searchPlaceholder')}
         style={{
           width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
           background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
@@ -100,7 +106,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
             color: activeFilterCount > 0 ? 'var(--card)' : 'var(--charcoal-soft)',
             fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
           }}
-        >Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</button>
+        >{t('recipesView.filtersBtn')}{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</button>
 
         <select
           value={sortBy} onChange={e => setSortBy(e.target.value)}
@@ -110,37 +116,37 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
             marginLeft: 'auto',
           }}
         >
-          <option value="recent">Recently added</option>
-          <option value="name">Name (A–Z)</option>
-          <option value="category">Category</option>
+          <option value="recent">{t('recipesView.sortRecent')}</option>
+          <option value="name">{t('recipesView.sortName')}</option>
+          <option value="category">{t('recipesView.sortCategory')}</option>
         </select>
       </div>
 
       {showFilters && (
         <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
           <FilterGroup
-            label="Meal type"
-            options={MEAL_TYPES}
+            label={t('recipesView.filterMealType')}
+            options={translatedMealTypes}
             active={mealTypeFilter}
             onSelect={setMealTypeFilter}
           />
           <FilterGroup
-            label="Main ingredient"
-            options={MAIN_INGREDIENTS}
+            label={t('recipesView.filterMainIngredient')}
+            options={translatedMainIngredients}
             active={proteinFilter}
             onSelect={setProteinFilter}
           />
           {allTags.length > 0 && (
             <FilterGroup
-              label="Tags"
-              options={allTags.map(t => ({ key: t, label: t }))}
+              label={t('recipesView.filterTags')}
+              options={allTags.map(tag => ({ key: tag, label: tag }))}
               active={tagFilter}
               onSelect={setTagFilter}
             />
           )}
           <FilterGroup
-            label="Diet"
-            options={DIET_TAGS}
+            label={t('recipesView.filterDiet')}
+            options={translatedDietTags}
             active={dietFilter}
             onSelect={setDietFilter}
           />
@@ -148,7 +154,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
       )}
 
       {loading ? (
-        <LoadingGyoza label="loading recipes…" />
+        <LoadingGyoza label={t('recipesView.loadingLabel')} />
       ) : viewMode === 'folders' ? (
         <FolderView
           recipes={filtered} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
@@ -156,7 +162,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
           compactMode={compactMode} cookCounts={cookCounts}
         />
       ) : filtered.length === 0 ? (
-        <Empty>{query || activeFilterCount > 0 ? 'No recipes match.' : 'No recipes yet — tap + Add to create one.'}</Empty>
+        <Empty>{query || activeFilterCount > 0 ? t('recipesView.noMatch') : t('recipesView.noRecipes')}</Empty>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(r => (
@@ -197,6 +203,7 @@ function FilterGroup({ label, options, active, onSelect }) {
 
 // Folder/cookbook browse mode — operates on the already-filtered recipe list
 function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened, compactMode = false, cookCounts = {} }) {
+  const { t } = useT()
   const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
   const [openSubcategories, setOpenSubcategories] = useState({})
 
@@ -239,7 +246,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
     return (
       <div style={{ textAlign: 'center', padding: '40px 0' }}>
         <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 13, marginBottom: 14 }}>
-          No recipes match.
+          {t('recipesView.noMatch')}
         </div>
       </div>
     )
@@ -304,7 +311,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 
                 {direct.length > 0 && subEntries.length > 0 && (
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
-                    Other {cat.toLowerCase()}
+                    {t('recipesView.other')} {cat.toLowerCase()}
                   </div>
                 )}
                 {direct.map(r => (
@@ -320,6 +327,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 }
 
 export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
+  const { t } = useT()
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
@@ -341,7 +349,7 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
           )}
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', flexShrink: 0, fontWeight: 600 }}>
-          {cookCount > 0 ? `${cookCount}× cooked` : 'not yet cooked'}
+          {cookCount > 0 ? t('recipesView.cookedCount')(cookCount) : t('recipesView.notYetCooked')}
         </div>
       </div>
     )
@@ -367,30 +375,30 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
         {r.tagline && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{r.tagline}</div>}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 5 }}>
           {matchedIngredient
-            ? `contains: ${matchedIngredient.name}`
+            ? t('recipesView.contains')(matchedIngredient.name)
             : <>
-                {(r.ingredients || []).reduce((s, g) => s + g.items.length, 0)} ingredients · {(r.steps || []).reduce((s, g) => s + g.items.length, 0)} steps
+                {(r.ingredients || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.ingredients')} · {(r.steps || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.steps')}
                 {r.category ? ` · ${r.category}` : ''}
               </>
           }
         </div>
         {(r.tags || []).length > 0 && (
           <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-            {r.tags.map(t => (
-              <span key={t} style={{
+            {r.tags.map(tag => (
+              <span key={tag} style={{
                 fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--sage)',
                 background: 'var(--sage-light)', borderRadius: 99, padding: '2px 8px',
-              }}>{t}</span>
+              }}>{tag}</span>
             ))}
           </div>
         )}
         {(r.allergen_tags?.length > 0 || r.is_vegan || r.is_vegetarian || r.is_pescatarian_or_better) && (
           <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-            {r.is_vegan && <AllergenBadge diet>{DIET_TAGS[0].label}</AllergenBadge>}
-            {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{DIET_TAGS[1].label}</AllergenBadge>}
-            {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{DIET_TAGS[2].label}</AllergenBadge>}
+            {r.is_vegan && <AllergenBadge diet>{t('diet.vegan')}</AllergenBadge>}
+            {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{t('diet.vegetarian')}</AllergenBadge>}
+            {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{t('diet.pescatarian')}</AllergenBadge>}
             {(r.allergen_tags || []).map(tag => (
-              <AllergenBadge key={tag}>{ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
+              <AllergenBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
             ))}
           </div>
         )}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useT } from '../lib/i18n'
 
 export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null }) {
+  const { t } = useT()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -36,7 +38,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
     if (!user_id) {
-      setError('Not signed in — please reload and try again.')
+      setError(t('cookLog.notSignedIn'))
       setSaving(false)
       return
     }
@@ -51,7 +53,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
     })
     setSaving(false)
     if (insertError) {
-      setError('Could not save — check your connection and try again.')
+      setError(t('cookLog.saveError'))
       return
     }
     setShowForm(false)
@@ -73,10 +75,10 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <SectionLabel>Cook log {entries.length > 0 && `· ${entries.length}x`}</SectionLabel>
+        <SectionLabel>{t('cookLog.title')} {entries.length > 0 && `· ${entries.length}x`}</SectionLabel>
         {!isGuest && (
           <button onClick={() => setShowForm(s => !s)} style={addBtnStyle}>
-            {showForm ? 'Cancel' : '+ Log a cook'}
+            {showForm ? t('cookLog.cancel') : t('cookLog.logCook')}
           </button>
         )}
       </div>
@@ -84,7 +86,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
       {showForm && (
         <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-            <span style={labelTextStyle}>date</span>
+            <span style={labelTextStyle}>{t('cookLog.dateLabel')}</span>
             <input
               type="date" value={date} onChange={e => setDate(e.target.value)}
               style={inputStyle}
@@ -93,34 +95,34 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
           {variants.length > 0 && (
             <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-              <span style={labelTextStyle}>which version?</span>
+              <span style={labelTextStyle}>{t('cookLog.whichVersion')}</span>
               <select value={variantLabel} onChange={e => setVariantLabel(e.target.value)} style={inputStyle}>
-                <option value="">Origineel</option>
+                <option value="">{t('cookLog.original')}</option>
                 {variants.map(v => <option key={v.id} value={v.label}>{v.label}</option>)}
               </select>
             </label>
           )}
 
           <div style={{ marginBottom: 12 }}>
-            <span style={labelTextStyle}>how was it?</span>
+            <span style={labelTextStyle}>{t('cookLog.howWasIt')}</span>
             <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-              <ThumbButton active={thumbs === 'up'} onClick={() => setThumbs(thumbs === 'up' ? null : 'up')}>👍 Good</ThumbButton>
-              <ThumbButton active={thumbs === 'down'} onClick={() => setThumbs(thumbs === 'down' ? null : 'down')}>👎 Not great</ThumbButton>
+              <ThumbButton active={thumbs === 'up'} onClick={() => setThumbs(thumbs === 'up' ? null : 'up')}>{t('cookLog.good')}</ThumbButton>
+              <ThumbButton active={thumbs === 'down'} onClick={() => setThumbs(thumbs === 'down' ? null : 'down')}>{t('cookLog.notGreat')}</ThumbButton>
             </div>
           </div>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-            <span style={labelTextStyle}>notes (optional)</span>
+            <span style={labelTextStyle}>{t('cookLog.notesLabel')}</span>
             <textarea
               value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="What did you change, what would you do differently…"
+              placeholder={t('cookLog.notesPlaceholder')}
               rows={2}
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </label>
 
           <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('cookLog.saving') : t('cookLog.save')}
           </button>
           {error && (
             <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)' }}>
@@ -139,7 +141,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
       {!loading && entries.length === 0 && !showForm && (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-          {isGuest ? 'Not cooked in this demo yet.' : 'Not logged yet — tap "+ Log a cook" after you make it.'}
+          {isGuest ? t('cookLog.emptyGuest') : t('cookLog.emptyUser')}
         </div>
       )}
 

@@ -1,19 +1,21 @@
 import { convertStepTemperatures } from '../../lib/unitConverter'
+import { useT } from '../../lib/i18n'
 
 export default function StepsTab({ steps, unitSystem, onStartCooking }) {
+  const { t } = useT()
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <SectionLabel>Steps</SectionLabel>
+        <SectionLabel>{t('stepsTab.label')}</SectionLabel>
         {steps.length > 0 && (
           <button onClick={onStartCooking} style={{
             background: 'var(--tomato)', border: 'none', cursor: 'pointer', borderRadius: 99,
             color: '#fffdf9', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, padding: '6px 14px',
-          }}>▶ Start cooking</button>
+          }}>{t('stepsTab.startCooking')}</button>
         )}
       </div>
       <div>
-        {steps.length === 0 && <EmptyRow>No steps listed.</EmptyRow>}
+        {steps.length === 0 && <EmptyRow>{t('stepsTab.noSteps')}</EmptyRow>}
         {steps.map((group, gi) => (
           <div key={gi} style={{ marginBottom: 16 }}>
             {group.group && (

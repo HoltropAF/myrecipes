@@ -1,10 +1,11 @@
 import { parseStepBlock } from '../../lib/stepParser'
 import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
-
-const COMMON_SECTIONS = ['Bereiding', 'Bewaren', 'Invriezen', 'Ideeën voor restjes']
+import { useT } from '../../lib/i18n'
 
 export default function StepsStep({ groups, setGroups, paste, setPaste }) {
+  const { t } = useT()
+  const COMMON_SECTIONS = t('stepsStep.commonSections')
   const handleParse = (groupIdx) => {
     const parsed = parseStepBlock(paste)
     if (parsed.length === 0) return
@@ -54,7 +55,7 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
 
   return (
     <div>
-      <h2 style={titleStyle}>How do we make it?</h2>
+      <h2 style={titleStyle}>{t('stepsStep.heading')}</h2>
 
       {groups.map((group, gIdx) => (
         <div key={gIdx} style={{ marginBottom: 22 }}>
@@ -63,7 +64,7 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
               value={group.group || ''}
               onChange={v => renameGroup(gIdx, v)}
               suggestions={COMMON_SECTIONS}
-              placeholder="Section name"
+              placeholder={t('stepsStep.sectionPlaceholder')}
             />
           </div>
 
@@ -106,11 +107,11 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
                 fontWeight: 600, fontSize: 13, cursor: paste.trim() ? 'pointer' : 'default',
                 opacity: paste.trim() ? 1 : 0.5,
               }}
-            >Parse & add</button>
+            >{t('stepsStep.parseBtn')}</button>
             <button
               onClick={() => addManualStep(gIdx)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12 }}
-            >+ add step manually</button>
+            >{t('stepsStep.addManualBtn')}</button>
           </div>
         </div>
       ))}
@@ -118,7 +119,7 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
       <button
         onClick={addSection}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 12 }}
-      >+ add another section (e.g. "Bewaren")</button>
+      >{t('stepsStep.addSectionBtn')}</button>
     </div>
   )
 }

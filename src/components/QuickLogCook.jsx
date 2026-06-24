@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { useT } from '../lib/i18n'
 
 export default function QuickLogCook({ recipes, onClose, onLogged }) {
+  const { t } = useT()
   const [step, setStep] = useState('pick') // 'pick' | 'log'
   const [query, setQuery] = useState('')
   const [selectedRecipe, setSelectedRecipe] = useState(null)
@@ -29,7 +31,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
     const { data: userData } = await supabase.auth.getUser()
     const user_id = userData?.user?.id
     if (!user_id) {
-      setError('Not signed in — please reload and try again.')
+      setError(t('cookLog.notSignedIn'))
       setSaving(false)
       return
     }
@@ -44,7 +46,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
     })
     setSaving(false)
     if (insertError) {
-      setError('Could not save — check your connection and try again.')
+      setError(t('cookLog.saveError'))
       return
     }
     onLogged?.()
@@ -67,12 +69,12 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
         {step === 'pick' && (
           <>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 14 }}>
-              Which recipe did you cook?
+              {t('quickLog.whichRecipe')}
             </h2>
             <input
               autoFocus
               type="text" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Search recipes…"
+              placeholder={t('quickLog.searchPlaceholder')}
               style={{
                 width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid var(--line)',
                 background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 15,
@@ -82,7 +84,7 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {filtered.length === 0 && (
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', textAlign: 'center', padding: '20px 0' }}>
-                  No recipes match.
+                  {t('quickLog.noMatch')}
                 </div>
               )}
               {filtered.map(r => (
@@ -104,47 +106,47 @@ export default function QuickLogCook({ recipes, onClose, onLogged }) {
         {step === 'log' && selectedRecipe && (
           <>
             <button onClick={() => setStep('pick')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, marginBottom: 10, display: 'block' }}>
-              ‹ Change recipe
+              {t('quickLog.changeRecipe')}
             </button>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 14 }}>
               {selectedRecipe.title}
             </h2>
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-              <span style={labelTextStyle}>date</span>
+              <span style={labelTextStyle}>{t('cookLog.dateLabel')}</span>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
             </label>
 
             {(selectedRecipe.variants || []).length > 0 && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-                <span style={labelTextStyle}>which version?</span>
+                <span style={labelTextStyle}>{t('cookLog.whichVersion')}</span>
                 <select value={variantLabel} onChange={e => setVariantLabel(e.target.value)} style={inputStyle}>
-                  <option value="">Origineel</option>
+                  <option value="">{t('cookLog.original')}</option>
                   {selectedRecipe.variants.map(v => <option key={v.id} value={v.label}>{v.label}</option>)}
                 </select>
               </label>
             )}
 
             <div style={{ marginBottom: 12 }}>
-              <span style={labelTextStyle}>how was it?</span>
+              <span style={labelTextStyle}>{t('cookLog.howWasIt')}</span>
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <ThumbButton active={thumbs === 'up'} onClick={() => setThumbs(thumbs === 'up' ? null : 'up')}>👍 Good</ThumbButton>
-                <ThumbButton active={thumbs === 'down'} onClick={() => setThumbs(thumbs === 'down' ? null : 'down')}>👎 Not great</ThumbButton>
+                <ThumbButton active={thumbs === 'up'} onClick={() => setThumbs(thumbs === 'up' ? null : 'up')}>{t('cookLog.good')}</ThumbButton>
+                <ThumbButton active={thumbs === 'down'} onClick={() => setThumbs(thumbs === 'down' ? null : 'down')}>{t('cookLog.notGreat')}</ThumbButton>
               </div>
             </div>
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 }}>
-              <span style={labelTextStyle}>notes (optional)</span>
+              <span style={labelTextStyle}>{t('cookLog.notesLabel')}</span>
               <textarea
                 value={notes} onChange={e => setNotes(e.target.value)}
-                placeholder="What did you change, what would you do differently…"
+                placeholder={t('cookLog.notesPlaceholder')}
                 rows={2}
                 style={{ ...inputStyle, resize: 'vertical' }}
               />
             </label>
 
             <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('cookLog.saving') : t('cookLog.save')}
             </button>
             {error && (
               <div style={{ marginTop: 10, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)', textAlign: 'center' }}>

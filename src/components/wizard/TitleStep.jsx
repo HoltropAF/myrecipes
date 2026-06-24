@@ -1,9 +1,12 @@
+import { useT } from '../../lib/i18n'
+
 export default function TitleStep({ title, setTitle, tagline, setTagline }) {
+  const { t } = useT()
   return (
     <div>
-      <h2 style={titleStyle}>What are we making?</h2>
+      <h2 style={titleStyle}>{t('titleStep.heading')}</h2>
       <label style={labelStyle}>
-        <span style={labelTextStyle}>recipe name</span>
+        <span style={labelTextStyle}>{t('titleStep.nameLabel')}</span>
         <input
           autoFocus
           type="text" value={title} onChange={e => setTitle(e.target.value)}
@@ -12,7 +15,7 @@ export default function TitleStep({ title, setTitle, tagline, setTagline }) {
         />
       </label>
       <label style={{ ...labelStyle, marginTop: 14 }}>
-        <span style={labelTextStyle}>tagline (optional)</span>
+        <span style={labelTextStyle}>{t('titleStep.taglineLabel')}</span>
         <input
           type="text" value={tagline} onChange={e => setTagline(e.target.value)}
           placeholder="Creamy pasta met boursin"

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { scaleAmount } from '../../lib/ingredientParser'
 import { convertIngredient, formatConvertedAmount } from '../../lib/unitConverter'
+import { useT } from '../../lib/i18n'
 
 export default function IngredientsTab({
   ingredients, baseServings, servings, unitSystem, onServingsChange,
   variants = [], activeVariant, onVariantChange,
   checkedIngredients, onToggleChecked, onAddToShoppingList, addedToList,
 }) {
+  const { t } = useT()
   const [collapsedGroups, setCollapsedGroups] = useState({})
   const toggleGroup = (gi) => setCollapsedGroups(prev => ({ ...prev, [gi]: !prev[gi] }))
 
@@ -15,7 +17,7 @@ export default function IngredientsTab({
       {/* Servings adjuster — first thing on this tab so scaling happens before reading amounts */}
       {baseServings && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>servings</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>{t('ingredientsTab.servings')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
             <StepperBtn onClick={() => onServingsChange(s => Math.max(1, (s || baseServings) - 1))}>−</StepperBtn>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, minWidth: 24, textAlign: 'center' }}>{servings || baseServings}</span>
@@ -36,7 +38,7 @@ export default function IngredientsTab({
               fontWeight: 600, fontSize: 15, cursor: 'pointer',
             }}
           >
-            <option value="main">Origineel</option>
+            <option value="main">{t('ingredientsTab.original')}</option>
             {variants.map(v => (
               <option key={v.id} value={v.id}>{v.label}</option>
             ))}
@@ -45,15 +47,15 @@ export default function IngredientsTab({
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <SectionLabel>Ingredients</SectionLabel>
+        <SectionLabel>{t('ingredientsTab.label')}</SectionLabel>
         <button onClick={onAddToShoppingList} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           color: addedToList ? 'var(--sage)' : 'var(--tomato-deep)',
           fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-        }}>{addedToList ? '✓ Added' : '+ Add to list'}</button>
+        }}>{addedToList ? t('ingredientsTab.added') : t('ingredientsTab.addToList')}</button>
       </div>
       <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '6px 16px' }}>
-        {ingredients.length === 0 && <EmptyRow>No ingredients listed.</EmptyRow>}
+        {ingredients.length === 0 && <EmptyRow>{t('ingredientsTab.noIngredients')}</EmptyRow>}
         {ingredients.map((group, gi) => {
           const isCollapsed = !!collapsedGroups[gi]
           return (

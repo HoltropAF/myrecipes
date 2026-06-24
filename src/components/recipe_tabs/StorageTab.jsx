@@ -1,24 +1,27 @@
+import { useT } from '../../lib/i18n'
+
 export default function StorageTab({ recipe }) {
+  const { t } = useT()
   const hasContent = recipe.freezer_friendly !== null || recipe.notes || recipe.source
 
   return (
     <div>
       {recipe.freezer_friendly !== null && recipe.freezer_friendly !== undefined && (
         <div style={{ marginBottom: 18 }}>
-          <SectionLabel>Freezer</SectionLabel>
+          <SectionLabel>{t('storageTab.freezerLabel')}</SectionLabel>
           <div style={{
             background: recipe.freezer_friendly ? 'var(--sage-light)' : 'var(--parchment-dim)',
             borderRadius: 10, padding: '12px 14px',
             fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)',
           }}>
-            {recipe.freezer_friendly ? '🧊 This recipe freezes well.' : '🚫 Not recommended for freezing.'}
+            {recipe.freezer_friendly ? t('storageTab.freezesWell') : t('storageTab.notFreezer')}
           </div>
         </div>
       )}
 
       {recipe.notes && (
         <div style={{ marginBottom: 18 }}>
-          <SectionLabel>Notes</SectionLabel>
+          <SectionLabel>{t('storageTab.notesLabel')}</SectionLabel>
           <div style={{
             background: 'var(--sage-light)', borderRadius: 10, padding: '12px 14px',
             fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.5,
@@ -28,7 +31,7 @@ export default function StorageTab({ recipe }) {
 
       {recipe.source && (
         <div>
-          <SectionLabel>Source</SectionLabel>
+          <SectionLabel>{t('storageTab.sourceLabel')}</SectionLabel>
           <a href={recipe.source} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)' }}>
             {recipe.source} ↗
           </a>
@@ -37,7 +40,7 @@ export default function StorageTab({ recipe }) {
 
       {!hasContent && (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', textAlign: 'center', padding: '30px 0' }}>
-          No storage info, notes, or source for this recipe yet.
+          {t('storageTab.noInfo')}
         </div>
       )}
     </div>
