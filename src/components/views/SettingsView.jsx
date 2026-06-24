@@ -8,7 +8,6 @@ const SECTIONS = [
   { id: 'recipes', label: 'Recipes' },
   { id: 'tags', label: 'Tags' },
   { id: 'backup', label: 'Backup' },
-  { id: 'account', label: 'Account' },
 ]
 
 export default function SettingsView({
@@ -92,7 +91,7 @@ export default function SettingsView({
         ))}
       </div>
 
-      {activeSection === 'general' && <GeneralSection />}
+      {activeSection === 'general' && <GeneralSection userEmail={userEmail} />}
 
       {activeSection === 'appearance' && (
         <>
@@ -218,24 +217,6 @@ export default function SettingsView({
         </>
       )}
 
-      {activeSection === 'account' && (
-        <>
-          <SectionLabel>Account</SectionLabel>
-          <div style={cardStyle}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 4 }}>signed in as</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)' }}>{userEmail}</div>
-          </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            style={{
-              width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
-              background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
-              marginTop: 8,
-            }}
-          >Sign out</button>
-        </>
-      )}
-
       {isDirty && (
         <div style={{
           position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20,
@@ -261,7 +242,7 @@ export default function SettingsView({
   )
 }
 
-function GeneralSection() {
+function GeneralSection({ userEmail }) {
   return (
     <>
       <SectionLabel>About</SectionLabel>
@@ -269,20 +250,52 @@ function GeneralSection() {
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6, marginBottom: 14 }}>
           myrecipes — your personal cookbook. Log what you cook, track what's worth making again, and keep every recipe organized in one place.
         </div>
-        <a
-          href="https://github.com/HoltropAF/myrecipes" target="_blank" rel="noreferrer"
-          style={linkRowStyle}
-        >
-          <span>🐙</span><span>GitHub — github.com/HoltropAF/myrecipes</span>
+        {userEmail && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--line)', marginTop: 4 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>signed in as</span>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>{userEmail}</span>
+          </div>
+        )}
+      </div>
+
+      <SectionLabel>Links</SectionLabel>
+      <div style={cardStyle}>
+        <a href="https://github.com/HoltropAF/myrecipes" target="_blank" rel="noreferrer" style={linkRowStyle}>
+          <GitHubIcon />
+          <span>GitHub — github.com/HoltropAF/myrecipes</span>
         </a>
-        <a
-          href="https://instagram.com/AnnuhFloor" target="_blank" rel="noreferrer"
-          style={{ ...linkRowStyle, marginTop: 4 }}
-        >
-          <span>📷</span><span>Instagram — @AnnuhFloor</span>
+        <a href="https://instagram.com/AnnuhFloor" target="_blank" rel="noreferrer" style={{ ...linkRowStyle, marginTop: 4 }}>
+          <InstagramIcon />
+          <span>Instagram — @AnnuhFloor</span>
         </a>
       </div>
+
+      <button
+        onClick={() => supabase.auth.signOut()}
+        style={{
+          width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
+          background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
+        }}
+      >Sign out</button>
     </>
+  )
+}
+
+function GitHubIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--charcoal)" style={{ flexShrink: 0 }}>
+      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.13-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.39.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.79 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.77.11 3.06.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.66.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+    </svg>
+  )
+}
+
+function InstagramIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="var(--tomato)" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4.3" stroke="var(--tomato)" strokeWidth="1.8" />
+      <circle cx="17.4" cy="6.6" r="1.15" fill="var(--tomato)" />
+    </svg>
   )
 }
 
