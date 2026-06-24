@@ -1,3 +1,5 @@
+import { ALLERGEN_LABELS, DIET_TAGS } from '../../lib/recipeTags'
+
 export default function InfoTab({ recipe, variants, activeVariant, onVariantChange }) {
   return (
     <div>
@@ -17,6 +19,18 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
         {recipe.freezer_friendly === true && <MetaChip>Freezes well</MetaChip>}
         {recipe.freezer_friendly === false && <MetaChip>Not freezer-friendly</MetaChip>}
       </div>
+
+      {/* Allergen + diet badges — computed server-side from ingredient_tags */}
+      {(recipe.allergen_tags?.length > 0 || recipe.is_vegan || recipe.is_vegetarian || recipe.is_pescatarian_or_better) && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
+          {recipe.is_vegan && <ComputedBadge diet>{DIET_TAGS[0].label}</ComputedBadge>}
+          {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{DIET_TAGS[1].label}</ComputedBadge>}
+          {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{DIET_TAGS[2].label}</ComputedBadge>}
+          {(recipe.allergen_tags || []).map(tag => (
+            <ComputedBadge key={tag}>{ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
+          ))}
+        </div>
+      )}
 
       {/* Version picker — pills for a few versions, dropdown once there are many */}
       {variants.length > 0 && (
@@ -75,6 +89,16 @@ function MetaChip({ children }) {
     <span style={{
       fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)',
       background: 'var(--parchment-dim)', borderRadius: 99, padding: '4px 10px',
+    }}>{children}</span>
+  )
+}
+
+function ComputedBadge({ children, diet = false }) {
+  return (
+    <span style={{
+      fontFamily: 'var(--font-mono)', fontSize: 12, borderRadius: 99, padding: '4px 10px',
+      color: diet ? 'var(--sage)' : 'var(--charcoal-soft)',
+      background: diet ? 'var(--sage-light)' : 'var(--parchment-dim)',
     }}>{children}</span>
   )
 }

@@ -20,6 +20,17 @@ export function getMainIngredientKeys(recipe) {
   return MAIN_INGREDIENTS.filter(m => m.match.test(allText)).map(m => m.key)
 }
 
+export const ALLERGEN_LABELS = {
+  meat: 'Meat', fish: 'Fish', shellfish: 'Shellfish',
+  dairy: 'Dairy', gluten: 'Gluten', egg: 'Egg', nuts: 'Nuts',
+}
+
+export const DIET_TAGS = [
+  { key: 'vegan', label: 'Vegan', field: 'is_vegan' },
+  { key: 'vegetarian', label: 'Vegetarian', field: 'is_vegetarian' },
+  { key: 'pescatarian', label: 'Pescatarian', field: 'is_pescatarian_or_better' },
+]
+
 // Meal-type buckets, inferred from category/subcategory naming already in use.
 export const MEAL_TYPES = [
   { key: 'breakfast', label: 'Breakfast', match: (r) => /breakfast|brunch/i.test(r.category || '') },

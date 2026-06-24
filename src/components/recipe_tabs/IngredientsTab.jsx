@@ -97,7 +97,12 @@ export default function IngredientsTab({
                         ? `${formatConvertedAmount(displayItem.amount)}${displayItem.unit ? ` ${displayItem.unit}` : ''}`
                         : '\u00A0'}
                     </span>
-                    <span>{item.name}</span>
+                    <span>
+                      {item.name}
+                      {item.note && (
+                        <span style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--charcoal-soft)', marginLeft: 5 }}>— {item.note}</span>
+                      )}
+                    </span>
                   </div>
                 )
               })}

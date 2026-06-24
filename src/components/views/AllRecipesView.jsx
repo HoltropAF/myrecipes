@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
-import { MAIN_INGREDIENTS, MEAL_TYPES, getMainIngredientKeys } from '../../lib/recipeTags'
+import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
 
 export const CATEGORY_ICONS = {
   'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
@@ -15,6 +15,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
   const [mealTypeFilter, setMealTypeFilter] = useState(null)
   const [proteinFilter, setProteinFilter] = useState(null)
   const [tagFilter, setTagFilter] = useState(null)
+  const [dietFilter, setDietFilter] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   const [lastOpenedFolder, setLastOpenedFolder] = useState(defaultOpenCategory ? { category: defaultOpenCategory, subcategory: null } : null)
 
@@ -34,6 +35,10 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     }
     if (tagFilter) {
       base = base.filter(r => (r.tags || []).includes(tagFilter))
+    }
+    if (dietFilter) {
+      const dt = DIET_TAGS.find(d => d.key === dietFilter)
+      if (dt) base = base.filter(r => r[dt.field])
     }
     if (query.trim()) {
       const q = query.trim().toLowerCase()
@@ -63,7 +68,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     return sorted
   }, [recipes, query, searchMode, sortBy, mealTypeFilter, proteinFilter, tagFilter])
 
-  const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter].filter(Boolean).length
+  const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter, dietFilter].filter(Boolean).length
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
@@ -133,6 +138,12 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
               onSelect={setTagFilter}
             />
           )}
+          <FilterGroup
+            label="Diet"
+            options={DIET_TAGS}
+            active={dietFilter}
+            onSelect={setDietFilter}
+          />
         </div>
       )}
 
@@ -373,8 +384,28 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
             ))}
           </div>
         )}
+        {(r.allergen_tags?.length > 0 || r.is_vegan || r.is_vegetarian || r.is_pescatarian_or_better) && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+            {r.is_vegan && <AllergenBadge diet>{DIET_TAGS[0].label}</AllergenBadge>}
+            {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{DIET_TAGS[1].label}</AllergenBadge>}
+            {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{DIET_TAGS[2].label}</AllergenBadge>}
+            {(r.allergen_tags || []).map(tag => (
+              <AllergenBadge key={tag}>{ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
+            ))}
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+function AllergenBadge({ children, diet = false }) {
+  return (
+    <span style={{
+      fontFamily: 'var(--font-mono)', fontSize: 10, borderRadius: 99, padding: '2px 8px',
+      color: diet ? 'var(--sage)' : 'var(--charcoal-soft)',
+      background: diet ? 'var(--sage-light)' : 'var(--parchment-dim)',
+    }}>{children}</span>
   )
 }
 

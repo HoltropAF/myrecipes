@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { parseIngredientBlock, formatIngredientRow } from '../../lib/ingredientParser'
 import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { supabase } from '../../lib/supabase'
 
 export default function IngredientsStep({ groups, setGroups, paste, setPaste, showGrouping, setShowGrouping, existingGroups }) {
   const handleParse = () => {
@@ -135,27 +136,115 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
 }
 
 function IngredientRow({ item, onChange, onRemove }) {
+  const [showNote, setShowNote] = useState(!!(item.note))
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const debounceRef = useRef(null)
+
+  const handleNameChange = (value) => {
+    onChange({ name: value })
+    clearTimeout(debounceRef.current)
+    if (value.trim().length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('ingredient_tags')
+        .select('canonical_name, tags')
+        .ilike('canonical_name', `%${value.trim()}%`)
+        .limit(5)
+      if (data?.length > 0) {
+        setSuggestions(data)
+        setShowSuggestions(true)
+      } else {
+        setSuggestions([])
+        setShowSuggestions(false)
+      }
+    }, 300)
+  }
+
+  const selectSuggestion = (canonical) => {
+    onChange({ name: canonical })
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <input
-        type="text" value={item.amount ?? ''} placeholder="—"
-        onChange={e => onChange({ amount: e.target.value === '' ? null : parseFloat(e.target.value) || e.target.value })}
-        style={{ ...inputStyle, width: 48, padding: '8px 6px', fontSize: 14, textAlign: 'center' }}
-      />
-      <input
-        type="text" value={item.unit ?? ''} placeholder="unit"
-        onChange={e => onChange({ unit: e.target.value || null })}
-        style={{ ...inputStyle, width: 56, padding: '8px 6px', fontSize: 14, textAlign: 'center' }}
-      />
-      <input
-        type="text" value={item.name} placeholder="ingredient"
-        onChange={e => onChange({ name: e.target.value })}
-        style={{ ...inputStyle, flex: 1, padding: '8px 10px', fontSize: 14 }}
-      />
-      <button
-        onClick={onRemove}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 18, padding: '0 4px' }}
-      >×</button>
+    <div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input
+          type="text" value={item.amount ?? ''} placeholder="—"
+          onChange={e => onChange({ amount: e.target.value === '' ? null : parseFloat(e.target.value) || e.target.value })}
+          style={{ ...inputStyle, width: 48, padding: '8px 6px', fontSize: 14, textAlign: 'center' }}
+        />
+        <input
+          type="text" value={item.unit ?? ''} placeholder="unit"
+          onChange={e => onChange({ unit: e.target.value || null })}
+          style={{ ...inputStyle, width: 56, padding: '8px 6px', fontSize: 14, textAlign: 'center' }}
+        />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="text" value={item.name} placeholder="ingredient"
+            onChange={e => handleNameChange(e.target.value)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            style={{ ...inputStyle, width: '100%', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box' }}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 2,
+              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
+              zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', overflow: 'hidden',
+            }}>
+              {suggestions.map((s, i) => (
+                <button
+                  key={s.canonical_name}
+                  onMouseDown={() => selectSuggestion(s.canonical_name)}
+                  style={{
+                    display: 'flex', alignItems: 'baseline', gap: 8,
+                    width: '100%', textAlign: 'left', padding: '8px 12px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: i < suggestions.length - 1 ? '1px solid var(--line)' : 'none',
+                    fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)',
+                  }}
+                >
+                  {s.canonical_name}
+                  {s.tags?.length > 0 && (
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>
+                      {s.tags.join(' · ')}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={onRemove}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 18, padding: '0 4px', flexShrink: 0 }}
+        >×</button>
+      </div>
+
+      {showNote ? (
+        <input
+          type="text" value={item.note ?? ''} placeholder="note, e.g. Bij voorkeur Unox rookworst"
+          onChange={e => onChange({ note: e.target.value || null })}
+          style={{
+            ...inputStyle, width: '100%', marginTop: 4, padding: '6px 10px', fontSize: 13,
+            fontStyle: 'italic', color: 'var(--charcoal-soft)', boxSizing: 'border-box',
+          }}
+        />
+      ) : (
+        <button
+          onClick={() => setShowNote(true)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11,
+            padding: '2px 0', marginTop: 2,
+          }}
+        >+ note</button>
+      )}
     </div>
   )
 }

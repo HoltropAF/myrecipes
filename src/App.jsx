@@ -107,9 +107,21 @@ function App() {
       return
     }
     setLoadingRecipes(true)
-    const { data } = await supabase.from('recipes').select('*').order('created_at', { ascending: false })
-    setRecipes(data || [])
-    const { data: logData } = await supabase.from('cook_log').select('recipe_id')
+    const [{ data }, { data: logData }, { data: tagData }] = await Promise.all([
+      supabase.from('recipes').select('*').order('created_at', { ascending: false }),
+      supabase.from('cook_log').select('recipe_id'),
+      supabase.from('recipe_computed_tags').select('recipe_id, allergen_tags, is_vegan, is_vegetarian, is_pescatarian_or_better'),
+    ])
+    const tagMap = {}
+    for (const row of (tagData || [])) tagMap[row.recipe_id] = row
+    const recipes = (data || []).map(r => ({
+      ...r,
+      allergen_tags: tagMap[r.id]?.allergen_tags || [],
+      is_vegan: tagMap[r.id]?.is_vegan ?? false,
+      is_vegetarian: tagMap[r.id]?.is_vegetarian ?? false,
+      is_pescatarian_or_better: tagMap[r.id]?.is_pescatarian_or_better ?? false,
+    }))
+    setRecipes(recipes)
     const counts = {}
     for (const entry of (logData || [])) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
     setCookCounts(counts)
