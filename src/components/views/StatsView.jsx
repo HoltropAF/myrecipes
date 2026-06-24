@@ -49,31 +49,18 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
     }
     const categoryList = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
 
-    const now = new Date()
-    const months = []
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString(undefined, { month: 'short' }), count: 0 })
-    }
-    const monthMap = Object.fromEntries(months.map(m => [m.key, m]))
-    for (const entry of cookLog) {
-      const key = entry.cooked_date.slice(0, 7)
-      if (monthMap[key]) monthMap[key].count++
-    }
-
     const totalCooks = cookLog.length
     const totalRecipes = recipes.length
-    const wishlistCount = recipes.filter(r => r.wishlist).length
+    const triedCount = recipes.filter(r => countByRecipe[r.id]).length
     const neverCooked = recipes.filter(r => !countByRecipe[r.id]).length
 
-    return { mostCooked, topRated, categoryList, months, totalCooks, totalRecipes, wishlistCount, neverCooked }
+    return { mostCooked, topRated, categoryList, totalCooks, totalRecipes, triedCount, neverCooked }
   }, [recipes, cookLog])
 
   if (loading) {
     return <div style={{ padding: '0 20px 100px' }}><LoadingGyoza label="loading stats…" /></div>
   }
 
-  const maxMonthCount = Math.max(...stats.months.map(m => m.count), 1)
   const maxCategoryCount = Math.max(...stats.categoryList.map(([, c]) => c), 1)
 
   return (
@@ -83,7 +70,7 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
         <Tile value={stats.totalRecipes} label="recipes" />
         <Tile value={stats.totalCooks} label="cooks logged" />
-        <Tile value={stats.wishlistCount} label="wishlist" />
+        <Tile value={stats.triedCount} label="recipes tried" />
         <Tile value={stats.neverCooked} label="never made" />
       </div>
 
@@ -96,19 +83,17 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
         </div>
       )}
 
-      <SectionLabel>Cooking activity (last 6 months)</SectionLabel>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 14px 12px', marginBottom: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
-          {stats.months.map(m => (
-            <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div style={{
-                width: '100%', borderRadius: 4, background: m.count > 0 ? 'var(--tomato)' : 'var(--line)',
-                height: Math.max(4, (m.count / maxMonthCount) * 64),
-              }} />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>{m.label}</span>
+      <SectionLabel>Recipes by category</SectionLabel>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', marginBottom: 22 }}>
+        {stats.categoryList.map(([cat, count]) => (
+          <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', width: 110, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+            <div style={{ flex: 1, height: 8, background: 'var(--parchment-dim)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 4, background: 'var(--sage)', width: `${(count / maxCategoryCount) * 100}%` }} />
             </div>
-          ))}
-        </div>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', width: 20, textAlign: 'right' }}>{count}</span>
+          </div>
+        ))}
       </div>
 
       {stats.mostCooked.length > 0 && (
@@ -132,19 +117,6 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
           </div>
         </>
       )}
-
-      <SectionLabel>Recipes by category</SectionLabel>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
-        {stats.categoryList.map(([cat, count]) => (
-          <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', width: 110, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
-            <div style={{ flex: 1, height: 8, background: 'var(--parchment-dim)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 4, background: 'var(--sage)', width: `${(count / maxCategoryCount) * 100}%` }} />
-            </div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', width: 20, textAlign: 'right' }}>{count}</span>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
