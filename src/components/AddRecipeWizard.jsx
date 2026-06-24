@@ -166,6 +166,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         )}
         {step === 'extras' && (
           <ExtrasStep
+            title={title}
             servings={servings} setServings={setServings}
             totalMinutes={totalMinutes} setTotalMinutes={setTotalMinutes}
             category={category} setCategory={setCategory}

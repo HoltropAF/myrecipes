@@ -3,11 +3,15 @@ import TagPicker from '../TagPicker'
 import { titleStyle, labelStyle, labelTextStyle, inputStyle } from './TitleStep'
 
 export default function ExtrasStep({
-  servings, setServings, totalMinutes, setTotalMinutes,
+  title, servings, setServings, totalMinutes, setTotalMinutes,
   category, setCategory, subcategory, setSubcategory,
   existingCategories, photoPreview, onPhotoChange,
   notes, setNotes, tags, setTags, existingTags,
 }) {
+  const imageSearchUrl = title?.trim()
+    ? `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(title.trim())}`
+    : null
+
   return (
     <div>
       <h2 style={titleStyle}>A few extras (all optional)</h2>
@@ -46,7 +50,15 @@ export default function ExtrasStep({
       </label>
 
       <label style={labelStyle}>
-        <span style={labelTextStyle}>photo</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={labelTextStyle}>photo</span>
+          {imageSearchUrl && (
+            <a
+              href={imageSearchUrl} target="_blank" rel="noreferrer"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--tomato-deep)', textDecoration: 'none' }}
+            >🔍 search Google Images</a>
+          )}
+        </div>
         {photoPreview ? (
           <div style={{ position: 'relative', marginTop: 4 }}>
             <img src={photoPreview} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 220, objectFit: 'cover' }} />
