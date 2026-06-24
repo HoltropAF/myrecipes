@@ -9,11 +9,8 @@ export const CATEGORY_ICONS = {
   'Drinks': '🍹', 'Household': '🧴',
 }
 
-export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory }) {
-  const [viewMode, setViewMode] = useState('list') // 'list' | 'folders'
+export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory, viewMode = 'folders', searchMode = 'title', compactMode = false, cookCounts = {} }) {
   const [query, setQuery] = useState('')
-  const [searchMode, setSearchMode] = useState('title') // 'title' | 'ingredient'
-  const [wishlistOnly, setWishlistOnly] = useState(false)
   const [sortBy, setSortBy] = useState('recent')
   const [mealTypeFilter, setMealTypeFilter] = useState(null)
   const [proteinFilter, setProteinFilter] = useState(null)
@@ -27,7 +24,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
   )
 
   const filtered = useMemo(() => {
-    let base = wishlistOnly ? recipes.filter(r => r.wishlist) : recipes
+    let base = recipes
     if (mealTypeFilter) {
       const mt = MEAL_TYPES.find(m => m.key === mealTypeFilter)
       if (mt) base = base.filter(r => mt.match(r))
@@ -64,7 +61,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
     else if (sortBy === 'category') sorted.sort((a, b) => (a.category || '').localeCompare(b.category || ''))
     else sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     return sorted
-  }, [recipes, query, searchMode, wishlistOnly, sortBy, mealTypeFilter, proteinFilter, tagFilter])
+  }, [recipes, query, searchMode, sortBy, mealTypeFilter, proteinFilter, tagFilter])
 
   const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter].filter(Boolean).length
 
@@ -76,40 +73,6 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
       </div>
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />
-
-      {/* List / Folders toggle */}
-      <div style={{ display: 'flex', background: 'var(--parchment-dim)', borderRadius: 10, padding: 3, marginBottom: 10, gap: 2 }}>
-        {[['list', 'List'], ['folders', 'Cookbook']].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setViewMode(id)}
-            style={{
-              flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
-              fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
-              background: viewMode === id ? 'var(--card)' : 'transparent',
-              color: viewMode === id ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
-              boxShadow: viewMode === id ? '0 1px 3px rgba(42,36,32,0.12)' : 'none',
-            }}
-          >{label}</button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div style={{ display: 'flex', background: 'var(--parchment-dim)', borderRadius: 10, padding: 3, marginBottom: 10, gap: 2 }}>
-        {[['title', 'By name'], ['ingredient', 'By ingredient']].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setSearchMode(id)}
-            style={{
-              flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
-              fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
-              background: searchMode === id ? 'var(--card)' : 'transparent',
-              color: searchMode === id ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
-              boxShadow: searchMode === id ? '0 1px 3px rgba(42,36,32,0.12)' : 'none',
-            }}
-          >{label}</button>
-        ))}
-      </div>
 
       <input
         type="text" value={query} onChange={e => setQuery(e.target.value)}
@@ -134,22 +97,12 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
           }}
         >Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</button>
 
-        <button
-          onClick={() => setWishlistOnly(w => !w)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 99,
-            border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
-            background: wishlistOnly ? 'var(--tomato)' : 'var(--card)',
-            color: wishlistOnly ? 'var(--card)' : 'var(--charcoal-soft)',
-            fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-          }}
-        >Wishlist</button>
-
         <select
           value={sortBy} onChange={e => setSortBy(e.target.value)}
           style={{
             padding: '6px 10px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--card)',
             color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+            marginLeft: 'auto',
           }}
         >
           <option value="recent">Recently added</option>
@@ -189,13 +142,18 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
         <FolderView
           recipes={filtered} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
           lastOpened={lastOpenedFolder} setLastOpened={setLastOpenedFolder}
+          compactMode={compactMode} cookCounts={cookCounts}
         />
       ) : filtered.length === 0 ? (
         <Empty>{query || activeFilterCount > 0 ? 'No recipes match.' : 'No recipes yet — tap + Add to create one.'}</Empty>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(r => (
-            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} highlightIngredient={searchMode === 'ingredient' ? query : null} />
+            <RecipeCard
+              key={r.id} recipe={r} onClick={() => onSelect(r)}
+              highlightIngredient={searchMode === 'ingredient' ? query : null}
+              compactMode={compactMode} cookCount={cookCounts[r.id] || 0}
+            />
           ))}
         </div>
       )}
@@ -227,7 +185,7 @@ function FilterGroup({ label, options, active, onSelect }) {
 }
 
 // Folder/cookbook browse mode — operates on the already-filtered recipe list
-function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened }) {
+function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened, compactMode = false, cookCounts = {} }) {
   const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
   const [openSubcategories, setOpenSubcategories] = useState({})
 
@@ -325,7 +283,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
                       {subOpen && (
                         <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {items.map(r => (
-                            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} />
+                            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
                           ))}
                         </div>
                       )}
@@ -339,7 +297,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
                   </div>
                 )}
                 {direct.map(r => (
-                  <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} />
+                  <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
                 ))}
               </div>
             )}
@@ -350,10 +308,33 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   )
 }
 
-export function RecipeCard({ recipe: r, onClick, highlightIngredient }) {
+export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
+
+  if (compactMode) {
+    return (
+      <div onClick={onClick} style={{
+        background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {r.title}
+          </div>
+          {r.tagline && (
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--charcoal-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {r.tagline}
+            </div>
+          )}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', flexShrink: 0, fontWeight: 600 }}>
+          {cookCount > 0 ? `${cookCount}× cooked` : 'not yet cooked'}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div onClick={onClick} style={{
@@ -370,7 +351,7 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient }) {
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--charcoal)' }}>
-          {r.wishlist && <span style={{ marginRight: 5 }}>⭐</span>}{r.title}
+          {r.title}
         </div>
         {r.tagline && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{r.tagline}</div>}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 5 }}>

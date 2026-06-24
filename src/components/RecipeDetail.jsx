@@ -22,15 +22,12 @@ const TABS = [
 const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
 const TAB_SHADES_DARK = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
 
-export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false }) {
-  const [recipe, setRecipe] = useState(initialRecipe)
+export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false }) {
   const variants = recipe.variants || []
   const [activeTab, setActiveTab] = useState('info')
   const [activeVariant, setActiveVariant] = useState('main')
   const [servings, setServings] = useState(recipe.servings || null)
   const [addedToList, setAddedToList] = useState(false)
-  const [wishlist, setWishlist] = useState(!!recipe.wishlist)
-  const [togglingWishlist, setTogglingWishlist] = useState(false)
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [showCookingMode, setShowCookingMode] = useState(false)
   const [compact, setCompact] = useState(false)
@@ -56,19 +53,6 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
     : (variants.find(v => v.id === activeVariant) || { ingredients: [], steps: [] })
 
   const baseServings = recipe.servings || null
-
-  const handleToggleWishlist = async () => {
-    setTogglingWishlist(true)
-    const next = !wishlist
-    if (isGuest) {
-      setWishlist(next)
-      setTogglingWishlist(false)
-      return
-    }
-    const { error } = await supabase.from('recipes').update({ wishlist: next }).eq('id', recipe.id)
-    if (!error) setWishlist(next)
-    setTogglingWishlist(false)
-  }
 
   const handleAddToShoppingList = async () => {
     const rows = active.ingredients.flatMap(group =>
@@ -128,11 +112,6 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
                 }}
               >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
             )}
-            <button
-              onClick={handleToggleWishlist} disabled={togglingWishlist}
-              title={wishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 19, lineHeight: 1, padding: 0 }}
-            >{wishlist ? '★' : '☆'}</button>
             {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>Edit</button>}
             {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>Delete</button>}
           </div>
@@ -189,13 +168,13 @@ export default function RecipeDetail({ recipe: initialRecipe, onClose, onEdit, o
         {activeTab === 'info' && (
           <InfoTab
             recipe={recipe} variants={variants} activeVariant={activeVariant} onVariantChange={setActiveVariant}
-            servings={servings} baseServings={baseServings}
-            onServingsChange={setServings} onUpdated={setRecipe} isGuest={isGuest}
           />
         )}
         {activeTab === 'ingredients' && (
           <IngredientsTab
             ingredients={active.ingredients} baseServings={baseServings} servings={servings} unitSystem={unitSystem}
+            onServingsChange={setServings}
+            variants={variants} activeVariant={activeVariant} onVariantChange={setActiveVariant}
             checkedIngredients={checkedIngredients} onToggleChecked={toggleIngredientChecked}
             onAddToShoppingList={handleAddToShoppingList} addedToList={addedToList}
           />

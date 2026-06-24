@@ -20,6 +20,7 @@ function App() {
   const [session, setSession] = useState(undefined)
   const [isGuest, setIsGuest] = useState(false)
   const [recipes, setRecipes] = useState([])
+  const [cookCounts, setCookCounts] = useState({}) // recipe_id -> number of cook_log entries
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
   const [loadingRecipes, setLoadingRecipes] = useState(false)
@@ -29,7 +30,9 @@ function App() {
   const [showQuickLog, setShowQuickLog] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
   const [defaultCategory, setDefaultCategory] = useState(null)
-  const [pinWishlistFirst, setPinWishlistFirst] = useState(false)
+  const [recipeViewMode, setRecipeViewMode] = useState('folders') // 'folders' | 'list'
+  const [recipeSearchMode, setRecipeSearchMode] = useState('title') // 'title' | 'ingredient'
+  const [compactMode, setCompactMode] = useState(false)
   const [prefillCategory, setPrefillCategory] = useState(null)
 
   // Apply the resolved theme (auto = follow system) to the document root
@@ -98,11 +101,18 @@ function App() {
   const loadRecipes = async () => {
     if (isGuest) {
       setRecipes(DEMO_RECIPES)
+      const counts = {}
+      for (const entry of DEMO_COOK_LOG) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
+      setCookCounts(counts)
       return
     }
     setLoadingRecipes(true)
     const { data } = await supabase.from('recipes').select('*').order('created_at', { ascending: false })
     setRecipes(data || [])
+    const { data: logData } = await supabase.from('cook_log').select('recipe_id')
+    const counts = {}
+    for (const entry of (logData || [])) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
+    setCookCounts(counts)
     setLoadingRecipes(false)
   }
 
@@ -133,7 +143,9 @@ function App() {
         if (data.unit_system) setUnitSystem(data.unit_system)
         if (data.theme) setTheme(data.theme)
         if (data.default_category) setDefaultCategory(data.default_category)
-        if (data.pin_wishlist_first) setPinWishlistFirst(data.pin_wishlist_first)
+        if (data.recipe_view_mode) setRecipeViewMode(data.recipe_view_mode)
+        if (data.recipe_search_mode) setRecipeSearchMode(data.recipe_search_mode)
+        if (data.compact_mode !== null && data.compact_mode !== undefined) setCompactMode(data.compact_mode)
       })
   }, [session])
 
@@ -150,19 +162,23 @@ function App() {
     savePreferences({ unit_system: next })
   }
 
-  const updateTheme = (next) => {
-    setTheme(next)
-    savePreferences({ theme: next })
-  }
-
-  const updateDefaultCategory = (next) => {
-    setDefaultCategory(next)
-    savePreferences({ default_category: next })
-  }
-
-  const updatePinWishlistFirst = (next) => {
-    setPinWishlistFirst(next)
-    savePreferences({ pin_wishlist_first: next })
+  // Batched save from the Settings screen's Save bar — applies every changed
+  // setting at once and persists in a single upsert.
+  const handleSaveSettings = async (draft) => {
+    setTheme(draft.theme)
+    setDefaultCategory(draft.defaultCategory)
+    setUnitSystem(draft.unitSystem)
+    setRecipeViewMode(draft.recipeViewMode)
+    setRecipeSearchMode(draft.recipeSearchMode)
+    setCompactMode(draft.compactMode)
+    await savePreferences({
+      theme: draft.theme,
+      default_category: draft.defaultCategory,
+      unit_system: draft.unitSystem,
+      recipe_view_mode: draft.recipeViewMode,
+      recipe_search_mode: draft.recipeSearchMode,
+      compact_mode: draft.compactMode,
+    })
   }
 
   const [pendingDelete, setPendingDelete] = useState(null) // { recipe, timeoutId }
@@ -266,11 +282,15 @@ function App() {
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
         {activeTab === 'recipes' && (
           <AllRecipesView
-            recipes={pinWishlistFirst ? [...recipes].sort((a, b) => (b.wishlist === true) - (a.wishlist === true)) : recipes}
+            recipes={recipes}
             loading={loadingRecipes}
             onSelect={openRecipe}
             onAdd={isGuest ? null : openWizard}
             defaultOpenCategory={defaultCategory}
+            viewMode={recipeViewMode}
+            searchMode={recipeSearchMode}
+            compactMode={compactMode}
+            cookCounts={cookCounts}
           />
         )}
         {activeTab === 'shopping' && (
@@ -303,10 +323,14 @@ function App() {
             <SettingsView
               userEmail={session.user.email}
               recipes={recipes}
-              theme={theme} onThemeChange={updateTheme}
-              defaultCategory={defaultCategory} onDefaultCategoryChange={updateDefaultCategory}
-              pinWishlistFirst={pinWishlistFirst} onPinWishlistFirstChange={updatePinWishlistFirst}
-              unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem}
+              onRecipesChanged={loadRecipes}
+              theme={theme}
+              defaultCategory={defaultCategory}
+              unitSystem={unitSystem}
+              recipeViewMode={recipeViewMode}
+              recipeSearchMode={recipeSearchMode}
+              compactMode={compactMode}
+              onSavePreferences={handleSaveSettings}
             />
           )
         )}
