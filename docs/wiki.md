@@ -16,6 +16,7 @@ This guide covers every part of the app in detail, explains how each section wor
 8. [Settings](#8-settings)
 9. [Backup and export](#9-backup-and-export)
 10. [Using AI to manage your recipes](#10-using-ai-to-manage-your-recipes)
+11. [Developer setup](#11-developer-setup)
 
 ---
 
@@ -629,3 +630,107 @@ You only need to do this occasionally — allergen badges simply won't appear fo
 - **Check amounts**: AI sometimes writes amounts as strings (`"2"`) instead of numbers (`2`). If the app shows a blank amount, this is the cause — go back to the AI and say "ensure all amount values are numbers, not strings".
 - **Verify IDs are unique**: if you are adding multiple recipes at once, make sure the `id` values don't collide. Using `"recipe-title_ing_1"` as a prefix helps.
 - **Use Claude for longer recipes**: Claude handles longer context better and tends to be more accurate with structured data formats than ChatGPT for recipes with many ingredients or steps.
+
+---
+
+## 11. Developer setup
+
+This section is for anyone who wants to run their own copy of the app, make changes to the code, or host it themselves.
+
+### What you need before starting
+
+- **Node.js** (version 18 or newer) — [nodejs.org](https://nodejs.org). Choose the LTS version.
+- **Git** — [git-scm.com](https://git-scm.com). Accept all defaults during installation.
+- A **Supabase** account (free) — [supabase.com](https://supabase.com).
+- A **Vercel** account (free, for deployment only) — [vercel.com](https://vercel.com).
+
+To check Node is installed, open a terminal and run `node --version`. You should see something like `v20.11.0`.
+
+### Step 1 — Get the code
+
+```bash
+git clone https://github.com/HoltropAF/myrecipes.git
+cd myrecipes
+```
+
+### Step 2 — Install dependencies
+
+```bash
+npm install
+```
+
+### Step 3 — Set up a Supabase project
+
+1. Go to [supabase.com](https://supabase.com), sign in, and click **New project**.
+2. Give it a name, choose a region close to you, set a database password, and click **Create new project**.
+3. Once it's ready, click **SQL Editor** in the left sidebar → **New query**.
+4. Open `supabase-schema.sql` from this project, paste the entire contents into the editor, and click **Run**.
+
+### Step 4 — Get your Supabase credentials
+
+1. In your project, go to **Project Settings** (cog icon) → **API**.
+2. Copy the **Project URL** (looks like `https://xxxxxxxxxxxx.supabase.co`).
+3. Copy the **anon / public** key.
+
+### Step 5 — Create a `.env` file
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your two values:
+
+```dotenv
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Step 6 — Start the development server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). Any code changes update the page automatically. Press `Ctrl + C` to stop.
+
+### Deploying to Vercel
+
+1. Push your code to a GitHub repository (`.env` is in `.gitignore` so your credentials won't be uploaded).
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repository.
+3. Under **Environment Variables**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+4. Click **Deploy**.
+
+Every push to `main` automatically triggers a new deploy.
+
+### Project structure
+
+```text
+myrecipes/
+├── src/
+│   ├── App.jsx                  Main app shell, routing, auth
+│   ├── components/
+│   │   ├── views/               Full-screen views (Recipes, Shopping, Stats, Plan, Settings)
+│   │   ├── recipe_tabs/         Tabs inside a recipe detail (Info, Ingredients, Steps, Log, Storage)
+│   │   └── wizard/              Multi-step recipe creation/edit form
+│   └── lib/
+│       ├── supabase.js          Supabase client
+│       ├── i18n.js              Language context, useT() hook, EN + NL translations
+│       ├── ingredientParser.js  Parses pasted ingredient text into structured data
+│       ├── unitConverter.js     Metric ↔ US unit conversion
+│       ├── recipeTags.js        Allergen labels, diet tag constants, meal-type matchers
+│       └── exportUtils.js       JSON backup and print-to-PDF export
+├── supabase-schema.sql          Full database schema
+├── .env.example                 Template for environment variables
+└── docs/
+    └── wiki.md                  This file
+```
+
+### Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19 + Vite |
+| Database + Auth | Supabase (PostgreSQL + magic-link email auth) |
+| Hosting | Vercel |
+| Styling | Plain CSS-in-JS (no CSS framework) |
+| Internationalisation | Custom `LanguageContext` + `useT()` hook (no external library) |
