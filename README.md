@@ -40,4 +40,4 @@ This makes the app open full-screen, just like a normal app from the store.
 
 ---
 
-For a full walkthrough of every feature — including how to use AI to add recipes from websites — see the **[detailed guide](./docs/wiki.md)**.
+For a full walkthrough of every feature — including how to use AI to add recipes from websites — see the **[Wiki](https://github.com/HoltropAF/myrecipes/wiki)**.
