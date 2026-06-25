@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { convertStepTemperatures } from '../lib/unitConverter'
 import { useT } from '../lib/i18n'
+import { supabase } from '../lib/supabase'
 
 export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
   const { t } = useT()
 
-  // Flatten all step groups into one sequential list, remembering section labels
   const flatSteps = useMemo(() => {
     const out = []
     for (const group of steps || []) {
@@ -21,11 +21,15 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
   const [timerRunning, setTimerRunning] = useState(false)
   const intervalRef = useRef(null)
 
+  // End-screen state
+  const [showEndScreen, setShowEndScreen] = useState(false)
+  const [endNotes, setEndNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const current = flatSteps[index]
   const isLast = index === flatSteps.length - 1
   const isFirst = index === 0
 
-  // Reset timer state when moving to a new step
   useEffect(() => {
     clearInterval(intervalRef.current)
     setTimerRunning(false)
@@ -58,11 +62,98 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
     return `${m}:${String(s).padStart(2, '0')}`
   }
 
+  const getUserId = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id || null
+  }
+
+  const handleLogCook = async () => {
+    setSaving(true)
+    const userId = await getUserId()
+    if (userId) {
+      await supabase.from('cook_log').insert({
+        recipe_id: recipe.id,
+        user_id: userId,
+        notes: endNotes.trim() || null,
+        cooked_at: new Date().toISOString(),
+      })
+    }
+    setSaving(false)
+    onClose()
+  }
+
+  const handleSaveToNotes = async () => {
+    setSaving(true)
+    const existing = recipe.notes || ''
+    const separator = existing ? '\n\n—\n' : ''
+    await supabase.from('recipes').update({ notes: existing + separator + endNotes.trim() }).eq('id', recipe.id)
+    setSaving(false)
+    onClose()
+  }
+
   if (flatSteps.length === 0) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div style={{ fontFamily: 'var(--font-body)', color: 'var(--charcoal-soft)' }}>{t('cookingMode.noSteps')}</div>
         <button onClick={onClose} style={closeBtnStyle}>{t('cookingMode.backToRecipe')}</button>
+      </div>
+    )
+  }
+
+  // End screen — shown after the last "Done" press
+  if (showEndScreen) {
+    return (
+      <div style={{
+        minHeight: '100dvh', background: 'var(--charcoal)', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: 20,
+      }}>
+        <div style={{ fontSize: 52, lineHeight: 1 }}>🍽</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--parchment)', textAlign: 'center' }}>
+          {t('cookingMode.endTitle')}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'rgba(253,248,240,0.55)', textAlign: 'center' }}>
+          {t('cookingMode.endHint')}
+        </div>
+        <textarea
+          value={endNotes}
+          onChange={e => setEndNotes(e.target.value)}
+          placeholder={t('cookingMode.notesPlaceholder')}
+          rows={4}
+          style={{
+            width: '100%', maxWidth: 440, padding: '12px 14px', borderRadius: 10,
+            border: '1px solid rgba(253,248,240,0.2)', background: 'rgba(253,248,240,0.07)',
+            color: 'var(--parchment)', fontFamily: 'var(--font-body)', fontSize: 14,
+            resize: 'none', outline: 'none', lineHeight: 1.5,
+          }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 440 }}>
+          <button
+            onClick={handleLogCook} disabled={saving}
+            style={{
+              padding: '14px 0', borderRadius: 12, border: 'none', cursor: saving ? 'default' : 'pointer',
+              background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)',
+              fontWeight: 700, fontSize: 15, opacity: saving ? 0.6 : 1,
+            }}
+          >{saving ? t('cookingMode.saving') : t('cookingMode.logCook')}</button>
+          {endNotes.trim() && (
+            <button
+              onClick={handleSaveToNotes} disabled={saving}
+              style={{
+                padding: '13px 0', borderRadius: 12, border: '1px solid rgba(253,248,240,0.25)', cursor: saving ? 'default' : 'pointer',
+                background: 'none', color: 'var(--parchment)', fontFamily: 'var(--font-body)',
+                fontWeight: 600, fontSize: 14, opacity: saving ? 0.6 : 1,
+              }}
+            >{saving ? t('cookingMode.saving') : t('cookingMode.saveToNotes')}</button>
+          )}
+          <button
+            onClick={onClose} disabled={saving}
+            style={{
+              padding: '13px 0', borderRadius: 12, border: 'none', cursor: saving ? 'default' : 'pointer',
+              background: 'none', color: 'rgba(253,248,240,0.4)', fontFamily: 'var(--font-body)',
+              fontWeight: 600, fontSize: 14,
+            }}
+          >{t('cookingMode.skip')}</button>
+        </div>
       </div>
     )
   }
@@ -122,7 +213,7 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
       <div style={{ display: 'flex', gap: 10, padding: '16px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={goBack} disabled={isFirst} style={{ ...navBtnStyle, opacity: isFirst ? 0.3 : 1 }}>{t('cookingMode.back')}</button>
         {isLast ? (
-          <button onClick={onClose} style={{ ...primaryNavBtnStyle, flex: 2 }}>{t('cookingMode.done')}</button>
+          <button onClick={() => setShowEndScreen(true)} style={{ ...primaryNavBtnStyle, flex: 2 }}>{t('cookingMode.done')}</button>
         ) : (
           <button onClick={goNext} style={{ ...primaryNavBtnStyle, flex: 2 }}>{t('cookingMode.next')}</button>
         )}

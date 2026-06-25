@@ -3,14 +3,17 @@ import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
+import { supabase } from '../../lib/supabase'
 
 export const CATEGORY_ICONS = {
   'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
   'Main dishes': '🍽', 'Sides': '🍚', 'Desserts': '🍰', 'Baking': '🥐',
-  'Drinks': '🍹', 'Household': '🧴',
+  'Drinks': '🍹', 'Household': '🧴', 'Soups': '🍲', 'Salads': '🥗',
 }
 
-export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory, viewMode = 'folders', searchMode = 'title', compactMode = false, cookCounts = {} }) {
+const GRID_PLACEHOLDER_COLORS = ['#fde8d8','#e8f3e0','#e0eaf8','#f8e8f0','#f8f3e0','#e8f0f8','#f0e8f8']
+
+export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory, viewMode = 'folders', searchMode = 'title', compactMode = false, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
@@ -20,6 +23,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
   const [dietFilter, setDietFilter] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   const [lastOpenedFolder, setLastOpenedFolder] = useState(defaultOpenCategory ? { category: defaultOpenCategory, subcategory: null } : null)
+  const [activeCollection, setActiveCollection] = useState(null)
 
   const allTags = useMemo(
     () => [...new Set(recipes.flatMap(r => r.tags || []))].sort(),
@@ -72,6 +76,11 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
 
   const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter, dietFilter].filter(Boolean).length
 
+  // Apply collection filter on top of the search/sort filtered list
+  const visibleRecipes = activeCollection
+    ? filtered.filter(r => (collectionRecipeMap[activeCollection] || new Set()).has(r.id))
+    : filtered
+
   const translatedMealTypes = MEAL_TYPES.map(m => ({ ...m, label: t(`mealTypes.${m.key}`) }))
   const translatedMainIngredients = MAIN_INGREDIENTS.map(m => ({ ...m, label: t(`mainIngredients.${m.key}`) }))
   const translatedDietTags = DIET_TAGS.map(d => ({ ...d, label: t(`diet.${d.key}`) }))
@@ -82,6 +91,14 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>{t('recipesView.title')}</h1>
         {onAdd && <button onClick={() => onAdd(viewMode === 'folders' ? lastOpenedFolder : null)} style={addBtnStyle}>{t('recipesView.addBtn')}</button>}
       </div>
+
+      <CollectionsBar
+        collections={collections}
+        collectionRecipeMap={collectionRecipeMap}
+        activeId={activeCollection}
+        onSelect={setActiveCollection}
+        onChanged={onCollectionsChanged}
+      />
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />
 
@@ -155,17 +172,23 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
 
       {loading ? (
         <LoadingGyoza label={t('recipesView.loadingLabel')} />
-      ) : viewMode === 'folders' ? (
+      ) : viewMode === 'folders' && !activeCollection ? (
         <FolderView
-          recipes={filtered} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
+          recipes={visibleRecipes} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
           lastOpened={lastOpenedFolder} setLastOpened={setLastOpenedFolder}
           compactMode={compactMode} cookCounts={cookCounts}
         />
-      ) : filtered.length === 0 ? (
-        <Empty>{query || activeFilterCount > 0 ? t('recipesView.noMatch') : t('recipesView.noRecipes')}</Empty>
+      ) : visibleRecipes.length === 0 ? (
+        <Empty>{query || activeFilterCount > 0 || activeCollection ? t('recipesView.noMatch') : t('recipesView.noRecipes')}</Empty>
+      ) : viewMode === 'grid' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {visibleRecipes.map(r => (
+            <GridCard key={r.id} recipe={r} onClick={() => onSelect(r)} cookCount={cookCounts[r.id] || 0} />
+          ))}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(r => (
+          {visibleRecipes.map(r => (
             <RecipeCard
               key={r.id} recipe={r} onClick={() => onSelect(r)}
               highlightIngredient={searchMode === 'ingredient' ? query : null}
@@ -401,6 +424,138 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
               <AllergenBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const COLLECTION_EMOJIS = ['📚','✨','❤️','🌟','🍝','🔥','🌿','🎉','🧁','☕','🥗','🍜']
+
+function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, onChanged }) {
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newEmoji, setNewEmoji] = useState('📚')
+  const [busy, setBusy] = useState(false)
+
+  const handleCreate = async () => {
+    const name = newName.trim()
+    if (!name || busy) return
+    setBusy(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('collections').insert({ user_id: user.id, name, emoji: newEmoji })
+      onChanged?.()
+    }
+    setCreating(false)
+    setNewName('')
+    setNewEmoji('📚')
+    setBusy(false)
+  }
+
+  if (collections.length === 0 && !creating) {
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <button
+          onClick={() => { setCreating(true); setNewName('Dopamine Menu'); setNewEmoji('✨') }}
+          style={{
+            padding: '7px 14px', borderRadius: 99, border: '1px dashed var(--line)',
+            background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)',
+            fontSize: 12, cursor: 'pointer',
+          }}
+        >✨ Dopamine Menu</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {collections.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8 }}>
+          {collections.map(col => {
+            const count = (collectionRecipeMap[col.id] || new Set()).size
+            const isActive = activeId === col.id
+            return (
+              <button
+                key={col.id}
+                onClick={() => onSelect(isActive ? null : col.id)}
+                style={{
+                  flexShrink: 0, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                  border: `1px solid ${isActive ? 'var(--tomato)' : 'var(--line)'}`,
+                  background: isActive ? 'var(--tomato)' : 'var(--card)',
+                  color: isActive ? '#fffdf9' : 'var(--charcoal)',
+                  fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600,
+                  display: 'flex', gap: 5, alignItems: 'center',
+                }}
+              >
+                <span>{col.emoji}</span>
+                <span>{col.name}</span>
+                {count > 0 && <span style={{ opacity: 0.6, fontSize: 10, fontFamily: 'var(--font-mono)' }}>{count}</span>}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => { setCreating(true); setNewName(''); setNewEmoji('📚') }}
+            style={{
+              flexShrink: 0, padding: '6px 12px', borderRadius: 99,
+              border: '1px dashed var(--line)', background: 'none',
+              color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer',
+            }}
+          >+</button>
+        </div>
+      )}
+
+      {creating && (
+        <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
+            {COLLECTION_EMOJIS.map(e => (
+              <button key={e} onClick={() => setNewEmoji(e)} style={{
+                fontSize: 18, border: newEmoji === e ? '2px solid var(--tomato)' : '2px solid transparent',
+                background: 'none', borderRadius: 6, cursor: 'pointer', padding: '2px 4px',
+              }}>{e}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
+              placeholder="Collection name"
+              style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'var(--font-body)', fontSize: 13, background: 'var(--parchment)', color: 'var(--charcoal)', outline: 'none' }}
+            />
+            <button onClick={handleCreate} disabled={busy || !newName.trim()} style={{
+              padding: '8px 14px', borderRadius: 8, border: 'none',
+              background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            }}>Create</button>
+            <button onClick={() => setCreating(false)} style={{
+              padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)',
+              background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+            }}>✕</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GridCard({ recipe: r, onClick, cookCount = 0 }) {
+  const placeholderColor = GRID_PLACEHOLDER_COLORS[r.title.charCodeAt(0) % GRID_PLACEHOLDER_COLORS.length]
+  return (
+    <div onClick={onClick} style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--card)' }}>
+      {r.photo_url ? (
+        <img src={r.photo_url} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+      ) : (
+        <div style={{
+          width: '100%', aspectRatio: '1', background: placeholderColor,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
+        }}>{CATEGORY_ICONS[r.category] || '🍽'}</div>
+      )}
+      <div style={{ padding: '7px 9px 9px' }}>
+        <div style={{
+          fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: 'var(--charcoal)',
+          overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3,
+        }}>{r.title}</div>
+        {cookCount > 0 && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--tomato-deep)', marginTop: 3, fontWeight: 600 }}>×{cookCount}</div>
         )}
       </div>
     </div>

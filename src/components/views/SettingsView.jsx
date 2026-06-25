@@ -3,6 +3,9 @@ import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
 import { useT } from '../../lib/i18n'
 
+const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
+const TAB_SHADES_DARK  = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
+
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
   theme, defaultCategory, unitSystem,
@@ -24,6 +27,14 @@ export default function SettingsView({
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [compact, setCompact] = useState(false)
+
+  useEffect(() => {
+    const check = () => setCompact(window.innerWidth <= 360)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const [draft, setDraft] = useState({
     theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language,
@@ -56,176 +67,204 @@ export default function SettingsView({
     try {
       const { data: userData } = await supabase.auth.getUser()
       await exportFullBackup(supabase, userData?.user?.id)
-    } catch (err) {
+    } catch {
       setExportError(t('settings.backupError'))
     } finally {
       setExporting(false)
     }
   }
 
-  const handleExportPDF = () => {
-    exportCookbookPDF(recipes)
-  }
+  const [showPdfFilter, setShowPdfFilter] = useState(false)
+  const handleExportPDF = () => setShowPdfFilter(true)
 
   const categories = useMemo(
     () => [...new Set(recipes.map(r => r.category).filter(Boolean))].sort(),
     [recipes]
   )
 
-  return (
-    <div style={{ padding: '0 20px 100px' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>
-        {t('settings.title')}
-      </h1>
+  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
+  const TAB_SHADES = isDark ? TAB_SHADES_DARK : TAB_SHADES_LIGHT
+  const activeSectionIndex = SECTIONS.findIndex(s => s.id === activeSection)
 
-      {/* Section tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 18, overflowX: 'auto', paddingBottom: 2 }}>
-        {SECTIONS.map(s => (
-          <button
-            key={s.id}
-            onClick={() => setActiveSection(s.id)}
-            style={{
-              flexShrink: 0, padding: '7px 13px', borderRadius: 99, cursor: 'pointer',
-              border: `1px solid ${activeSection === s.id ? 'var(--tomato)' : 'var(--line)'}`,
-              background: activeSection === s.id ? 'var(--tomato)' : 'var(--card)',
-              color: activeSection === s.id ? '#fffdf9' : 'var(--charcoal-soft)',
-              fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
-            }}
-          >{s.label}</button>
-        ))}
+  return (
+    <div>
+      {/* Sticky header — title + binder-divider tabs, same pattern as RecipeDetail */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 5,
+        background: 'var(--card)', borderBottom: '1px solid var(--line)',
+        padding: '14px 16px 0',
+      }}>
+        <h1 style={{
+          fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600,
+          color: 'var(--tomato-deep)', marginBottom: 14,
+        }}>
+          {t('settings.title')}
+        </h1>
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, overflowX: 'auto' }}>
+          {SECTIONS.map((s, i) => {
+            const isActive = activeSection === s.id
+            return (
+              <button
+                key={s.id}
+                onClick={() => setActiveSection(s.id)}
+                style={{
+                  flexShrink: 0,
+                  position: 'relative',
+                  zIndex: isActive ? SECTIONS.length + 1 : SECTIONS.length - i,
+                  marginLeft: i === 0 ? 0 : (compact ? -6 : -10),
+                  padding: isActive
+                    ? (compact ? '8px 12px 9px' : '10px 18px 11px')
+                    : (compact ? '7px 10px 8px' : '8px 16px 9px'),
+                  borderRadius: '10px 10px 0 0',
+                  border: '1px solid var(--line)',
+                  borderBottom: isActive
+                    ? `1px solid ${TAB_SHADES[i % TAB_SHADES.length]}`
+                    : '1px solid var(--line)',
+                  background: TAB_SHADES[i % TAB_SHADES.length],
+                  color: isActive ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
+                  fontFamily: 'var(--font-display)', fontWeight: 600,
+                  fontSize: compact ? (isActive ? 12.5 : 11.5) : (isActive ? 14 : 13),
+                  cursor: 'pointer',
+                  transform: isActive ? 'translateY(0)' : 'translateY(4px)',
+                  boxShadow: isActive ? '0 -2px 8px rgba(42,36,32,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >{s.label}</button>
+            )
+          })}
+        </div>
       </div>
 
-      {activeSection === 'general' && (
-        <GeneralSection
-          userEmail={userEmail}
-          language={draft.language}
-          onLanguageChange={v => patch('language', v)}
-        />
-      )}
+      {/* Content — background shade matches active tab */}
+      <div style={{
+        padding: '20px 20px',
+        paddingBottom: isDirty ? 90 : 100,
+        background: TAB_SHADES[activeSectionIndex % TAB_SHADES.length],
+        minHeight: 'calc(100dvh - 160px)',
+      }}>
+        {activeSection === 'general' && (
+          <GeneralSection
+            userEmail={userEmail}
+            language={draft.language}
+            onLanguageChange={v => patch('language', v)}
+          />
+        )}
 
-      {activeSection === 'appearance' && (
-        <>
-          <SectionLabel>{t('settings.themeLabel')}</SectionLabel>
-          <div style={cardStyle}>
-            <SegmentedControl
-              value={draft.theme}
-              onChange={(v) => patch('theme', v)}
-              options={[
-                { value: 'light', label: t('settings.themeLight') },
-                { value: 'dark',  label: t('settings.themeDark') },
-                { value: 'auto',  label: t('settings.themeAuto') },
-              ]}
-            />
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              {t('settings.themeHint')}
-            </div>
-          </div>
-
-          <SectionLabel>{t('settings.measurementsLabel')}</SectionLabel>
-          <div style={cardStyle}>
-            <RowLabel>{t('settings.defaultUnits')}</RowLabel>
-            <SegmentedControl
-              value={draft.unitSystem}
-              onChange={(v) => patch('unitSystem', v)}
-              options={[
-                { value: 'metric', label: 'g / ml' },
-                { value: 'us',     label: 'cup / oz' },
-              ]}
-            />
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              {t('settings.unitsHint')}
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeSection === 'recipes' && (
-        <>
-          <SectionLabel>{t('settings.defaultViewLabel')}</SectionLabel>
-          <div style={cardStyle}>
-            <RowLabel>{t('settings.browseAs')}</RowLabel>
-            <SegmentedControl
-              value={draft.recipeViewMode}
-              onChange={(v) => patch('recipeViewMode', v)}
-              options={[
-                { value: 'folders', label: t('settings.viewCookbook') },
-                { value: 'list',    label: t('settings.viewList') },
-              ]}
-            />
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8, marginBottom: 16 }}>
-              {t('settings.viewHint')}
+        {activeSection === 'appearance' && (
+          <>
+            <SectionLabel>{t('settings.themeLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <SegmentedControl
+                value={draft.theme}
+                onChange={v => patch('theme', v)}
+                options={[
+                  { value: 'light', label: t('settings.themeLight') },
+                  { value: 'dark',  label: t('settings.themeDark') },
+                  { value: 'auto',  label: t('settings.themeAuto') },
+                ]}
+              />
+              <div style={hintStyle}>{t('settings.themeHint')}</div>
             </div>
 
-            <RowLabel>{t('settings.searchBy')}</RowLabel>
-            <SegmentedControl
-              value={draft.recipeSearchMode}
-              onChange={(v) => patch('recipeSearchMode', v)}
-              options={[
-                { value: 'title',      label: t('settings.searchByName') },
-                { value: 'ingredient', label: t('settings.searchByIngredient') },
-              ]}
-            />
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8, marginBottom: 16 }}>
-              {t('settings.searchHint')}
+            <SectionLabel>{t('settings.measurementsLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <RowLabel>{t('settings.defaultUnits')}</RowLabel>
+              <SegmentedControl
+                value={draft.unitSystem}
+                onChange={v => patch('unitSystem', v)}
+                options={[
+                  { value: 'metric', label: 'g / ml' },
+                  { value: 'us',     label: 'cup / oz' },
+                ]}
+              />
+              <div style={hintStyle}>{t('settings.unitsHint')}</div>
+            </div>
+          </>
+        )}
+
+        {activeSection === 'recipes' && (
+          <>
+            <SectionLabel>{t('settings.defaultViewLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <RowLabel>{t('settings.browseAs')}</RowLabel>
+              <SegmentedControl
+                value={draft.recipeViewMode}
+                onChange={v => patch('recipeViewMode', v)}
+                options={[
+                  { value: 'folders', label: t('settings.viewCookbook') },
+                  { value: 'list',    label: t('settings.viewList') },
+                  { value: 'grid',    label: t('settings.viewGrid') },
+                ]}
+              />
+              <div style={{ ...hintStyle, marginBottom: 16 }}>{t('settings.viewHint')}</div>
+
+              <RowLabel>{t('settings.searchBy')}</RowLabel>
+              <SegmentedControl
+                value={draft.recipeSearchMode}
+                onChange={v => patch('recipeSearchMode', v)}
+                options={[
+                  { value: 'title',      label: t('settings.searchByName') },
+                  { value: 'ingredient', label: t('settings.searchByIngredient') },
+                ]}
+              />
+              <div style={{ ...hintStyle, marginBottom: 16 }}>{t('settings.searchHint')}</div>
+
+              <ToggleRow
+                label={t('settings.compactMode')}
+                sub={t('settings.compactSub')}
+                checked={draft.compactMode}
+                onChange={v => patch('compactMode', v)}
+              />
             </div>
 
-            <ToggleRow
-              label={t('settings.compactMode')}
-              sub={t('settings.compactSub')}
-              checked={draft.compactMode}
-              onChange={(v) => patch('compactMode', v)}
-            />
-          </div>
-
-          <SectionLabel>{t('settings.cookbookLabel')}</SectionLabel>
-          <div style={cardStyle}>
-            <RowLabel>{t('settings.defaultOpenCategory')}</RowLabel>
-            <select
-              value={draft.defaultCategory || ''}
-              onChange={e => patch('defaultCategory', e.target.value || null)}
-              style={selectStyle}
-            >
-              <option value="">{t('settings.defaultCategoryNone')}</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8 }}>
-              {t('settings.defaultCategoryHint')}
+            <SectionLabel>{t('settings.cookbookLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <RowLabel>{t('settings.defaultOpenCategory')}</RowLabel>
+              <select
+                value={draft.defaultCategory || ''}
+                onChange={e => patch('defaultCategory', e.target.value || null)}
+                style={selectStyle}
+              >
+                <option value="">{t('settings.defaultCategoryNone')}</option>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <div style={hintStyle}>{t('settings.defaultCategoryHint')}</div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
-      {activeSection === 'tags' && (
-        <TagsSection recipes={recipes} onRecipesChanged={onRecipesChanged} />
-      )}
+        {activeSection === 'tags' && (
+          <TagsSection recipes={recipes} onRecipesChanged={onRecipesChanged} />
+        )}
 
-      {activeSection === 'backup' && (
-        <>
-          <SectionLabel>{t('settings.backupLabel')}</SectionLabel>
-          <div style={cardStyle}>
-            <RowLabel>{t('settings.fullBackup')}</RowLabel>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
-              {t('settings.fullBackupDesc')}
+        {activeSection === 'backup' && (
+          <>
+            <SectionLabel>{t('settings.backupLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <RowLabel>{t('settings.fullBackup')}</RowLabel>
+              <div style={hintStyle}>{t('settings.fullBackupDesc')}</div>
+              <button onClick={handleExportBackup} disabled={exporting} style={{ ...secondaryBtnStyle, width: '100%' }}>
+                {exporting ? t('settings.exporting') : t('settings.downloadBackup')}
+              </button>
+              {exportError && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 6 }}>
+                  {exportError}
+                </div>
+              )}
+
+              <div style={{ height: 1, background: 'var(--line)', margin: '16px 0' }} />
+
+              <RowLabel>{t('settings.printableCookbook')}</RowLabel>
+              <div style={hintStyle}>{t('settings.printableDesc')(recipes.length)}</div>
+              <button onClick={handleExportPDF} style={{ ...secondaryBtnStyle, width: '100%' }}>
+                {t('settings.exportPDF')}
+              </button>
             </div>
-            <button onClick={handleExportBackup} disabled={exporting} style={{ ...secondaryBtnStyle, width: '100%' }}>
-              {exporting ? t('settings.exporting') : t('settings.downloadBackup')}
-            </button>
-            {exportError && (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 6 }}>{exportError}</div>
-            )}
-
-            <div style={{ height: 1, background: 'var(--line)', margin: '16px 0' }} />
-
-            <RowLabel>{t('settings.printableCookbook')}</RowLabel>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 10 }}>
-              {t('settings.printableDesc')(recipes.length)}
-            </div>
-            <button onClick={handleExportPDF} style={{ ...secondaryBtnStyle, width: '100%' }}>
-              {t('settings.exportPDF')}
-            </button>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
       {isDirty && (
         <div style={{
@@ -248,6 +287,77 @@ export default function SettingsView({
           >{saving ? t('settings.savingBtn') : t('settings.saveChanges')}</button>
         </div>
       )}
+
+      {showPdfFilter && (
+        <PdfFilterSheet
+          recipes={recipes}
+          onConfirm={filtered => { setShowPdfFilter(false); exportCookbookPDF(filtered) }}
+          onCancel={() => setShowPdfFilter(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
+  const { t } = useT()
+  const allCategories = useMemo(
+    () => [...new Set(recipes.map(r => r.category).filter(Boolean))].sort(),
+    [recipes]
+  )
+  const [selected, setSelected] = useState(new Set(allCategories))
+
+  const toggle = (cat) => setSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(cat)) next.delete(cat)
+    else next.add(cat)
+    return next
+  })
+
+  const filtered = recipes.filter(r => selected.has(r.category))
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ background: 'var(--card)', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 20px 40px', maxHeight: '80dvh', overflowY: 'auto' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--charcoal)', marginBottom: 6 }}>
+          {t('settings.pdfFilter.title')}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 16 }}>
+          {t('settings.pdfFilter.hint')(filtered.length)}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <button onClick={() => setSelected(new Set(allCategories))} style={smallToggleBtnStyle}>{t('settings.pdfFilter.all')}</button>
+          <button onClick={() => setSelected(new Set())} style={smallToggleBtnStyle}>{t('settings.pdfFilter.none')}</button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {allCategories.map(cat => (
+            <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', cursor: 'pointer', borderBottom: '1px solid var(--line)' }}>
+              <input type="checkbox" checked={selected.has(cat)} onChange={() => toggle(cat)} style={{ width: 18, height: 18, accentColor: 'var(--tomato)', flexShrink: 0 }} />
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', flex: 1 }}>{cat}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
+                {recipes.filter(r => r.category === cat).length}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onCancel} style={{ ...secondaryBtnStyle, flex: 1 }}>{t('settings.cancel')}</button>
+          <button
+            onClick={() => onConfirm(filtered)}
+            disabled={filtered.length === 0}
+            style={{
+              flex: 2, padding: '12px 0', borderRadius: 9, border: 'none',
+              background: filtered.length === 0 ? 'var(--line)' : 'var(--tomato)',
+              color: filtered.length === 0 ? 'var(--charcoal-soft)' : '#fffdf9',
+              fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
+              cursor: filtered.length === 0 ? 'default' : 'pointer',
+            }}
+          >{t('settings.pdfFilter.export')(filtered.length)}</button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -283,23 +393,43 @@ function GeneralSection({ userEmail, language, onLanguageChange }) {
 
       <SectionLabel>{t('settings.linksLabel')}</SectionLabel>
       <div style={cardStyle}>
-        <a href="https://github.com/HoltropAF/myrecipes" target="_blank" rel="noreferrer" style={linkRowStyle}>
-          <GitHubIcon />
-          <span>GitHub — github.com/HoltropAF/myrecipes</span>
-        </a>
-        <a href="https://instagram.com/AnnuhFloor" target="_blank" rel="noreferrer" style={{ ...linkRowStyle, marginTop: 4 }}>
-          <InstagramIcon />
-          <span>Instagram — @AnnuhFloor</span>
-        </a>
+        <LinkRow href="https://github.com/HoltropAF/myrecipes"        icon={<GitHubIcon />}    label="Repository" />
+        <LinkRow href="https://github.com/HoltropAF/myrecipes/issues" icon={<GitHubIcon />}    label="Issues"     divider />
+        <LinkRow href="https://github.com/HoltropAF/myrecipes/wiki"   icon={<WikiIcon />}      label="Wiki"       divider />
+        <LinkRow href="https://instagram.com/AnnuhFloor"              icon={<InstagramIcon />} label="@AnnuhFloor" divider />
       </div>
 
       <button
         onClick={() => supabase.auth.signOut()}
         style={{
           width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)',
-          background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, cursor: 'pointer',
+          background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
+          fontWeight: 600, fontSize: 15, cursor: 'pointer', marginTop: 4,
         }}
       >{t('settings.signOut')}</button>
+    </>
+  )
+}
+
+function LinkRow({ href, icon, label, divider = false }) {
+  return (
+    <>
+      {divider && <div style={{ height: 1, background: 'var(--line)' }} />}
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0',
+          fontFamily: 'var(--font-body)', color: 'var(--charcoal)', textDecoration: 'none',
+        }}
+      >
+        {icon}
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', fontWeight: 600 }}>
+          {label}
+        </span>
+        <span style={{ marginLeft: 'auto', color: 'var(--charcoal-soft)', opacity: 0.4, fontSize: 16 }}>›</span>
+      </a>
     </>
   )
 }
@@ -308,6 +438,15 @@ function GitHubIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--charcoal)" style={{ flexShrink: 0 }}>
       <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.13-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.39.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.79 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.77.11 3.06.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.66.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+    </svg>
+  )
+}
+
+function WikiIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="var(--charcoal)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="var(--charcoal)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -476,20 +615,24 @@ function ToggleRow({ label, sub, checked, onChange }) {
 const cardStyle = {
   background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 4,
 }
+const hintStyle = {
+  fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8,
+}
 const selectStyle = {
   width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid var(--line)',
   background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
 }
 const secondaryBtnStyle = {
   padding: '10px 14px', borderRadius: 9, border: '1px solid var(--tomato)',
-  background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-  textAlign: 'center',
+  background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
+  fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'center',
 }
 const linkBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)',
   fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, padding: 0,
 }
-const linkRowStyle = {
-  display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0',
-  fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', textDecoration: 'none',
+const smallToggleBtnStyle = {
+  padding: '6px 12px', borderRadius: 99, border: '1px solid var(--line)',
+  background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)',
+  fontSize: 12, fontWeight: 600, cursor: 'pointer',
 }

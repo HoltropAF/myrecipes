@@ -15,7 +15,7 @@ import StorageTab from './recipe_tabs/StorageTab'
 const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
 const TAB_SHADES_DARK = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
 
-export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false }) {
+export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
   const { t } = useT()
 
   const TABS = [
@@ -31,7 +31,14 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const [activeVariant, setActiveVariant] = useState('main')
   const [servings, setServings] = useState(recipe.servings || null)
   const [addedToList, setAddedToList] = useState(false)
-  const [checkedIngredients, setCheckedIngredients] = useState(new Set())
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false)
+  const [showPlanPicker, setShowPlanPicker] = useState(false)
+  const [checkedIngredients, setCheckedIngredients] = useState(() => {
+    try {
+      const raw = localStorage.getItem(`recipe_check_${recipe.id}`)
+      return raw ? new Set(JSON.parse(raw)) : new Set()
+    } catch { return new Set() }
+  })
   const [showCookingMode, setShowCookingMode] = useState(false)
   const [compact, setCompact] = useState(false)
 
@@ -42,11 +49,19 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`recipe_check_${recipe.id}`)
+      setCheckedIngredients(raw ? new Set(JSON.parse(raw)) : new Set())
+    } catch { setCheckedIngredients(new Set()) }
+  }, [recipe.id])
+
   const toggleIngredientChecked = (id) => {
     setCheckedIngredients(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      try { localStorage.setItem(`recipe_check_${recipe.id}`, JSON.stringify([...next])) } catch {}
       return next
     })
   }
@@ -114,6 +129,14 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
                   color: 'var(--tomato-deep)', padding: '5px 10px',
                 }}
               >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
+            )}
+            {!isGuest && (
+              <button onClick={() => setShowCollectionPicker(true)} title="Collections" style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>
+                {collections.some(c => (collectionRecipeMap[c.id] || new Set()).has(recipe.id)) ? '📚' : '🔖'}
+              </button>
+            )}
+            {!isGuest && (
+              <button onClick={() => setShowPlanPicker(true)} title="Add to meal plan" style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>📅</button>
             )}
             {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>{t('recipeDetail.edit')}</button>}
             {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>{t('recipeDetail.delete')}</button>}
@@ -193,6 +216,184 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         )}
         {activeTab === 'storage' && (
           <StorageTab recipe={recipe} />
+        )}
+      </div>
+
+      {showCollectionPicker && (
+        <CollectionPicker
+          recipeId={recipe.id}
+          collections={collections}
+          collectionRecipeMap={collectionRecipeMap}
+          onChanged={onCollectionsChanged}
+          onClose={() => setShowCollectionPicker(false)}
+        />
+      )}
+      {showPlanPicker && (
+        <PlanPicker
+          recipeId={recipe.id}
+          onClose={() => setShowPlanPicker(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function CollectionPicker({ recipeId, collections, collectionRecipeMap, onChanged, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newEmoji, setNewEmoji] = useState('📚')
+
+  const toggle = async (col) => {
+    if (busy) return
+    setBusy(true)
+    const inCollection = (collectionRecipeMap[col.id] || new Set()).has(recipeId)
+    if (inCollection) {
+      await supabase.from('collection_recipes').delete()
+        .eq('collection_id', col.id).eq('recipe_id', recipeId)
+    } else {
+      await supabase.from('collection_recipes').insert({ collection_id: col.id, recipe_id: recipeId })
+    }
+    await onChanged?.()
+    setBusy(false)
+  }
+
+  const handleCreate = async () => {
+    const name = newName.trim()
+    if (!name || busy) return
+    setBusy(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: newCol } = await supabase.from('collections')
+        .insert({ user_id: user.id, name, emoji: newEmoji }).select().single()
+      if (newCol) {
+        await supabase.from('collection_recipes').insert({ collection_id: newCol.id, recipe_id: recipeId })
+      }
+      await onChanged?.()
+    }
+    setCreating(false)
+    setNewName('')
+    setBusy(false)
+  }
+
+  const EMOJIS = ['📚','✨','❤️','🌟','🍝','🔥','🌿','🎉','🧁','☕','🥗','🍜']
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ background: 'var(--card)', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 20px 40px', maxHeight: '70dvh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>Collections</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--charcoal-soft)' }}>✕</button>
+        </div>
+
+        {collections.length === 0 && !creating && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', marginBottom: 14 }}>No collections yet.</div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {collections.map(col => {
+            const checked = (collectionRecipeMap[col.id] || new Set()).has(recipeId)
+            return (
+              <label key={col.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', cursor: 'pointer', borderBottom: '1px solid var(--line)' }}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(col)} style={{ width: 18, height: 18, accentColor: 'var(--tomato)', flexShrink: 0 }} />
+                <span style={{ fontSize: 18 }}>{col.emoji}</span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', flex: 1 }}>{col.name}</span>
+              </label>
+            )
+          })}
+        </div>
+
+        {creating ? (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
+              {EMOJIS.map(e => (
+                <button key={e} onClick={() => setNewEmoji(e)} style={{
+                  fontSize: 18, border: newEmoji === e ? '2px solid var(--tomato)' : '2px solid transparent',
+                  background: 'none', borderRadius: 6, cursor: 'pointer', padding: '2px 4px',
+                }}>{e}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
+                placeholder="Collection name"
+                style={{ flex: 1, padding: '9px 10px', borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'var(--font-body)', fontSize: 13, background: 'var(--parchment)', color: 'var(--charcoal)', outline: 'none' }}
+              />
+              <button onClick={handleCreate} disabled={busy || !newName.trim()} style={{ padding: '9px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                Create
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setCreating(true)} style={{ marginTop: 14, padding: '10px 0', borderRadius: 9, border: '1px dashed var(--line)', background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer', width: '100%' }}>
+            + New collection
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PlanPicker({ recipeId, onClose }) {
+  const [groups, setGroups] = useState([])
+  const [adding, setAdding] = useState(null)
+  const [added, setAdded] = useState(null)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('meal_groups').select('id, name, recipe_ids').eq('user_id', user.id).order('created_at', { ascending: false })
+      setGroups(data || [])
+    }
+    load()
+  }, [])
+
+  const addToGroup = async (group) => {
+    if (adding) return
+    setAdding(group.id)
+    const current = group.recipe_ids || []
+    if (!current.includes(recipeId)) {
+      await supabase.from('meal_groups').update({ recipe_ids: [...current, recipeId] }).eq('id', group.id)
+    }
+    setAdded(group.id)
+    setAdding(null)
+    setTimeout(onClose, 800)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ background: 'var(--card)', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 20px 40px', maxHeight: '60dvh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>Add to meal plan</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--charcoal-soft)' }}>✕</button>
+        </div>
+
+        {groups.length === 0 ? (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
+            No meal plan weeks yet — create one in the Meal Prep tab first.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {groups.map(group => (
+              <button
+                key={group.id}
+                onClick={() => addToGroup(group)}
+                disabled={!!adding}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 14px', borderRadius: 10, border: '1px solid var(--line)',
+                  background: added === group.id ? 'var(--sage-light)' : 'var(--parchment)',
+                  cursor: adding ? 'default' : 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', fontWeight: 600 }}>{group.name}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
+                  {added === group.id ? '✓ Added' : `${(group.recipe_ids || []).length} recipes`}
+                </span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -36,6 +36,8 @@ function AppInner({ setLanguage }) {
   const [recipeSearchMode, setRecipeSearchMode] = useState('title') // 'title' | 'ingredient'
   const [compactMode, setCompactMode] = useState(false)
   const [prefillCategory, setPrefillCategory] = useState(null)
+  const [collections, setCollections] = useState([])
+  const [collectionRecipeMap, setCollectionRecipeMap] = useState({})
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
@@ -130,6 +132,21 @@ function AppInner({ setLanguage }) {
     setLoadingRecipes(false)
   }
 
+  const loadCollections = async () => {
+    if (!session?.user?.id) return
+    const [{ data: cols }, { data: links }] = await Promise.all([
+      supabase.from('collections').select('*').order('created_at'),
+      supabase.from('collection_recipes').select('collection_id, recipe_id'),
+    ])
+    setCollections(cols || [])
+    const map = {}
+    for (const { collection_id, recipe_id } of links || []) {
+      if (!map[collection_id]) map[collection_id] = new Set()
+      map[collection_id].add(recipe_id)
+    }
+    setCollectionRecipeMap(map)
+  }
+
   const enterGuestMode = () => {
     setIsGuest(true)
     setRecipes(DEMO_RECIPES)
@@ -142,7 +159,7 @@ function AppInner({ setLanguage }) {
   }
 
   useEffect(() => {
-    if (session) loadRecipes()
+    if (session) { loadRecipes(); loadCollections() }
   }, [session])
 
   useEffect(() => {
@@ -275,6 +292,9 @@ function AppInner({ setLanguage }) {
         unitSystem={unitSystem}
         onToggleUnitSystem={toggleUnitSystem}
         isGuest={isGuest}
+        collections={isGuest ? [] : collections}
+        collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
+        onCollectionsChanged={loadCollections}
       />
     )
   }
@@ -308,6 +328,9 @@ function AppInner({ setLanguage }) {
             searchMode={recipeSearchMode}
             compactMode={compactMode}
             cookCounts={cookCounts}
+            collections={isGuest ? [] : collections}
+            collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
+            onCollectionsChanged={loadCollections}
           />
         )}
         {activeTab === 'shopping' && (
