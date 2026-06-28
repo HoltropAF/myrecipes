@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const RECIPE_CACHE_KEY = 'mr_recipes_v1'
@@ -12,26 +12,30 @@ function readStoredSession() {
     if (!authKey) return null
     const data = JSON.parse(localStorage.getItem(authKey))
     if (!data?.access_token || !data?.user) return null
-    // Use the stored session only when it has more than 60 s left
-    if (data.expires_at && data.expires_at * 1000 < Date.now() + 60_000) return undefined
+    // Return the session regardless of expiry. The Supabase SDK will auto-refresh
+    // the access token on the first API call using the refresh_token. This avoids
+    // showing the gyoza splash for the very common case where the token has simply
+    // expired since the last visit (happens every hour).
     return data
   } catch { return undefined }
 }
 import { LanguageContext, useT } from './lib/i18n'
 import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS } from './lib/demoData'
 import AuthScreen from './components/AuthScreen'
-import AddRecipeWizard from './components/AddRecipeWizard'
-import RecipeDetail from './components/RecipeDetail'
 import BottomNav from './components/BottomNav'
 import FloatingActionButton from './components/FloatingActionButton'
-import QuickLogCook from './components/QuickLogCook'
 import AllRecipesView from './components/views/AllRecipesView'
-import ShoppingListView from './components/views/ShoppingListView'
-import StatsView from './components/views/StatsView'
-import MealPrepView from './components/views/MealPrepView'
-import SettingsView from './components/views/SettingsView'
 import UndoToast from './components/UndoToast'
 import PullToRefresh from './components/PullToRefresh'
+
+// Lazy-load heavy views and overlays that aren't needed on the initial screen
+const AddRecipeWizard  = lazy(() => import('./components/AddRecipeWizard'))
+const RecipeDetail     = lazy(() => import('./components/RecipeDetail'))
+const QuickLogCook     = lazy(() => import('./components/QuickLogCook'))
+const ShoppingListView = lazy(() => import('./components/views/ShoppingListView'))
+const StatsView        = lazy(() => import('./components/views/StatsView'))
+const MealPrepView     = lazy(() => import('./components/views/MealPrepView'))
+const SettingsView     = lazy(() => import('./components/views/SettingsView'))
 import './App.css'
 
 function AppInner({ setLanguage }) {
@@ -296,33 +300,37 @@ function AppInner({ setLanguage }) {
       return null
     }
     return (
-      <AddRecipeWizard
-        existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
-        existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
-        existingTags={[...new Set(recipes.flatMap(r => r.tags || []))]}
-        existingRecipe={editingRecipe}
-        initialStep={editingRecipe ? editInitialStep : 0}
-        prefillCategory={prefillCategory}
-        onClose={closeWizard}
-        onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}
-      />
+      <Suspense fallback={null}>
+        <AddRecipeWizard
+          existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
+          existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
+          existingTags={[...new Set(recipes.flatMap(r => r.tags || []))]}
+          existingRecipe={editingRecipe}
+          initialStep={editingRecipe ? editInitialStep : 0}
+          prefillCategory={prefillCategory}
+          onClose={closeWizard}
+          onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}
+        />
+      </Suspense>
     )
   }
 
   if (selectedRecipe) {
     return (
-      <RecipeDetail
-        recipe={selectedRecipe}
-        onClose={closeRecipe}
-        onDelete={isGuest ? null : handleDelete}
-        onEdit={isGuest ? null : openEdit}
-        unitSystem={unitSystem}
-        onToggleUnitSystem={toggleUnitSystem}
-        isGuest={isGuest}
-        collections={isGuest ? [] : collections}
-        collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
-        onCollectionsChanged={loadCollections}
-      />
+      <Suspense fallback={null}>
+        <RecipeDetail
+          recipe={selectedRecipe}
+          onClose={closeRecipe}
+          onDelete={isGuest ? null : handleDelete}
+          onEdit={isGuest ? null : openEdit}
+          unitSystem={unitSystem}
+          onToggleUnitSystem={toggleUnitSystem}
+          isGuest={isGuest}
+          collections={isGuest ? [] : collections}
+          collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
+          onCollectionsChanged={loadCollections}
+        />
+      </Suspense>
     )
   }
 
@@ -361,13 +369,19 @@ function AppInner({ setLanguage }) {
           />
         )}
         {activeTab === 'shopping' && (
-          <ShoppingListView userId={session?.user?.id} isGuest={isGuest} />
+          <Suspense fallback={null}>
+            <ShoppingListView userId={session?.user?.id} isGuest={isGuest} />
+          </Suspense>
         )}
         {activeTab === 'stats' && (
-          <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} />
+          <Suspense fallback={null}>
+            <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} />
+          </Suspense>
         )}
         {activeTab === 'mealprep' && (
-          <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} isGuest={isGuest} demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null} />
+          <Suspense fallback={null}>
+            <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} isGuest={isGuest} demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null} />
+          </Suspense>
         )}
         {activeTab === 'settings' && (
           isGuest ? (
@@ -387,19 +401,21 @@ function AppInner({ setLanguage }) {
               >{t('app.exitGuestBtn')}</button>
             </div>
           ) : (
-            <SettingsView
-              userEmail={session.user.email}
-              recipes={recipes}
-              onRecipesChanged={loadRecipes}
-              theme={theme}
-              defaultCategory={defaultCategory}
-              unitSystem={unitSystem}
-              recipeViewMode={recipeViewMode}
-              recipeSearchMode={recipeSearchMode}
-              compactMode={compactMode}
-              language={lang}
-              onSavePreferences={handleSaveSettings}
-            />
+            <Suspense fallback={null}>
+              <SettingsView
+                userEmail={session.user.email}
+                recipes={recipes}
+                onRecipesChanged={loadRecipes}
+                theme={theme}
+                defaultCategory={defaultCategory}
+                unitSystem={unitSystem}
+                recipeViewMode={recipeViewMode}
+                recipeSearchMode={recipeSearchMode}
+                compactMode={compactMode}
+                language={lang}
+                onSavePreferences={handleSaveSettings}
+              />
+            </Suspense>
           )
         )}
       </PullToRefresh>
@@ -407,11 +423,13 @@ function AppInner({ setLanguage }) {
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
       {showQuickLog && !isGuest && (
-        <QuickLogCook
-          recipes={recipes}
-          onClose={() => setShowQuickLog(false)}
-          onLogged={() => setShowQuickLog(false)}
-        />
+        <Suspense fallback={null}>
+          <QuickLogCook
+            recipes={recipes}
+            onClose={() => setShowQuickLog(false)}
+            onLogged={() => setShowQuickLog(false)}
+          />
+        </Suspense>
       )}
 
       {pendingDelete && (
