@@ -47,6 +47,7 @@ function AppInner({ setLanguage }) {
   const [cookCounts, setCookCounts] = useState({})
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
+  const [editInitialStep, setEditInitialStep] = useState(0)
   const [loadingRecipes, setLoadingRecipes] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState('recipes')
@@ -89,9 +90,11 @@ function AppInner({ setLanguage }) {
     setPrefillCategory(prefill || null)
     setShowWizard(true)
   }
-  const openEdit = (recipe) => {
+  const TAB_TO_STEP = { info: 3, ingredients: 1, steps: 2, cooklog: 0, storage: 3 }
+  const openEdit = (recipe, tab = 'info') => {
     window.history.pushState({ screen: 'wizard' }, '')
     setEditingRecipe(recipe)
+    setEditInitialStep(TAB_TO_STEP[tab] ?? 0)
     setShowWizard(true)
   }
   const closeRecipe = () => {
@@ -298,6 +301,7 @@ function AppInner({ setLanguage }) {
         existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
         existingTags={[...new Set(recipes.flatMap(r => r.tags || []))]}
         existingRecipe={editingRecipe}
+        initialStep={editingRecipe ? editInitialStep : 0}
         prefillCategory={prefillCategory}
         onClose={closeWizard}
         onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}

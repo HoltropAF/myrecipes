@@ -138,7 +138,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
             {!isGuest && (
               <button onClick={() => setShowPlanPicker(true)} title="Add to meal plan" style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>📅</button>
             )}
-            {onEdit && <button onClick={() => onEdit(recipe)} style={navBtnStyle}>{t('recipeDetail.edit')}</button>}
+            {onEdit && <button onClick={() => onEdit(recipe, activeTab)} style={navBtnStyle}>{t('recipeDetail.edit')}</button>}
             {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>{t('recipeDetail.delete')}</button>}
           </div>
         </div>

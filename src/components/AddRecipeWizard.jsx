@@ -11,10 +11,10 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
 const emptyGroup = () => ({ group: null, items: [] })
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
   const { t } = useT()
   const isEditing = !!existingRecipe
-  const [stepIndex, setStepIndex] = useState(0)
+  const [stepIndex, setStepIndex] = useState(initialStep)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -149,7 +149,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
-      <WizardHeader stepIndex={stepIndex} total={STEPS.length} onClose={onClose} onBack={stepIndex > 0 ? goBack : null} isEditing={isEditing} />
+      <WizardHeader stepIndex={stepIndex} total={STEPS.length} onClose={onClose} onBack={stepIndex > 0 ? goBack : null} isEditing={isEditing} onJump={setStepIndex} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 100px' }}>
         {step === 'title' && (
@@ -222,27 +222,43 @@ function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, v
   return true
 }
 
-function WizardHeader({ stepIndex, total, onClose, onBack, isEditing }) {
+function WizardHeader({ stepIndex, total, onClose, onBack, isEditing, onJump }) {
   const { t } = useT()
   const labels = t('wizard.steps')
   return (
-    <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--line)', background: 'var(--card)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+    <div style={{ padding: '12px 20px 10px', borderBottom: '1px solid var(--line)', background: 'var(--card)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         {onBack
           ? <button onClick={onBack} style={navBtnStyle}>{t('wizard.back')}</button>
           : <div style={{ width: 50 }} />}
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-          {isEditing ? t('wizard.editing') : ''}{stepIndex + 1} / {total} — {labels[stepIndex]}
+          {isEditing ? t('wizard.editing').replace(' — ', '') : `${stepIndex + 1} / ${total}`}
         </div>
-        <button onClick={onClose} style={navBtnStyle}>{t('wizard.close')}</button>
+        <button onClick={onClose} style={{ ...navBtnStyle, textAlign: 'right' }}>{t('wizard.close')}</button>
       </div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        {Array.from({ length: total }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: 4, borderRadius: 2,
-            background: i <= stepIndex ? 'var(--tomato)' : 'var(--line)',
-          }} />
-        ))}
+      <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 1 }}>
+        {labels.map((label, i) => {
+          const isActive = i === stepIndex
+          const canJump = isEditing || i <= stepIndex
+          return (
+            <button
+              key={i}
+              onClick={() => canJump && onJump(i)}
+              style={{
+                padding: '4px 9px', borderRadius: 6, flexShrink: 0,
+                border: isActive ? '1.5px solid var(--tomato)' : '1.5px solid var(--line)',
+                background: isActive ? 'var(--tomato)' : 'transparent',
+                color: isActive ? 'var(--card)' : canJump ? 'var(--charcoal)' : 'var(--charcoal-soft)',
+                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+                cursor: canJump ? 'pointer' : 'default',
+                opacity: canJump ? 1 : 0.35,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
