@@ -32,10 +32,12 @@ This makes the app open full-screen, just like a normal app from the store.
 | Browse and search your recipes | **Recipes** tab |
 | Add a new recipe | **+** button (bottom-right) |
 | Edit a recipe | Open it → tap **Edit** (top-right) |
+| Log a cook after cooking | Tap **Done** when in cooking mode → log or add notes |
 | Shopping list | **List** tab |
-| Log a cook and rate a recipe | Inside any recipe → **Log** tab |
+| Log a cook and rate a recipe | Inside any recipe ��� **Log** tab |
 | See your cooking stats | **Stats** tab |
 | Plan meals across multiple recipes | **Plan** tab |
+| Group recipes into collections | Open a recipe → tap the bookmark icon |
 | Change language, theme, units, back up your data | **Settings** tab |
 
 ---

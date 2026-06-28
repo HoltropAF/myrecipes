@@ -49,14 +49,23 @@ All your recipes, cooking logs, and shopping list items are private to your acco
 
 This is the main screen. Everything starts here.
 
-### Cookbook view vs List view
+### Cookbook view vs List view vs Grid view
 
-You can switch between two ways of browsing:
+You can switch between three ways of browsing:
 
-- **Cookbook view** (default): recipes are grouped into categories (e.g. "Main dishes", "Desserts") shown as collapsible folders. Tap a category to expand it and see the recipes inside. Subcategories nest underneath. This view works well when you know what kind of recipe you are looking for.
+- **Cookbook view** (default): recipes are grouped into categories (e.g. "Main dishes", "Desserts") shown as collapsible folders, numbered in a fixed order. Tap a category to expand it and see the recipes inside. Subcategories nest underneath. This view works well when you know what kind of recipe you are looking for.
 - **List view**: a flat, scrollable list of all your recipes in one place. Easier for searching or sorting by name.
+- **Grid view**: a three-column photo grid. Recipes without a photo get a coloured placeholder tile.
 
 To change the default view, go to **Settings → Recipes → Browse as**.
+
+### Collections
+
+Collections are named groups you can use to organise recipes however you like — e.g. "Weeknight favourites", "Dinner party ideas", or "From mum". They appear as a scrollable row of pills just above the recipe list.
+
+To add a recipe to a collection: open the recipe and tap the **bookmark** icon (top-right). A sheet appears where you can check one or more collections, or create a new one. Collections are personal — they are stored in your account and are not visible to anyone else.
+
+A special collection called **Dopamine Menu** is suggested automatically when you have no collections yet — it is a dedicated place for recipes that always make you happy to cook.
 
 ### Searching
 
@@ -124,7 +133,11 @@ The button in the header (showing `g / ml` or `cup / oz`) toggles between metric
 
 The cooking steps, optionally split into sections (e.g. "Prep", "Cooking", "Serving"). Each step that has a timer shows a **Start timer** button — tap it to start a countdown. Timers keep running if you switch tabs or scroll.
 
-**Cooking mode**: tap **Start cooking** at the top of the Steps tab for a full-screen, step-by-step guided view. It shows one step at a time with large text, a built-in timer for timed steps, and Prev / Next buttons. Press the X to exit back to the recipe.
+**Cooking mode**: tap **Start cooking** at the top of the Steps tab for a full-screen, step-by-step guided view. It shows one step at a time with large text, a built-in timer for timed steps, and Prev / Next buttons. When you tap **Done** at the end, a screen appears where you can:
+
+- **Log this cook** — saves a cook log entry (shows up on the Log tab and in Stats).
+- **Save to recipe notes** — appends anything you typed to the recipe's notes field (only shown when you have written something).
+- **Skip** — closes cooking mode without saving anything.
 
 ### Log tab
 
@@ -137,15 +150,21 @@ A chronological history of every time you have cooked this recipe. Each entry sh
 
 To add a new log entry: tap **+ Log this cook** at the top of the Log tab, or use the floating **+** button on the main screen and choose **Log a cook** (which lets you pick which recipe from a list).
 
-### Notes tab
+### Storage tab
 
-A freeform text field for anything you want to remember about the recipe — storage instructions, sourcing notes, things you would change next time. This is separate from the per-cook notes in the Log tab.
+Shows three things, each only if the recipe has them:
+
+- **Freezer-friendly**: whether the recipe freezes well or not.
+- **Notes**: any freeform notes saved with the recipe — storage tips, where the recipe is from, things to change next time.
+- **Source**: a link to the original recipe page, if one was saved.
+
+This is separate from the per-cook notes on the Log tab, which are specific to a single cooking session.
 
 ---
 
 ## 4. Adding and editing recipes
 
-Tap **+ Add** (top-right of Recipes) or the **+** floating button to open the recipe wizard. The wizard has up to five steps.
+Tap **+ Add** (top-right of Recipes) or the **+** floating button to open the recipe wizard. The wizard has up to five steps, shown as clickable chips at the top: **Title · Ingredients · Steps · Extras · Variants**. When editing an existing recipe, all chips are freely tappable so you can jump directly to any section — no need to step through them in order. The wizard also opens on the section that matches the tab you were viewing (e.g. tapping Edit from the Ingredients tab opens straight on the Ingredients step).
 
 ### Step 1 — Title
 
@@ -192,7 +211,6 @@ Steps can optionally include a **timer** — if a step mentions a time ("bake fo
 - **Photo**: tap the photo area to upload an image from your device. A link to Google Images (pre-filled with the recipe title) is shown next to the label — tap it to search for a photo, download it, and then upload it through the file picker.
 - **Tags**: free-form labels. Type a tag and press Enter. Existing tags from your other recipes are suggested as you type. Examples: "quick", "freezes well", "meal prep", "date night".
 - **Notes**: any freeform notes to store with the recipe (storage tips, source URL, things to change next time).
-- **Freezer-friendly**: three-way toggle — yes, no, or not assessed.
 
 ### Step 5 — Version (optional)
 
@@ -267,7 +285,7 @@ Stats update live — as soon as you log a cook, the numbers change.
 
 ## 8. Settings
 
-Open Settings from the bottom navigation bar. Settings are organised into five sections, selectable from a row of pill buttons at the top.
+Open Settings from the bottom navigation bar. Settings are organised into five sections — **General**, **Appearance**, **Recipes**, **Tags**, and **Backup** — each shown as a named tab at the top of the screen. Tap any tab to switch to it.
 
 ### General
 
@@ -299,7 +317,7 @@ To add new tags, edit a recipe and use the Tags field in Step 4.
 ### Backup
 
 - **Download backup (.json)**: exports all your data (recipes, cook log, shopping list, meal groups, preferences) as a single JSON file. Store this somewhere safe — it is the only way to recover your data if your account is ever lost.
-- **Export cookbook (PDF)**: generates a print-ready PDF of all your recipes, organised by category with a table of contents. The PDF is created entirely in the browser using the native print dialog (no third-party library) — you will see a print preview where you can save as PDF.
+- **Export cookbook (PDF)**: generates a print-ready PDF of your recipes. Before exporting, a filter sheet appears where you can choose which categories to include — handy if you only want to print a subset. Tap **Export N recipes** to confirm. The PDF is created entirely in the browser using the native print dialog — you will see a print preview where you can save as PDF.
 
 ---
 
