@@ -303,6 +303,13 @@ function AppInner({ setLanguage }) {
       <Suspense fallback={null}>
         <AddRecipeWizard
           existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
+          existingSubcategories={recipes.reduce((map, r) => {
+            if (r.category && r.subcategory) {
+              if (!map[r.category]) map[r.category] = []
+              if (!map[r.category].includes(r.subcategory)) map[r.category].push(r.subcategory)
+            }
+            return map
+          }, {})}
           existingGroups={[...new Set(recipes.flatMap(r => (r.ingredients || []).map(g => g.group).filter(Boolean)))]}
           existingTags={[...new Set(recipes.flatMap(r => r.tags || []))]}
           existingRecipe={editingRecipe}

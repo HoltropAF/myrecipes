@@ -11,7 +11,7 @@ const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
 const emptyGroup = () => ({ group: null, items: [] })
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingSubcategories = {}, existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
   const { t } = useT()
   const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(initialStep)
@@ -171,9 +171,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             title={title}
             servings={servings} setServings={setServings}
             totalMinutes={totalMinutes} setTotalMinutes={setTotalMinutes}
-            category={category} setCategory={setCategory}
+            category={category} setCategory={cat => { setCategory(cat); setSubcategory('') }}
             subcategory={subcategory} setSubcategory={setSubcategory}
             existingCategories={existingCategories}
+            existingSubcategories={existingSubcategories}
             photoPreview={photoPreview} onPhotoChange={handlePhotoChange}
             notes={notes} setNotes={setNotes}
             tags={tags} setTags={setTags} existingTags={existingTags}
