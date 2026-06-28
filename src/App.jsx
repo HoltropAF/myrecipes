@@ -1,5 +1,22 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+
+const RECIPE_CACHE_KEY = 'mr_recipes_v1'
+
+// Read the Supabase session synchronously from localStorage so returning
+// users skip the splash entirely. Returns null if not logged in, undefined
+// if we can't tell (expired token or storage error — fall back to async getSession).
+function readStoredSession() {
+  try {
+    const authKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+    if (!authKey) return null
+    const data = JSON.parse(localStorage.getItem(authKey))
+    if (!data?.access_token || !data?.user) return null
+    // Use the stored session only when it has more than 60 s left
+    if (data.expires_at && data.expires_at * 1000 < Date.now() + 60_000) return undefined
+    return data
+  } catch { return undefined }
+}
 import { LanguageContext, useT } from './lib/i18n'
 import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS } from './lib/demoData'
 import AuthScreen from './components/AuthScreen'
@@ -19,10 +36,15 @@ import './App.css'
 
 function AppInner({ setLanguage }) {
   const { t, lang } = useT()
-  const [session, setSession] = useState(undefined)
+  const [session, setSession] = useState(() => readStoredSession())
   const [isGuest, setIsGuest] = useState(false)
-  const [recipes, setRecipes] = useState([])
-  const [cookCounts, setCookCounts] = useState({}) // recipe_id -> number of cook_log entries
+  const [recipes, setRecipes] = useState(() => {
+    try {
+      const raw = localStorage.getItem(RECIPE_CACHE_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+  })
+  const [cookCounts, setCookCounts] = useState({})
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
   const [loadingRecipes, setLoadingRecipes] = useState(false)
@@ -118,14 +140,15 @@ function AppInner({ setLanguage }) {
     ])
     const tagMap = {}
     for (const row of (tagData || [])) tagMap[row.recipe_id] = row
-    const recipes = (data || []).map(r => ({
+    const freshRecipes = (data || []).map(r => ({
       ...r,
       allergen_tags: tagMap[r.id]?.allergen_tags || [],
       is_vegan: tagMap[r.id]?.is_vegan ?? false,
       is_vegetarian: tagMap[r.id]?.is_vegetarian ?? false,
       is_pescatarian_or_better: tagMap[r.id]?.is_pescatarian_or_better ?? false,
     }))
-    setRecipes(recipes)
+    setRecipes(freshRecipes)
+    try { localStorage.setItem(RECIPE_CACHE_KEY, JSON.stringify(freshRecipes)) } catch {}
     const counts = {}
     for (const entry of (logData || [])) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
     setCookCounts(counts)
@@ -320,7 +343,7 @@ function AppInner({ setLanguage }) {
         {activeTab === 'recipes' && (
           <AllRecipesView
             recipes={recipes}
-            loading={loadingRecipes}
+            loading={loadingRecipes && recipes.length === 0}
             onSelect={openRecipe}
             onAdd={isGuest ? null : openWizard}
             defaultOpenCategory={defaultCategory}
