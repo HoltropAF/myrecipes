@@ -11,6 +11,19 @@ export const CATEGORY_ICONS = {
   'Drinks': '🍹', 'Household': '🧴', 'Soups': '🍲', 'Salads': '🥗',
 }
 
+// Fixed category order for the cookbook folder view
+export const CATEGORY_ORDER = [
+  'Main dishes',
+  'Sides',
+  'Soups',
+  'Salads',
+  'Breakfast & Brunch',
+  'Appetizers & Snacks',
+  'Desserts',
+  'Drinks',
+  'Household',
+]
+
 const GRID_PLACEHOLDER_COLORS = ['#fde8d8','#e8f3e0','#e0eaf8','#f8e8f0','#f8f3e0','#e8f0f8','#f0e8f8']
 
 export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defaultOpenCategory, viewMode = 'folders', searchMode = 'title', compactMode = false, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
@@ -243,9 +256,12 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
       }
     }
     return Object.entries(map).sort((a, b) => {
-      const countA = a[1].direct.length + Object.values(a[1].subcategories).flat().length
-      const countB = b[1].direct.length + Object.values(b[1].subcategories).flat().length
-      return countB - countA
+      const ai = CATEGORY_ORDER.indexOf(a[0])
+      const bi = CATEGORY_ORDER.indexOf(b[0])
+      if (ai === -1 && bi === -1) return a[0].localeCompare(b[0])
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
     })
   }, [recipes])
 
@@ -277,7 +293,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {tree.map(([cat, { direct, subcategories }]) => {
+      {tree.map(([cat, { direct, subcategories }], catIndex) => {
         const totalCount = direct.length + Object.values(subcategories).flat().length
         const isOpen = !!openCategories[cat]
         const subEntries = Object.entries(subcategories).sort((a, b) => b[1].length - a[1].length)
@@ -291,7 +307,9 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
                 padding: '14px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{CATEGORY_ICONS[cat] || '🍽'}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--tomato-deep)', flexShrink: 0, minWidth: 20, opacity: 0.7 }}>
+                {String(catIndex + 1).padStart(2, '0')}
+              </span>
               <span style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--charcoal)' }}>{cat}</span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', flexShrink: 0 }}>{totalCount}</span>
               <span style={{
