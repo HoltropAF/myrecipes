@@ -1,370 +1,682 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>myrecipes – Setup Wizard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>myrecipes — Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #fdf8f0;
-      --surface: #ffffff;
-      --border: #e5ddd0;
-      --text: #1a1410;
-      --muted: #7a6e64;
-      --accent: #c1432f;
-      --accent-dim: #f9eeeb;
-      --green: #1a7a4a;
-      --green-dim: #e8f5ee;
-      --red: #c1432f;
-      --radius: 10px;
-    }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    :root {
+      --bg:         #fdf8f0;
+      --surface:    #ffffff;
+      --border:     #e5ddd0;
+      --text:       #1a1410;
+      --muted:      #7a6e64;
+      --accent:     #c1432f;
+      --accent-dim: #f5ebe8;
+      --green:      #1a7a4a;
+      --red:        #c1432f;
+      --radius:     12px;
     }
 
-    /* ── Progress header ── */
-    #progress-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      width: 100%;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 20px;
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    #progress-top {
+
+    .wizard {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      min-height: 100dvh;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+    }
+
+    /* ── Progress ── */
+    .progress {
+      display: flex;
       align-items: center;
-      margin-bottom: 8px;
+      gap: 12px;
+      margin-bottom: 36px;
+      flex-shrink: 0;
     }
-    #progress-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    #lang-toggle {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--muted);
-      font-family: inherit;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    #lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
-    #progress-bar-bg {
-      width: 100%;
-      height: 4px;
+    .progress-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .progress-track {
+      flex: 1;
+      height: 3px;
       background: var(--border);
       border-radius: 2px;
       overflow: hidden;
     }
-    #progress-bar-fill {
+    .progress-fill {
       height: 100%;
       background: var(--accent);
       border-radius: 2px;
-      transition: width 0.3s ease;
+      transition: width 0.35s ease;
     }
+
+    /* ── Language toggle ── */
+    .lang-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 2px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lang-sep { font-size: 11px; color: var(--border); }
+    .lang-opt {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      transition: color 0.15s;
+    }
+    .lang-opt.active { color: var(--accent); }
 
     /* ── Steps ── */
-    #steps-container {
-      width: 100%;
-      max-width: 640px;
-      padding: 0 20px 60px;
-    }
-    .step {
-      display: none;
-      flex-direction: column;
-      min-height: calc(100vh - 80px);
-      padding: 32px 0 24px;
-    }
+    .step { display: none; flex-direction: column; gap: 18px; flex: 1; }
     .step.active { display: flex; }
+    .step-icon { font-size: 40px; line-height: 1; }
+    h1 { font-size: 24px; font-weight: 600; line-height: 1.3; }
 
-    .step-icon { font-size: 40px; margin-bottom: 16px; line-height: 1; }
-    .step h1 { font-size: 26px; font-weight: 700; line-height: 1.25; margin-bottom: 8px; }
-    .step .subtitle { font-size: 15px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
-
-    /* ── Why callout ── */
     .why {
-      background: var(--accent-dim);
-      border-left: 3px solid var(--accent);
-      border-radius: 0 var(--radius) var(--radius) 0;
-      padding: 12px 14px;
-      font-size: 13px;
+      font-size: 14px;
       color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 24px;
+      background: var(--surface);
+      border-left: 3px solid var(--accent-dim);
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      line-height: 1.55;
     }
-    .why strong { color: var(--text); }
 
-    /* ── Instructions ── */
-    .instructions { display: flex; flex-direction: column; gap: 14px; }
-    .instr { display: flex; gap: 12px; align-items: flex-start; }
-    .instr-num {
-      flex-shrink: 0;
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      margin-top: 2px;
-    }
-    .instr-body { font-size: 14px; line-height: 1.65; }
-    .instr-body a { color: var(--accent); text-decoration: none; font-weight: 500; }
-    .instr-body a:hover { text-decoration: underline; }
-    .instr-body strong { font-weight: 600; }
-    .instr-body code {
-      background: var(--border);
-      padding: 1px 5px;
+    p { font-size: 15px; }
+    .muted { color: var(--muted); font-size: 13px; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      background: var(--accent-dim);
+      padding: 1px 6px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 13px;
       font-family: 'Menlo', 'Consolas', monospace;
     }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 20px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      text-decoration: none;
+      line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); }
+    .btn-full   { width: 100%; }
+    .btn-inline { align-self: flex-start; }
+    .btn-install { background: var(--green); color: #fff; font-weight: 600; }
+    .btn-start-over {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 4px;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-start-over:hover { color: var(--text); }
+
+    /* ── Inputs ── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; font-weight: 500; color: var(--muted); }
+    .field input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 11px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); opacity: 0.55; }
+    .field input.error { border-color: var(--red); }
+    .field-hint { font-size: 12px; color: var(--red); display: none; }
+    .field input.error ~ .field-hint { display: block; }
 
     /* ── Code block ── */
     .code-block {
       position: relative;
       background: #1e1a17;
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      margin-top: 10px;
+      overflow: hidden;
     }
     .code-block pre {
-      padding: 14px 50px 14px 16px;
-      font-size: 12px;
+      padding: 14px 16px;
       font-family: 'Menlo', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.75;
       color: #f0e8e0;
       overflow-x: auto;
       white-space: pre;
-      line-height: 1.6;
     }
+    .pre-sm { padding: 10px 16px; font-size: 13px; }
     .copy-btn {
       position: absolute;
-      top: 8px; right: 8px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 6px;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,255,255,0.12);
       color: #f0e8e0;
-      font-size: 11px; font-weight: 600;
+      border: none;
+      border-radius: 6px;
       padding: 4px 10px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s;
-    }
-    .copy-btn:hover { background: rgba(255,255,255,0.2); }
-    .copy-btn.copied { background: var(--green); border-color: var(--green); color: #fff; }
-
-    /* ── Fields ── */
-    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .field label { font-size: 13px; font-weight: 600; }
-    .field input {
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      font-size: 14px;
-      font-family: inherit;
-      background: var(--surface);
-      color: var(--text);
-      transition: border-color 0.15s;
-      outline: none;
-    }
-    .field input:focus { border-color: var(--accent); }
-    .field input.error { border-color: var(--red); }
-    .field-hint { display: none; font-size: 12px; color: var(--red); font-weight: 500; }
-    .field input.error ~ .field-hint { display: block; }
-
-    /* ── Display value ── */
-    .display-val {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
       font-size: 12px;
-      font-family: 'Menlo', 'Consolas', monospace;
-      word-break: break-all;
-      color: var(--muted);
-      flex: 1;
-    }
-    .env-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
-    .env-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; margin-top: 14px; }
-    .env-label:first-child { margin-top: 0; }
-
-    /* ── Prereq cards ── */
-    .prereq-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-    .prereq-item {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 11px 14px;
-    }
-    .prereq-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
-    .prereq-text { flex: 1; }
-    .prereq-text strong { font-size: 13px; font-weight: 600; display: block; }
-    .prereq-text span { font-size: 11px; color: var(--muted); }
-    .prereq-link { font-size: 12px; color: var(--accent); font-weight: 500; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
-    .prereq-link:hover { text-decoration: underline; }
-
-    /* ── Platform box ── */
-    .platform-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-top: 8px;
-    }
-    .platform-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-    .platform-steps { display: flex; flex-direction: column; gap: 9px; }
-    .platform-step { font-size: 14px; line-height: 1.55; color: var(--muted); }
-    .platform-step strong { color: var(--text); }
-
-    /* ── Done card ── */
-    .done-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
-    .done-link {
-      display: flex; align-items: center; gap: 10px;
-      text-decoration: none; color: var(--text);
-      font-size: 14px; font-weight: 500;
-      padding: 10px 12px;
-      border-radius: 8px;
+      font-family: inherit;
+      cursor: pointer;
       transition: background 0.15s;
+      z-index: 1;
     }
-    .done-link:hover { background: var(--bg); }
-    .done-link .done-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .copy-btn:hover { background: rgba(255,255,255,0.22); }
+    .copy-btn.copied { background: var(--green); color: #fff; }
 
-    /* ── Buttons ── */
-    .actions { margin-top: auto; padding-top: 28px; display: flex; flex-direction: column; gap: 10px; }
-    button { font-family: inherit; cursor: pointer; }
-
-    .btn-primary {
-      background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius);
-      padding: 14px 20px; font-size: 15px; font-weight: 600;
-      width: 100%; transition: opacity 0.15s;
-    }
-    .btn-primary:hover { opacity: 0.88; }
-
-    .btn-secondary {
-      background: var(--surface); color: var(--text);
-      border: 1.5px solid var(--border); border-radius: var(--radius);
-      padding: 12px 20px; font-size: 14px; font-weight: 500;
-      width: 100%; transition: border-color 0.15s;
-    }
-    .btn-secondary:hover { border-color: var(--accent); }
-
-    .btn-install {
-      background: var(--green); color: #fff;
-      border: none; border-radius: var(--radius);
-      padding: 14px 20px; font-size: 15px; font-weight: 600;
-      width: 100%; transition: opacity 0.15s;
-    }
-    .btn-install:hover { opacity: 0.88; }
-
-    .btn-link-primary {
-      display: block; text-decoration: none; text-align: center;
-      background: var(--accent); color: #fff;
-      border-radius: var(--radius);
-      padding: 14px 20px; font-size: 15px; font-weight: 600;
-      transition: opacity 0.15s;
-    }
-    .btn-link-primary:hover { opacity: 0.88; }
-
-    .btn-start-over {
-      background: none; border: none;
-      color: var(--muted); font-size: 13px;
-      text-decoration: underline; cursor: pointer;
-      padding: 2px 0; align-self: flex-start;
-    }
-    .btn-start-over:hover { color: var(--text); }
-
-    .env-copy-btn {
+    /* ── Callout ── */
+    .callout {
       background: var(--surface);
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 8px 12px; font-size: 11px; font-weight: 600;
-      cursor: pointer; color: var(--muted);
-      white-space: nowrap; font-family: inherit;
-      transition: border-color 0.15s, color 0.15s;
+      padding: 13px 16px;
+      font-size: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      line-height: 1.5;
     }
-    .env-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .env-copy-btn.copied { border-color: var(--green); color: var(--green); }
+    .callout-icon { flex-shrink: 0; margin-top: 1px; }
 
-    .spacer { margin-top: 16px; }
+    /* ── Actions ── */
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding-top: 20px; }
+
+    /* ── Welcome ── */
+    .hero { text-align: center; padding: 16px 0 4px; }
+    .hero-logo { font-size: 52px; margin-bottom: 10px; }
+    .hero h1 { font-size: 28px; }
+
+    .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .stat-num   { font-size: 22px; font-weight: 600; color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* ── iOS walkthrough ── */
+    .ios-steps { display: flex; flex-direction: column; gap: 10px; }
+    .ios-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .ios-num {
+      width: 24px; height: 24px; min-width: 24px;
+      background: var(--accent-dim);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .ios-text { font-size: 14px; line-height: 1.5; }
+    .share-icon {
+      display: inline-flex;
+      align-items: center;
+      background: var(--accent-dim);
+      border-radius: 4px;
+      padding: 1px 5px 2px;
+      font-size: 14px;
+      vertical-align: middle;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
+<div class="wizard">
 
-<div id="progress-header">
-  <div id="progress-top">
-    <span id="progress-label"></span>
-    <button type="button" id="lang-toggle" onclick="toggleLang()" aria-label="Toggle language"></button>
+  <div class="progress">
+    <span class="progress-label" id="prog-label"></span>
+    <div class="progress-track">
+      <div class="progress-fill" id="prog-fill"></div>
+    </div>
+    <button type="button" class="lang-toggle" onclick="toggleLang()" id="lang-btn" aria-label="Switch language" title="Switch language">
+      <span class="lang-opt" id="lo-en">EN</span>
+      <span class="lang-sep">|</span>
+      <span class="lang-opt" id="lo-nl">NL</span>
+    </button>
   </div>
-  <div id="progress-bar-bg">
-    <div id="progress-bar-fill"></div>
-  </div>
-</div>
 
-<div id="steps-container">
-
-  <!-- ═══════════════════════════════════════════════ STEP 1 -->
+  <!-- ══ Step 1: Welcome ══════════════════════════════════════════════════ -->
   <section class="step active" id="step-1">
-    <div class="step-icon">🍳</div>
-    <h1 data-t="s1_title"></h1>
-    <p class="subtitle" data-t-html="s1_sub"></p>
-    <div class="why" data-t-html="s1_why"></div>
-    <div class="prereq-list" id="prereq-list"></div>
+    <div class="hero">
+      <div class="hero-logo">🍳</div>
+      <h1 data-t="s1_h1"></h1>
+    </div>
+    <p data-t="s1_p"></p>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num">~15</div>
+        <div class="stat-label" data-t="s1_stat_minutes"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">3</div>
+        <div class="stat-label" data-t="s1_stat_accounts"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">€0</div>
+        <div class="stat-label" data-t="s1_stat_cost"></div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="callout-icon">📋</span>
+      <div data-t-html="s1_callout"></div>
+    </div>
+    <p class="muted" data-t-html="s1_note"></p>
     <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(2)" data-t="s1_cta"></button>
+      <button type="button" class="btn btn-primary btn-full" onclick="goTo(2)" data-t="s1_btn" title="Let's go →">Let's go →</button>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════════════════ STEP 2 -->
+  <!-- ══ Step 2: GitHub fork ══════════════════════════════════════════════ -->
   <section class="step" id="step-2">
-    <div class="step-icon">🗄️</div>
-    <h1 data-t="s2_title"></h1>
+    <div class="step-icon">🐙</div>
+    <h1 data-t="s2_h1"></h1>
     <div class="why" data-t-html="s2_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s2_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s2_i2"></div></div>
-      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s2_i3"></div></div>
-    </div>
+    <p data-t-html="s2_p1"></p>
+    <p data-t-html="s2_p2"></p>
     <div class="actions">
-      <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener" class="btn-link-primary" data-t="s2_open"></a>
-      <button type="button" class="btn-primary" onclick="goTo(3)" data-t="s2_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+      <a class="btn btn-primary btn-full" href="https://github.com/HoltropAF/myrecipes/fork" target="_blank" rel="noopener" data-t="s2_btn1"></a>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goTo(3)" data-t="s2_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════════════════ STEP 3 -->
+  <!-- ══ Step 3: Supabase project ════════════════════════════════════════ -->
   <section class="step" id="step-3">
-    <div class="step-icon">📋</div>
-    <h1 data-t="s3_title"></h1>
+    <div class="step-icon">🗄️</div>
+    <h1 data-t="s3_h1"></h1>
     <div class="why" data-t-html="s3_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s3_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s3_i2"></div></div>
+    <p data-t-html="s3_p1"></p>
+    <p data-t-html="s3_p2"></p>
+    <p data-t-html="s3_p3"></p>
+    <div class="actions">
+      <a class="btn btn-secondary btn-full" href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener" data-t="s3_btn1"></a>
+      <button type="button" class="btn btn-primary btn-full" onclick="goTo(4)" data-t="s3_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
     </div>
-    <div class="code-block spacer">
-      <pre id="sql-pre">-- myrecipes — full database schema
--- Run this against a fresh Supabase project.
+  </section>
+
+  <!-- ══ Step 4: Run schema SQL ══════════════════════════════════════════ -->
+  <section class="step" id="step-4">
+    <div class="step-icon">🛠️</div>
+    <h1 data-t="s4_h1"></h1>
+    <div class="why" data-t-html="s4_why"></div>
+    <p data-t-html="s4_p1"></p>
+    <div class="code-block">
+      <button type="button" class="copy-btn" id="copy-sql-btn" onclick="copySql(this)" data-t="copy" data-t-title="copy"></button>
+      <pre id="sql-block"></pre>
+    </div>
+    <p data-t-html="s4_p2"></p>
+    <a class="btn btn-secondary btn-inline" href="https://supabase.com/dashboard/project/_/sql/new" target="_blank" rel="noopener" data-t="s4_btn1"></a>
+    <p data-t-html="s4_p3"></p>
+    <div class="callout">
+      <span class="callout-icon">✅</span>
+      <div data-t-html="s4_callout"></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-full" onclick="goTo(5)" data-t="s4_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
+    </div>
+  </section>
+
+  <!-- ══ Step 5: Copy credentials ════════════════════════════════════════ -->
+  <section class="step" id="step-5">
+    <div class="step-icon">🔑</div>
+    <h1 data-t="s5_h1"></h1>
+    <div class="why" data-t-html="s5_why"></div>
+    <p data-t-html="s5_p1"></p>
+    <a class="btn btn-secondary btn-inline" href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" rel="noopener" data-t="s5_btn1"></a>
+    <p data-t-html="s5_p2"></p>
+    <div class="field">
+      <label data-t="s5_label1"></label>
+      <input type="url" id="inp-url" oninput="clearErr(this); onUrlInput()" autocomplete="off" autocorrect="off" spellcheck="false">
+      <span class="field-hint" data-t="err_url"></span>
+    </div>
+    <div class="field">
+      <label data-t="s5_label2"></label>
+      <input type="text" id="inp-key" oninput="clearErr(this); onKeyInput()" autocomplete="off" autocorrect="off" spellcheck="false">
+      <span class="field-hint" data-t="err_key"></span>
+    </div>
+    <p class="muted" data-t="s5_muted"></p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-full" onclick="validate5()" data-t="s5_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
+    </div>
+  </section>
+
+  <!-- ══ Step 6: Deploy to Vercel ════════════════════════════════════════ -->
+  <section class="step" id="step-6">
+    <div class="step-icon">🚀</div>
+    <h1 data-t="s6_h1"></h1>
+    <div class="why" data-t-html="s6_why"></div>
+    <p data-t-html="s6_p1"></p>
+    <p class="muted" data-t-html="s6_muted"></p>
+    <a class="btn btn-primary btn-full" id="vercel-btn" href="#" target="_blank" rel="noopener" data-t="s6_btn1"></a>
+    <div class="callout">
+      <span class="callout-icon">⏱️</span>
+      <div data-t-html="s6_callout"></div>
+    </div>
+    <div class="field">
+      <label data-t="s6_label"></label>
+      <input type="url" id="inp-vercel" oninput="clearErr(this); onVercelInput()" autocomplete="off" autocorrect="off" spellcheck="false">
+      <span class="field-hint" data-t="err_vercel"></span>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-full" onclick="validate6()" data-t="s6_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
+    </div>
+  </section>
+
+  <!-- ══ Step 7: Supabase auth redirect ══════════════════════════════════ -->
+  <section class="step" id="step-7">
+    <div class="step-icon">🔗</div>
+    <h1 data-t="s7_h1"></h1>
+    <div class="why" data-t-html="s7_why"></div>
+    <div class="callout">
+      <span class="callout-icon">↩️</span>
+      <div data-t-html="s7_callout"></div>
+    </div>
+    <p data-t-html="s7_p1"></p>
+    <a class="btn btn-secondary btn-inline" href="https://supabase.com/dashboard/project/_/auth/url-configuration" target="_blank" rel="noopener" data-t="s7_btn1"></a>
+    <p data-t-html="s7_p2"></p>
+    <div class="code-block">
+      <button type="button" class="copy-btn" onclick="copyField('vercel-url-display', this)" data-t="copy" data-t-title="copy"></button>
+      <pre id="vercel-url-display" class="pre-sm"></pre>
+    </div>
+    <p data-t-html="s7_p3"></p>
+    <div class="code-block">
+      <button type="button" class="copy-btn" onclick="copyField('vercel-url-wild-display', this)" data-t="copy" data-t-title="copy"></button>
+      <pre id="vercel-url-wild-display" class="pre-sm"></pre>
+    </div>
+    <p data-t-html="s7_p4"></p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-full" onclick="goTo(8)" data-t="s7_btn2"></button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
+    </div>
+  </section>
+
+  <!-- ══ Step 8: Install on phone ════════════════════════════════════════ -->
+  <section class="step" id="step-8">
+    <div class="step-icon">📱</div>
+    <h1 data-t="s8_h1"></h1>
+    <div class="why" data-t-html="s8_why"></div>
+    <div id="install-body"></div>
+    <div class="actions" id="install-actions"></div>
+  </section>
+
+</div><!-- /wizard -->
+
+<script>
+'use strict';
+
+const T = {
+  en: {
+    stepOf:           (n, t) => `Step ${n} of ${t}`,
+    s1_h1:            'Set up myrecipes',
+    s1_p:             'This wizard sets up your own copy of myrecipes — your own database, your own deployment, installed on your phone. All free, no technical background needed.',
+    s1_stat_minutes:  'minutes',
+    s1_stat_accounts: 'free accounts',
+    s1_stat_cost:     'cost',
+    s1_callout:       'You\'ll need accounts on <strong>GitHub</strong>, <strong>Supabase</strong>, and <strong>Vercel</strong>. This wizard links you to each signup as we go — nothing to prepare in advance.',
+    s1_note:          'This is a personal hobby project, not an official product. If something doesn\'t work, the easiest way to reach me is to <a href="https://github.com/HoltropAF/myrecipes/issues/new" target="_blank" rel="noopener">open an issue on GitHub ↗</a> — you\'ll need a GitHub account, which you\'re creating in step 2 anyway.',
+    s1_btn:           'Let\'s go →',
+
+    s2_h1:   'Fork the project on GitHub',
+    s2_why:  'GitHub hosts the code. You need your own copy (a "fork") so Vercel can deploy it under your account — and so any changes you make stay yours.',
+    s2_p1:   '<strong>1.</strong> No GitHub account yet? <a href="https://github.com/signup" target="_blank" rel="noopener">Sign up here ↗</a> — then come back.',
+    s2_p2:   '<strong>2.</strong> Click the button below. GitHub will show a confirmation page — just click <strong>Create fork</strong>.',
+    s2_btn1: 'Fork on GitHub ↗',
+    s2_btn2: 'I\'ve forked it — next →',
+
+    s3_h1:   'Create your Supabase project',
+    s3_why:  'Supabase is your database and login system. It stores all your recipes and handles magic-link sign-in. It\'s free and takes about 2 minutes to set up.',
+    s3_p1:   '<strong>1.</strong> No Supabase account? <a href="https://supabase.com/dashboard/sign-up" target="_blank" rel="noopener">Sign up here ↗</a> — then come back.',
+    s3_p2:   '<strong>2.</strong> In your Supabase dashboard, click <strong>New project</strong>. Give it any name — <code>myrecipes</code> works fine. Set any database password. Click <strong>Create new project</strong>.',
+    s3_p3:   '<strong>3.</strong> Wait about 2 minutes. You\'ll see a green status indicator when it\'s ready.',
+    s3_btn1: 'Open Supabase dashboard ↗',
+    s3_btn2: 'Project is ready — next →',
+
+    s4_h1:      'Set up your database',
+    s4_why:     'The app needs several tables in your Supabase database — for recipes, your shopping list, cook log, and more. The SQL below creates them all and sets the security rules so only you can access your data.',
+    s4_p1:      '<strong>1.</strong> Copy the SQL below using the Copy button in the top-right corner of the block.',
+    s4_p2:      '<strong>2.</strong> Open the SQL Editor — it opens in a new tab so you can come back here.',
+    s4_btn1:    'Open SQL Editor ↗',
+    s4_p3:      '<strong>3.</strong> Paste it in and click <strong>Run</strong>.',
+    s4_callout: 'After clicking Run you should see <strong>"Success. No rows returned."</strong> — that\'s correct. It means all tables were created successfully.',
+    s4_btn2:    'Done — next →',
+
+    s5_h1:    'Copy your Supabase credentials',
+    s5_why:   'The app needs two values to connect to your database: your project URL and a public API key. Paste them here — they\'ll be carried forward to the Vercel step so you don\'t have to find them again.',
+    s5_p1:    '<strong>1.</strong> Click below to open your project\'s API settings.',
+    s5_btn1:  'Open API Settings ↗',
+    s5_p2:    '<strong>2.</strong> Copy the two values and paste them below.',
+    s5_label1:'Project URL',
+    s5_label2:'anon public key',
+    s5_ph_url:'https://xxxxxxxx.supabase.co',
+    s5_ph_key:'eyJ...',
+    s5_muted: 'These values stay in this browser tab only — this wizard never sends them anywhere.',
+    s5_btn2:  'Next →',
+    err_url:  'Please paste your Project URL before continuing.',
+    err_key:  'Please paste your anon public key before continuing.',
+
+    s6_h1:       'Deploy to Vercel',
+    s6_why:      'Vercel puts your app online for free. It takes the code from your GitHub fork and builds it into a live website at a <code>*.vercel.app</code> address.',
+    s6_p1:       '<strong>1.</strong> Click the button below. Vercel will open its import page, already pointed at your fork.',
+    s6_muted:    'On that page, Vercel will show a form with two fields — <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong>. Paste the values from the previous step into those fields, then click <strong>Deploy</strong>.',
+    s6_btn1:     'Deploy on Vercel ↗',
+    s6_callout:  'After clicking Deploy on Vercel\'s page, wait about <strong>60 seconds</strong>. When it finishes, Vercel shows you a URL like <code>myrecipes-xyz.vercel.app</code>. Copy it and paste it below.',
+    s6_label:    'Your Vercel URL',
+    s6_ph_vercel:'https://myrecipes-xyz.vercel.app',
+    s6_btn2:     'I have my URL — next →',
+    err_vercel:  'Please paste your Vercel URL before continuing.',
+
+    s7_h1:      'Link Supabase to your Vercel URL',
+    s7_why:     'myrecipes signs you in with a magic link sent to your email. For that link to redirect back to your app correctly, Supabase needs to know your app\'s URL.',
+    s7_callout: 'This step takes you back to Supabase after just coming from Vercel. That\'s expected — it\'s just the order things have to happen: deploy first, then tell Supabase where you landed.',
+    s7_p1:      '<strong>1.</strong> Open Auth URL Configuration in Supabase.',
+    s7_btn1:    'Open Auth URL Config ↗',
+    s7_p2:      '<strong>2.</strong> Set <strong>Site URL</strong> to your Vercel URL:',
+    s7_p3:      '<strong>3.</strong> Under <strong>Redirect URLs</strong>, add the same URL with <code>/**</code> appended:',
+    s7_p4:      '<strong>4.</strong> Click <strong>Save</strong> in Supabase.',
+    s7_btn2:    'Done — final step →',
+
+    s8_h1:          'Install on your phone',
+    s8_why:         'myrecipes is a PWA — it can be added to your home screen and opens fullscreen like a native app, with no browser bar.',
+    ios_step1:      (url) => `Open <strong>${url}</strong> in <strong>Safari</strong> — the install option doesn\'t appear in other browsers on iPhone.`,
+    ios_step2:      'Tap the <strong>Share</strong> button at the bottom of the screen <span class="share-icon">⎙</span> (a box with an upward arrow).',
+    ios_step3:      'Scroll down in the sheet that appears and tap <strong>Add to Home Screen</strong>.',
+    ios_step4:      'Tap <strong>Add</strong> in the top-right corner to confirm.',
+    ios_done:       'The app will appear on your home screen and open fullscreen with no browser bar.',
+    android_p:      'Open your app in Chrome, Edge, or Brave on this phone — then install using the button below.',
+    android_btn:    '⬇ Install App',
+    android_note:   'Tapping this triggers your browser\'s native install prompt.',
+    android_manual: 'In Chrome, tap <strong>⋮</strong> (three-dot menu, top-right) → <strong>Add to Home screen</strong> or <strong>Install app</strong>.',
+    desktop_p:      'Open your app URL on your phone to install it.',
+    desktop_iphone: '<strong>iPhone (Safari):</strong>',
+    desktop_android:'<strong>Android (Chrome):</strong> tap <strong>⋮</strong> → <strong>Add to Home screen</strong>.',
+    desktop_done:   'That\'s everything! Your myrecipes is live. Start adding your first recipes.',
+
+    back_btn:    '← Back',
+    start_over:  'Start over',
+    copy:        'Copy',
+    copied:      'Copied!',
+    copy_failed: 'Failed',
+    installed:   '✓ Installed!',
+  },
+
+  nl: {
+    stepOf:           (n, t) => `Stap ${n} van ${t}`,
+    s1_h1:            'myrecipes instellen',
+    s1_p:             'Deze wizard helpt je bij het opzetten van je eigen kopie van myrecipes — je eigen database, je eigen deployment, geïnstalleerd op je telefoon. Helemaal gratis, geen technische kennis nodig.',
+    s1_stat_minutes:  'minuten',
+    s1_stat_accounts: 'gratis accounts',
+    s1_stat_cost:     'kosten',
+    s1_callout:       'Je hebt accounts nodig op <strong>GitHub</strong>, <strong>Supabase</strong> en <strong>Vercel</strong>. De wizard linkt je naar elke aanmeldpagina — je hoeft niets van tevoren voor te bereiden.',
+    s1_note:          'Dit is een persoonlijk hobbyproject, geen officieel product. Als er iets niet werkt, kun je dat het makkelijkst melden via <a href="https://github.com/HoltropAF/myrecipes/issues/new" target="_blank" rel="noopener">een issue op GitHub ↗</a> — daarvoor heb je een GitHub-account nodig, die je toch al aanmaakt in stap 2.',
+    s1_btn:           'Aan de slag →',
+
+    s2_h1:   'Kopieer het project op GitHub',
+    s2_why:  'GitHub bewaart de code. Je hebt een eigen kopie nodig (een "fork") zodat Vercel het onder jouw account kan deployen — en zodat wijzigingen die jij maakt van jou blijven.',
+    s2_p1:   '<strong>1.</strong> Nog geen GitHub-account? <a href="https://github.com/signup" target="_blank" rel="noopener">Registreer hier ↗</a> — kom dan terug.',
+    s2_p2:   '<strong>2.</strong> Klik op de knop hieronder. GitHub toont een bevestigingspagina — klik gewoon op <strong>Create fork</strong>.',
+    s2_btn1: 'Forken op GitHub ↗',
+    s2_btn2: 'Fork aangemaakt — volgende →',
+
+    s3_h1:   'Maak een Supabase-project aan',
+    s3_why:  'Supabase is je database en inlogsysteem. Het slaat al je recepten op en regelt het inloggen via magic link. Gratis, en duurt ongeveer 2 minuten.',
+    s3_p1:   '<strong>1.</strong> Nog geen Supabase-account? <a href="https://supabase.com/dashboard/sign-up" target="_blank" rel="noopener">Registreer hier ↗</a> — kom dan terug.',
+    s3_p2:   '<strong>2.</strong> Klik in je Supabase-dashboard op <strong>New project</strong>. Geef het een naam — <code>myrecipes</code> werkt prima. Kies een databasewachtwoord. Klik op <strong>Create new project</strong>.',
+    s3_p3:   '<strong>3.</strong> Wacht ongeveer 2 minuten. Je ziet een groen statusindicatortje als het klaar is.',
+    s3_btn1: 'Open Supabase-dashboard ↗',
+    s3_btn2: 'Project is klaar — volgende →',
+
+    s4_h1:      'Database instellen',
+    s4_why:     'De app heeft meerdere tabellen nodig in je Supabase-database — voor recepten, je boodschappenlijst, kooklog en meer. De SQL hieronder maakt ze allemaal aan en stelt de beveiligingsregels in zodat alleen jij je data kunt zien.',
+    s4_p1:      '<strong>1.</strong> Kopieer de SQL hieronder via de kopieerknop rechtsboven in het blok.',
+    s4_p2:      '<strong>2.</strong> Open de SQL Editor — die opent in een nieuw tabblad zodat je hier terug kunt komen.',
+    s4_btn1:    'Open SQL Editor ↗',
+    s4_p3:      '<strong>3.</strong> Plak hem erin en klik op <strong>Run</strong>.',
+    s4_callout: 'Na het klikken op Run zie je <strong>"Success. No rows returned."</strong> — dat klopt. Het betekent dat alle tabellen succesvol zijn aangemaakt.',
+    s4_btn2:    'Klaar — volgende →',
+
+    s5_h1:    'Kopieer je Supabase-gegevens',
+    s5_why:   'De app heeft twee waarden nodig om verbinding te maken met je database: je project-URL en een publieke API-sleutel. Plak ze hier — ze worden meegenomen naar de Vercel-stap zodat je ze niet opnieuw hoeft op te zoeken.',
+    s5_p1:    '<strong>1.</strong> Klik hieronder om de API-instellingen van je project te openen.',
+    s5_btn1:  'Open API-instellingen ↗',
+    s5_p2:    '<strong>2.</strong> Kopieer de twee waarden en plak ze hieronder.',
+    s5_label1:'Project URL',
+    s5_label2:'anon public sleutel',
+    s5_ph_url:'https://xxxxxxxx.supabase.co',
+    s5_ph_key:'eyJ...',
+    s5_muted: 'Deze waarden blijven alleen in dit browsertabblad — de wizard stuurt ze nergens naartoe.',
+    s5_btn2:  'Volgende →',
+    err_url:  'Plak eerst je Project URL voordat je verdergaat.',
+    err_key:  'Plak eerst je anon public sleutel voordat je verdergaat.',
+
+    s6_h1:       'Deployen naar Vercel',
+    s6_why:      'Vercel zet je app gratis online. Het neemt de code van je GitHub-fork en bouwt er een live website van op een <code>*.vercel.app</code>-adres.',
+    s6_p1:       '<strong>1.</strong> Klik op de knop hieronder. Vercel opent zijn importpagina, al ingesteld op jouw fork.',
+    s6_muted:    'Op die pagina toont Vercel een formulier met twee velden — <strong>VITE_SUPABASE_URL</strong> en <strong>VITE_SUPABASE_ANON_KEY</strong>. Plak de waarden uit de vorige stap in die velden en klik op <strong>Deploy</strong>.',
+    s6_btn1:     'Deployen op Vercel ↗',
+    s6_callout:  'Na het klikken op Deploy op de Vercel-pagina, wacht ongeveer <strong>60 seconden</strong>. Als het klaar is toont Vercel een URL zoals <code>myrecipes-xyz.vercel.app</code>. Kopieer die en plak hem hieronder.',
+    s6_label:    'Jouw Vercel URL',
+    s6_ph_vercel:'https://myrecipes-xyz.vercel.app',
+    s6_btn2:     'Ik heb mijn URL — volgende →',
+    err_vercel:  'Plak eerst je Vercel URL voordat je verdergaat.',
+
+    s7_h1:      'Koppel Supabase aan je Vercel URL',
+    s7_why:     'myrecipes logt je in via een magic link die per e-mail wordt verstuurd. Om die link correct terug te verwijzen naar je app, moet Supabase de URL van je app weten.',
+    s7_callout: 'Deze stap brengt je terug naar Supabase nadat je net van Vercel komt. Dat klopt — het is gewoon de volgorde: eerst deployen, dan Supabase vertellen waar je terecht bent gekomen.',
+    s7_p1:      '<strong>1.</strong> Open de Auth URL-configuratie in Supabase.',
+    s7_btn1:    'Open Auth URL-config ↗',
+    s7_p2:      '<strong>2.</strong> Stel <strong>Site URL</strong> in op je Vercel URL:',
+    s7_p3:      '<strong>3.</strong> Voeg onder <strong>Redirect URLs</strong> dezelfde URL toe met <code>/**</code> erachter:',
+    s7_p4:      '<strong>4.</strong> Klik op <strong>Save</strong> in Supabase.',
+    s7_btn2:    'Klaar — laatste stap →',
+
+    s8_h1:          'Installeer op je telefoon',
+    s8_why:         'myrecipes is een PWA — je kunt hem aan je beginscherm toevoegen en hij opent volledig scherm zoals een native app, zonder browserbalk.',
+    ios_step1:      (url) => `Open <strong>${url}</strong> in <strong>Safari</strong> — de installatieoptie verschijnt niet in andere browsers op iPhone.`,
+    ios_step2:      'Tik op de <strong>Deel</strong>-knop onderaan het scherm <span class="share-icon">⎙</span> (een vak met een pijl omhoog).',
+    ios_step3:      'Scroll omlaag in het menu dat verschijnt en tik op <strong>Zet op beginscherm</strong>.',
+    ios_step4:      'Tik op <strong>Voeg toe</strong> rechtsboven om te bevestigen.',
+    ios_done:       'De app verschijnt op je beginscherm en opent volledig scherm zonder browserbalk.',
+    android_p:      'Open je app in Chrome, Edge of Brave op deze telefoon — installeer dan via de knop hieronder.',
+    android_btn:    '⬇ App installeren',
+    android_note:   'Hierop tikken toont de installatieprompt van je browser.',
+    android_manual: 'Tik in Chrome op <strong>⋮</strong> (drie puntjes, rechtsboven) → <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong>.',
+    desktop_p:      'Open je app URL op je telefoon om hem te installeren.',
+    desktop_iphone: '<strong>iPhone (Safari):</strong>',
+    desktop_android:'<strong>Android (Chrome):</strong> tik op <strong>⋮</strong> → <strong>Toevoegen aan startscherm</strong>.',
+    desktop_done:   'Dat was alles! myrecipes staat live. Voeg je eerste recepten toe en geniet van het koken.',
+
+    back_btn:    '← Terug',
+    start_over:  'Opnieuw beginnen',
+    copy:        'Kopieer',
+    copied:      'Gekopieerd!',
+    copy_failed: 'Mislukt',
+    installed:   '✓ Geïnstalleerd!',
+  },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let lang        = (navigator.language || '').toLowerCase().startsWith('nl') ? 'nl' : 'en';
+let supabaseUrl = '';
+let supabaseKey = '';
+let vercelUrl   = '';
+let deferredPWA = null;
+let currentStep = 1;
+const TOTAL     = 8;
+
+// ── SQL ───────────────────────────────────────────────────────────────────
+const SQL = `-- myrecipes — full database schema
+-- Run this in your Supabase project → SQL Editor
 
 create table if not exists recipes (
   id                    uuid primary key default gen_random_uuid(),
@@ -411,11 +723,11 @@ create table if not exists cook_log (
 
 create table if not exists user_preferences (
   user_id            uuid primary key references auth.users(id) on delete cascade,
-  unit_system        text not null default 'metric' check (unit_system in ('metric', 'us')),
-  theme              text not null default 'auto' check (theme in ('light', 'dark', 'auto')),
+  unit_system        text not null default 'metric',
+  theme              text not null default 'auto',
   default_category   text,
-  recipe_view_mode   text not null default 'folders' check (recipe_view_mode in ('folders', 'list')),
-  recipe_search_mode text not null default 'title' check (recipe_search_mode in ('title', 'ingredient')),
+  recipe_view_mode   text not null default 'folders',
+  recipe_search_mode text not null default 'title',
   compact_mode       boolean not null default false,
   updated_at         timestamptz not null default now()
 );
@@ -435,48 +747,25 @@ create table if not exists ingredient_tags (
 );
 
 create or replace view recipe_ingredient_tags as
-select
-  r.id                as recipe_id,
-  r.title,
-  item->>'name'       as raw_ingredient,
-  it.canonical_name,
-  it.tags
+select r.id as recipe_id, r.title,
+  item->>'name' as raw_ingredient, it.canonical_name, it.tags
 from recipes r
 cross join lateral jsonb_array_elements(r.ingredients) as ig
-cross join lateral jsonb_array_elements(ig->'items')   as item
+cross join lateral jsonb_array_elements(ig->'items') as item
 join ingredient_tags it
   on lower(item->>'name') ilike '%' || lower(it.canonical_name) || '%';
 
 create or replace view recipe_computed_tags as
 with matched as (
   select distinct recipe_id, title, tag
-  from recipe_ingredient_tags,
-       unnest(tags) as tag
+  from recipe_ingredient_tags, unnest(tags) as tag
 )
-select
-  r.id as recipe_id,
-  r.title,
-  coalesce(
-    array_agg(distinct m.tag) filter (where m.tag is not null),
-    '{}'::text[]
-  ) as allergen_tags,
-  not exists (
-    select 1 from matched m2
-    where m2.recipe_id = r.id
-      and m2.tag in ('meat','fish','shellfish','dairy','egg')
-  ) as is_vegan,
-  not exists (
-    select 1 from matched m2
-    where m2.recipe_id = r.id
-      and m2.tag in ('meat','fish','shellfish')
-  ) as is_vegetarian,
-  not exists (
-    select 1 from matched m2
-    where m2.recipe_id = r.id
-      and m2.tag = 'meat'
-  ) as is_pescatarian_or_better
-from recipes r
-left join matched m on m.recipe_id = r.id
+select r.id as recipe_id, r.title,
+  coalesce(array_agg(distinct m.tag) filter (where m.tag is not null), '{}') as allergen_tags,
+  not exists (select 1 from matched m2 where m2.recipe_id = r.id and m2.tag in ('meat','fish','shellfish','dairy','egg')) as is_vegan,
+  not exists (select 1 from matched m2 where m2.recipe_id = r.id and m2.tag in ('meat','fish','shellfish')) as is_vegetarian,
+  not exists (select 1 from matched m2 where m2.recipe_id = r.id and m2.tag = 'meat') as is_pescatarian_or_better
+from recipes r left join matched m on m.recipe_id = r.id
 group by r.id, r.title;
 
 alter table recipes          enable row level security;
@@ -487,33 +776,17 @@ alter table meal_groups      enable row level security;
 alter table ingredient_tags  enable row level security;
 
 create policy "Users manage their own recipes"
-  on recipes for all
-  using  ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
+  on recipes for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Users manage their own shopping list"
-  on shopping_list for all
-  using  ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
+  on shopping_list for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Users manage their own cook log"
-  on cook_log for all
-  using  ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
+  on cook_log for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Users manage their own preferences"
-  on user_preferences for all
-  using  ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
+  on user_preferences for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Users manage their own meal groups"
-  on meal_groups for all
-  using  ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
+  on meal_groups for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Authenticated users can read ingredient_tags"
-  on ingredient_tags for select
-  using (auth.role() = 'authenticated');
+  on ingredient_tags for select using (auth.role() = 'authenticated');
 
 create index if not exists idx_recipes_user         on recipes(user_id);
 create index if not exists idx_recipes_category     on recipes(category);
@@ -522,709 +795,213 @@ create index if not exists idx_shopping_list_recipe on shopping_list(recipe_id);
 create index if not exists idx_cook_log_user_recipe on cook_log(user_id, recipe_id);
 create index if not exists idx_cook_log_recipe      on cook_log(recipe_id);
 create index if not exists idx_cook_log_date        on cook_log(user_id, cooked_date);
-create index if not exists idx_meal_groups_user     on meal_groups(user_id);</pre>
-      <button type="button" class="copy-btn" onclick="copyField('sql-pre',this)" data-t-title="copy" aria-label="Copy SQL"></button>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(4)" data-t="s3_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
+create index if not exists idx_meal_groups_user     on meal_groups(user_id);`;
 
-  <!-- ═══════════════════════════════════════════════ STEP 4 -->
-  <section class="step" id="step-4">
-    <div class="step-icon">🔑</div>
-    <h1 data-t="s4_title"></h1>
-    <div class="why" data-t-html="s4_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s4_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s4_i2"></div></div>
-    </div>
-    <div class="spacer">
-      <div class="field">
-        <label for="input-url" data-t="s4_url_label"></label>
-        <input type="url" id="input-url" placeholder="https://xxxxxxxxxxxx.supabase.co"
-          oninput="supabaseUrl=this.value.trim();clearErr(this)" />
-        <span class="field-hint" data-t="s4_url_err"></span>
-      </div>
-      <div class="instructions">
-        <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s4_i3"></div></div>
-      </div>
-      <div class="field spacer">
-        <label for="input-key" data-t="s4_key_label"></label>
-        <input type="text" id="input-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          oninput="supabaseAnonKey=this.value.trim();clearErr(this)" />
-        <span class="field-hint" data-t="s4_key_err"></span>
-      </div>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="validateStep4()" data-t="s4_cta"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
+document.getElementById('sql-block').textContent = SQL;
 
-  <!-- ═══════════════════════════════════════════════ STEP 5 -->
-  <section class="step" id="step-5">
-    <div class="step-icon">💻</div>
-    <h1 data-t="s5_title"></h1>
-    <div class="why" data-t-html="s5_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s5_i1"></div></div>
-    </div>
-    <div class="code-block">
-      <pre id="clone-pre">git clone https://github.com/HoltropAF/myrecipes.git
-cd myrecipes
-npm install</pre>
-      <button type="button" class="copy-btn" onclick="copyField('clone-pre',this)" data-t-title="copy" aria-label="Copy command"></button>
-    </div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s5_i2"></div></div>
-    </div>
-    <div class="code-block">
-      <pre id="env-pre"></pre>
-      <button type="button" class="copy-btn" onclick="copyField('env-pre',this)" data-t-title="copy" aria-label="Copy .env"></button>
-    </div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s5_i3"></div></div>
-    </div>
-    <div class="code-block">
-      <pre>npm run dev</pre>
-      <button type="button" class="copy-btn" onclick="copyText('npm run dev',this)" data-t-title="copy" aria-label="Copy command"></button>
-    </div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">4</div><div class="instr-body" data-t-html="s5_i4"></div></div>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(6)" data-t="s5_cta"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPWA = e; });
 
-  <!-- ═══════════════════════════════════════════════ STEP 6 -->
-  <section class="step" id="step-6">
-    <div class="step-icon">🚀</div>
-    <h1 data-t="s6_title"></h1>
-    <div class="why" data-t-html="s6_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s6_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s6_i2"></div></div>
-    </div>
-    <div class="actions">
-      <a href="https://vercel.com/new" target="_blank" rel="noopener" class="btn-link-primary" data-t="s6_import"></a>
-      <button type="button" class="btn-primary" onclick="goTo(7)" data-t="s6_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
+// ── Language ──────────────────────────────────────────────────────────────
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.getElementById('lo-en').classList.toggle('active', l === 'en');
+  document.getElementById('lo-nl').classList.toggle('active', l === 'nl');
+  const t = T[l];
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const k = el.getAttribute('data-t');
+    if (k in t) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-t-html]').forEach(el => {
+    const k = el.getAttribute('data-t-html');
+    if (k in t) el.innerHTML = t[k];
+  });
+  document.querySelectorAll('[data-t-title]').forEach(el => {
+    const k = el.getAttribute('data-t-title');
+    if (k in t) el.title = t[k];
+  });
+  document.getElementById('inp-url').placeholder    = t.s5_ph_url;
+  document.getElementById('inp-key').placeholder    = t.s5_ph_key;
+  document.getElementById('inp-vercel').placeholder = t.s6_ph_vercel;
+  document.getElementById('prog-label').textContent = t.stepOf(currentStep, TOTAL);
+  if (currentStep === 8) onEnterInstallStep();
+}
 
-  <!-- ═══════════════════════════════════════════════ STEP 7 -->
-  <section class="step" id="step-7">
-    <div class="step-icon">⚙️</div>
-    <h1 data-t="s7_title"></h1>
-    <div class="why" data-t-html="s7_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s7_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s7_i2"></div></div>
-    </div>
-    <div id="env-vars-display" class="spacer"></div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s7_i3"></div></div>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(8)" data-t="s7_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
+function toggleLang() { setLang(lang === 'en' ? 'nl' : 'en'); }
 
-  <!-- ═══════════════════════════════════════════════ STEP 8 -->
-  <section class="step" id="step-8">
-    <div class="step-icon">🌐</div>
-    <h1 data-t="s8_title"></h1>
-    <div class="why" data-t-html="s8_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s8_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s8_i2"></div></div>
-    </div>
-    <div class="field spacer">
-      <label for="input-deploy-url" data-t="s8_url_label"></label>
-      <input type="url" id="input-deploy-url" placeholder="https://myrecipes-xyz.vercel.app"
-        oninput="deployedUrl=this.value.trim().replace(/\/$/,'');clearErr(this)" />
-      <span class="field-hint" data-t="s8_url_err"></span>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="validateStep8()" data-t="s8_cta"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════ STEP 9 -->
-  <section class="step" id="step-9">
-    <div class="step-icon">🔒</div>
-    <h1 data-t="s9_title"></h1>
-    <div class="why" data-t-html="s9_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s9_i1"></div></div>
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s9_i2"></div></div>
-    </div>
-    <div class="env-row spacer">
-      <div class="display-val" id="display-site-url"></div>
-      <button type="button" class="env-copy-btn" id="copy-site-url" onclick="copyFromAttr(this)" data-copy="" data-t-title="copy"></button>
-    </div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s9_i3"></div></div>
-    </div>
-    <div class="env-row spacer">
-      <div class="display-val" id="display-redirect-url"></div>
-      <button type="button" class="env-copy-btn" id="copy-redirect-url" onclick="copyFromAttr(this)" data-copy="" data-t-title="copy"></button>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(10)" data-t="s9_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════ STEP 10 -->
-  <section class="step" id="step-10">
-    <div class="step-icon">✅</div>
-    <h1 data-t="s10_title"></h1>
-    <div class="why" data-t-html="s10_why"></div>
-    <div class="instructions">
-      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s10_i1"></div></div>
-    </div>
-    <div class="spacer">
-      <a id="verify-link" href="#" target="_blank" rel="noopener" class="btn-link-primary" data-t="s10_open"></a>
-    </div>
-    <div class="instructions spacer">
-      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s10_i2"></div></div>
-      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s10_i3"></div></div>
-      <div class="instr"><div class="instr-num">4</div><div class="instr-body" data-t-html="s10_i4"></div></div>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(11)" data-t="s10_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════ STEP 11 -->
-  <section class="step" id="step-11">
-    <div class="step-icon">📲</div>
-    <h1 data-t="s11_title"></h1>
-    <div class="why" data-t-html="s11_why"></div>
-    <div id="pwa-content"></div>
-    <div id="pwa-install-btn"></div>
-    <div class="actions">
-      <button type="button" class="btn-primary" onclick="goTo(12)" data-t="s11_done"></button>
-      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════ STEP 12 -->
-  <section class="step" id="step-12">
-    <div class="step-icon">🎉</div>
-    <h1 data-t="s12_title"></h1>
-    <p class="subtitle" data-t-html="s12_sub"></p>
-    <div class="done-card">
-      <a id="done-app-link" href="#" target="_blank" rel="noopener" class="done-link">
-        <span class="done-icon">🌐</span><span data-t="s12_app"></span>
-      </a>
-      <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="done-link">
-        <span class="done-icon">🗄️</span><span data-t="s12_supabase"></span>
-      </a>
-      <a href="https://vercel.com/dashboard" target="_blank" rel="noopener" class="done-link">
-        <span class="done-icon">🚀</span><span data-t="s12_vercel"></span>
-      </a>
-    </div>
-    <div class="why" data-t-html="s12_tip"></div>
-    <div class="actions">
-      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
-    </div>
-  </section>
-
-</div><!-- /steps-container -->
-
-<script>
-// ── State ────────────────────────────────────────────────────
-let supabaseUrl = '';
-let supabaseAnonKey = '';
-let deployedUrl = '';
-let currentStep = 1;
-const TOTAL = 12;
-
-let deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; });
-
-// ── Translations ─────────────────────────────────────────────
-const T = {
-  en: {
-    lang_btn: 'NL',
-    lang_title: 'Schakel naar Nederlands',
-    progress: (n, t) => `Step ${n} of ${t}`,
-    back_btn: '← Back',
-    start_over: 'Start over',
-    copy: 'Copy',
-    copied: 'Copied!',
-    copy_failed: 'Failed',
-
-    s1_title: 'Welcome to myrecipes setup',
-    s1_sub: 'This wizard walks you through every step to get your own <strong>myrecipes</strong> instance running — database, deployment, and app install.',
-    s1_why: '<strong>What you\'ll set up:</strong> a Supabase database, a Vercel deployment, and the installable PWA on your device. The whole process takes about 15–20 minutes.',
-    s1_cta: "Let's start →",
-
-    prereq_node: 'Node.js 18+', prereq_node_sub: 'For local development', prereq_node_lnk: 'Download ↗',
-    prereq_git:  'Git',         prereq_git_sub:  'For cloning the repo',  prereq_git_lnk:  'Download ↗',
-    prereq_gh:   'GitHub account', prereq_gh_sub: 'For hosting your code', prereq_gh_lnk: 'Sign up ↗',
-    prereq_sb:   'Supabase account', prereq_sb_sub: 'Free — no credit card', prereq_sb_lnk: 'Sign up ↗',
-    prereq_vc:   'Vercel account', prereq_vc_sub: 'Free — connects to GitHub', prereq_vc_lnk: 'Sign up ↗',
-
-    s2_title: 'Create a Supabase project',
-    s2_why: 'Supabase is the database and authentication backend. It\'s free for personal projects — no credit card needed.',
-    s2_i1: 'Go to <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener">supabase.com</a> and sign in (or create an account).',
-    s2_i2: 'Click <strong>New project</strong>, choose a name (e.g. <code>myrecipes</code>), pick a region close to you, and set a database password. <strong>Save that password somewhere safe.</strong>',
-    s2_i3: 'Wait ~60 seconds for the project to provision, then come back here and click the button below.',
-    s2_open: 'Open Supabase Dashboard ↗',
-    s2_done: 'My project is ready →',
-
-    s3_title: 'Set up the database',
-    s3_why: 'This SQL creates all tables, views, indexes, and Row-Level Security policies. It\'s safe to run on a fresh Supabase project.',
-    s3_i1: 'In your Supabase project, open <strong>SQL Editor</strong> in the left sidebar.',
-    s3_i2: 'Copy the SQL below, paste it into the editor, and click <strong>Run</strong>.',
-    s3_done: 'Schema applied →',
-
-    s4_title: 'Copy your Supabase credentials',
-    s4_why: 'The app connects to Supabase using your Project URL and anon key. You\'ll find both in <strong>Project Settings → API</strong>.',
-    s4_i1: 'In Supabase, click the gear icon → <strong>Project Settings → API</strong>.',
-    s4_i2: 'Under <strong>Project URL</strong>, copy the URL and paste it below.',
-    s4_i3: 'Under <strong>Project API keys</strong>, copy the <strong>anon / public</strong> key.',
-    s4_url_label: 'Project URL',
-    s4_url_err: 'Please enter your Supabase Project URL',
-    s4_key_label: 'Anon / public key',
-    s4_key_err: 'Please enter your Supabase anon key',
-    s4_cta: 'Save & continue →',
-
-    s5_title: 'Set up locally',
-    s5_why: 'Test the app on your machine before deploying. You need <strong>Node.js 18+</strong> and <strong>Git</strong>.',
-    s5_i1: 'Clone the repo and install dependencies:',
-    s5_i2: 'Create a <code>.env</code> file in the project root (your credentials are filled in):',
-    s5_i3: 'Start the dev server:',
-    s5_i4: 'Open <a href="http://localhost:5173" target="_blank" rel="noopener">localhost:5173</a> and sign in with your email — you\'ll get a magic link.',
-    s5_cta: 'Works locally →',
-
-    s6_title: 'Deploy to Vercel',
-    s6_why: 'Vercel hosts the app and auto-deploys on every push to your main branch. Free for personal projects.',
-    s6_i1: 'Go to <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> and sign in with GitHub.',
-    s6_i2: 'Click <strong>Add New → Project</strong>, pick your <code>myrecipes</code> repo, and click <strong>Import</strong>. Don\'t deploy yet — you need to add env vars first.',
-    s6_import: 'New project on Vercel ↗',
-    s6_done: 'I\'ve imported my repo →',
-
-    s7_title: 'Add environment variables in Vercel',
-    s7_why: 'Before deploying, add your Supabase credentials to Vercel so the build can connect to the database.',
-    s7_i1: 'In your new Vercel project, go to <strong>Settings → Environment Variables</strong>.',
-    s7_i2: 'Add these two variables (copy each value with the button):',
-    s7_i3: 'Save, then click <strong>Deploy</strong> (or go to <strong>Deployments → Redeploy</strong> if it auto-deployed already).',
-    s7_done: 'Variables added & deployed →',
-
-    s8_title: 'Enter your deployed URL',
-    s8_why: 'Supabase needs your live URL to send magic link emails that open your app correctly.',
-    s8_i1: 'In Vercel, open your project. Copy the URL shown at the top (e.g. <code>myrecipes-xyz.vercel.app</code>).',
-    s8_i2: 'Paste the full URL below, including <code>https://</code>.',
-    s8_url_label: 'Deployed URL',
-    s8_url_err: 'Please enter your deployment URL',
-    s8_cta: 'Continue →',
-
-    s9_title: 'Configure Supabase auth redirect',
-    s9_why: 'Magic links include a redirect URL. Supabase must whitelist your domain so clicking the link from email works.',
-    s9_i1: 'In Supabase, go to <strong>Authentication → URL Configuration</strong>.',
-    s9_i2: 'Set <strong>Site URL</strong> to:',
-    s9_i3: 'Under <strong>Redirect URLs</strong>, add:',
-    s9_done: 'Auth configured →',
-
-    s10_title: 'Verify your deployment',
-    s10_why: 'A quick end-to-end test to confirm sign-in works before installing the app.',
-    s10_i1: 'Open your live app:',
-    s10_open: 'Open live app ↗',
-    s10_i2: 'Enter your email and click the sign-in button. You should receive a magic link within a minute.',
-    s10_i3: 'Click the link in the email. It should open your app and sign you in.',
-    s10_i4: 'Once signed in, come back here and continue.',
-    s10_done: 'Sign-in works →',
-
-    s11_title: 'Install the app',
-    s11_why: 'myrecipes is a PWA — add it to your home screen for a full-screen app experience without a browser bar.',
-    s11_ios_title: 'Install on iPhone / iPad',
-    s11_ios_1: 'Open your app URL in <strong>Safari</strong>.',
-    s11_ios_2: 'Tap the <strong>Share</strong> button (square with an upward arrow).',
-    s11_ios_3: 'Scroll down and tap <strong>Add to Home Screen</strong>.',
-    s11_ios_4: 'Tap <strong>Add</strong> in the top right.',
-    s11_android_title: 'Install on Android',
-    s11_android_1: 'Open your app URL in <strong>Chrome</strong>.',
-    s11_android_prompt: 'Tap the <strong>Install app</strong> button below, or use Chrome\'s menu (⋮) → <strong>Add to home screen</strong>.',
-    s11_android_manual: 'Tap Chrome\'s menu (⋮) → <strong>Add to home screen</strong>.',
-    s11_desktop_title: 'Install on Desktop',
-    s11_desktop_1: 'Open your app URL in <strong>Chrome</strong> or <strong>Edge</strong>.',
-    s11_desktop_2: 'Click the install icon (⊕) in the address bar, or open the menu → <strong>Install myrecipes</strong>.',
-    s11_install_btn: 'Install app',
-    s11_done: 'App installed →',
-
-    s12_title: "You're all set!",
-    s12_sub: 'Your personal recipe book is live. Start adding recipes, build your shopping list, and log what you cook.',
-    s12_app: 'Open myrecipes',
-    s12_supabase: 'Supabase dashboard',
-    s12_vercel: 'Vercel dashboard',
-    s12_tip: '<strong>Tip:</strong> Share your app URL with others — each user signs in with their own email and gets their own private recipe collection.',
-  },
-
-  nl: {
-    lang_btn: 'EN',
-    lang_title: 'Switch to English',
-    progress: (n, t) => `Stap ${n} van ${t}`,
-    back_btn: '← Terug',
-    start_over: 'Opnieuw beginnen',
-    copy: 'Kopieer',
-    copied: 'Gekopieerd!',
-    copy_failed: 'Mislukt',
-
-    s1_title: 'Welkom bij de myrecipes-setup',
-    s1_sub: 'Deze wizard begeleidt je stap voor stap bij het opzetten van je eigen <strong>myrecipes</strong>-instantie — database, deployment en app-installatie.',
-    s1_why: '<strong>Wat je gaat instellen:</strong> een Supabase-database, een Vercel-deployment en de installeerbare PWA op je apparaat. Het hele proces duurt ongeveer 15–20 minuten.',
-    s1_cta: 'Aan de slag →',
-
-    prereq_node: 'Node.js 18+', prereq_node_sub: 'Voor lokale ontwikkeling', prereq_node_lnk: 'Download ↗',
-    prereq_git:  'Git',         prereq_git_sub:  'Voor het klonen van de repo', prereq_git_lnk: 'Download ↗',
-    prereq_gh:   'GitHub-account', prereq_gh_sub: 'Voor het hosten van de code', prereq_gh_lnk: 'Aanmelden ↗',
-    prereq_sb:   'Supabase-account', prereq_sb_sub: 'Gratis — geen creditcard', prereq_sb_lnk: 'Aanmelden ↗',
-    prereq_vc:   'Vercel-account', prereq_vc_sub: 'Gratis — koppelt met GitHub', prereq_vc_lnk: 'Aanmelden ↗',
-
-    s2_title: 'Maak een Supabase-project aan',
-    s2_why: 'Supabase is de database- en authenticatiebackend. Gratis voor persoonlijke projecten — geen creditcard nodig.',
-    s2_i1: 'Ga naar <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener">supabase.com</a> en log in (of maak een account aan).',
-    s2_i2: 'Klik op <strong>Nieuw project</strong>, kies een naam (bijv. <code>myrecipes</code>), kies een regio dicht bij jou en stel een databasewachtwoord in. <strong>Bewaar dit wachtwoord op een veilige plek.</strong>',
-    s2_i3: 'Wacht ~60 seconden tot het project klaar is en kom dan hier terug.',
-    s2_open: 'Open Supabase Dashboard ↗',
-    s2_done: 'Mijn project is klaar →',
-
-    s3_title: 'Database instellen',
-    s3_why: 'Dit SQL-script maakt alle tabellen, views, indexen en Row-Level Security-beleid aan. Veilig te gebruiken op een nieuw Supabase-project.',
-    s3_i1: 'Ga in je Supabase-project naar <strong>SQL Editor</strong> in de zijbalk.',
-    s3_i2: 'Kopieer de SQL hieronder, plak hem in de editor en klik op <strong>Run</strong>.',
-    s3_done: 'Schema toegepast →',
-
-    s4_title: 'Kopieer je Supabase-gegevens',
-    s4_why: 'De app maakt verbinding met Supabase via je Project URL en anon-sleutel. Je vindt beide onder <strong>Projectinstellingen → API</strong>.',
-    s4_i1: 'Klik in Supabase op het tandwiel → <strong>Projectinstellingen → API</strong>.',
-    s4_i2: 'Kopieer onder <strong>Project URL</strong> de URL en plak deze hieronder.',
-    s4_i3: 'Kopieer onder <strong>Project API-sleutels</strong> de <strong>anon / public</strong>-sleutel.',
-    s4_url_label: 'Project URL',
-    s4_url_err: 'Vul je Supabase Project URL in',
-    s4_key_label: 'Anon / public-sleutel',
-    s4_key_err: 'Vul je Supabase anon-sleutel in',
-    s4_cta: 'Opslaan & verder →',
-
-    s5_title: 'Lokaal instellen',
-    s5_why: 'Test de app lokaal vóór de deployment. Je hebt <strong>Node.js 18+</strong> en <strong>Git</strong> nodig.',
-    s5_i1: 'Kloon de repo en installeer de afhankelijkheden:',
-    s5_i2: 'Maak een <code>.env</code>-bestand aan in de projectmap (je gegevens zijn al ingevuld):',
-    s5_i3: 'Start de ontwikkelserver:',
-    s5_i4: 'Open <a href="http://localhost:5173" target="_blank" rel="noopener">localhost:5173</a> en log in met je e-mail — je ontvangt een magic link.',
-    s5_cta: 'Werkt lokaal →',
-
-    s6_title: 'Deployen naar Vercel',
-    s6_why: 'Vercel host de app en deployt automatisch bij elke push naar je main-branch. Gratis voor persoonlijke projecten.',
-    s6_i1: 'Ga naar <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> en log in met GitHub.',
-    s6_i2: 'Klik op <strong>Nieuw toevoegen → Project</strong>, selecteer je <code>myrecipes</code>-repo en klik op <strong>Importeren</strong>. Deploy nog niet — je moet eerst omgevingsvariabelen toevoegen.',
-    s6_import: 'Nieuw project op Vercel ↗',
-    s6_done: 'Repo geïmporteerd →',
-
-    s7_title: 'Omgevingsvariabelen toevoegen in Vercel',
-    s7_why: 'Vercel heeft je Supabase-gegevens nodig voordat de build verbinding kan maken met de database.',
-    s7_i1: 'Ga in je Vercel-project naar <strong>Instellingen → Omgevingsvariabelen</strong>.',
-    s7_i2: 'Voeg deze twee variabelen toe (kopieer elke waarde met de knop):',
-    s7_i3: 'Sla op en klik daarna op <strong>Deploy</strong> (of ga naar <strong>Deployments → Opnieuw deployen</strong> als het al automatisch is gedeployd).',
-    s7_done: 'Variabelen toegevoegd & gedeployd →',
-
-    s8_title: 'Vul je deployment-URL in',
-    s8_why: 'Supabase heeft je live URL nodig om magic link-e-mails te sturen die je app correct openen.',
-    s8_i1: 'Open je project op Vercel. De URL staat bovenaan de overzichtspagina (bijv. <code>myrecipes-xyz.vercel.app</code>).',
-    s8_i2: 'Plak de volledige URL hieronder, inclusief <code>https://</code>.',
-    s8_url_label: 'Deployment-URL',
-    s8_url_err: 'Vul je deployment-URL in',
-    s8_cta: 'Verder →',
-
-    s9_title: 'Auth-redirect instellen in Supabase',
-    s9_why: 'Magic links bevatten een redirect-URL. Supabase moet je domein goedkeuren zodat de link vanuit e-mail correct werkt.',
-    s9_i1: 'Ga in Supabase naar <strong>Authenticatie → URL-configuratie</strong>.',
-    s9_i2: 'Stel <strong>Site URL</strong> in op:',
-    s9_i3: 'Voeg onder <strong>Redirect URL\'s</strong> toe:',
-    s9_done: 'Auth ingesteld →',
-
-    s10_title: 'Controleer je deployment',
-    s10_why: 'Een snelle end-to-end test om te bevestigen dat inloggen werkt vóór de app-installatie.',
-    s10_i1: 'Open je live app:',
-    s10_open: 'Open live app ↗',
-    s10_i2: 'Voer je e-mailadres in en klik op inloggen. Je ontvangt binnen een minuut een magic link.',
-    s10_i3: 'Klik op de link in de e-mail. De app zou moeten openen en je inloggen.',
-    s10_i4: 'Als het inloggen lukt, kom dan hier terug en ga verder.',
-    s10_done: 'Inloggen werkt →',
-
-    s11_title: 'App installeren',
-    s11_why: 'myrecipes is een PWA — voeg hem toe aan je beginscherm voor volledig scherm zonder browserbalk.',
-    s11_ios_title: 'Installeren op iPhone / iPad',
-    s11_ios_1: 'Open de app-URL in <strong>Safari</strong>.',
-    s11_ios_2: 'Tik op de <strong>Deel</strong>-knop (vierkant met pijl omhoog).',
-    s11_ios_3: 'Scroll omlaag en tik op <strong>Zet op beginscherm</strong>.',
-    s11_ios_4: 'Tik op <strong>Voeg toe</strong> rechtsboven.',
-    s11_android_title: 'Installeren op Android',
-    s11_android_1: 'Open de app-URL in <strong>Chrome</strong>.',
-    s11_android_prompt: 'Tik op de knop <strong>App installeren</strong> hieronder, of gebruik het Chrome-menu (⋮) → <strong>Toevoegen aan beginscherm</strong>.',
-    s11_android_manual: 'Tik op het Chrome-menu (⋮) → <strong>Toevoegen aan beginscherm</strong>.',
-    s11_desktop_title: 'Installeren op desktop',
-    s11_desktop_1: 'Open de app-URL in <strong>Chrome</strong> of <strong>Edge</strong>.',
-    s11_desktop_2: 'Klik op het installatiepictogram (⊕) in de adresbalk, of open het menu → <strong>myrecipes installeren</strong>.',
-    s11_install_btn: 'App installeren',
-    s11_done: 'App geïnstalleerd →',
-
-    s12_title: 'Alles is klaar!',
-    s12_sub: 'Je persoonlijke receptenboek is live. Begin met recepten toevoegen, bouw je boodschappenlijst en houd bij wat je kookt.',
-    s12_app: 'Open myrecipes',
-    s12_supabase: 'Supabase-dashboard',
-    s12_vercel: 'Vercel-dashboard',
-    s12_tip: '<strong>Tip:</strong> Deel je app-URL met anderen — elke gebruiker logt in met zijn eigen e-mail en krijgt zijn eigen privé-receptenverzameling.',
-  }
-};
-
-let lang = (navigator.language || 'en').toLowerCase().startsWith('nl') ? 'nl' : 'en';
-
-// ── Navigation ───────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────────
 function goTo(n) {
   document.getElementById('step-' + currentStep).classList.remove('active');
   currentStep = n;
   document.getElementById('step-' + n).classList.add('active');
-  document.getElementById('progress-bar-fill').style.width = (n / TOTAL * 100).toFixed(1) + '%';
-  document.getElementById('progress-label').textContent = T[lang].progress(n, TOTAL);
-  window.scrollTo(0, 0);
-  if (n === 5)  initStep5();
-  if (n === 7)  initStep7();
-  if (n === 9)  initStep9();
-  if (n === 10) initStep10();
-  if (n === 11) initStep11();
-  if (n === 12) initStep12();
+  document.getElementById('prog-label').textContent = T[lang].stepOf(n, TOTAL);
+  document.getElementById('prog-fill').style.width = (n / TOTAL * 100) + '%';
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (n === 6) onEnterVercelStep();
+  if (n === 7) onEnterAuthStep();
+  if (n === 8) onEnterInstallStep();
 }
 
 function goBack() { if (currentStep > 1) goTo(currentStep - 1); }
 
 function startOver() {
-  supabaseUrl = ''; supabaseAnonKey = ''; deployedUrl = '';
-  ['input-url','input-key','input-deploy-url'].forEach(id => {
+  supabaseUrl = ''; supabaseKey = ''; vercelUrl = '';
+  ['inp-url', 'inp-key', 'inp-vercel'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.value = ''; el.classList.remove('error'); }
+    el.value = '';
+    el.classList.remove('error');
   });
   goTo(1);
 }
 
-// ── Validation ───────────────────────────────────────────────
-function clearErr(el) { el.classList.remove('error'); }
+// ── Input handlers ────────────────────────────────────────────────────────
+function onUrlInput()    { supabaseUrl = document.getElementById('inp-url').value.trim(); }
+function onKeyInput()    { supabaseKey = document.getElementById('inp-key').value.trim(); }
+function onVercelInput() { vercelUrl   = document.getElementById('inp-vercel').value.trim().replace(/\/$/, ''); }
+function clearErr(el)    { el.classList.remove('error'); }
 
-function validateStep4() {
-  const urlEl = document.getElementById('input-url');
-  const keyEl = document.getElementById('input-key');
+// ── Validation ────────────────────────────────────────────────────────────
+function validate5() {
+  onUrlInput(); onKeyInput();
+  const urlEl = document.getElementById('inp-url');
+  const keyEl = document.getElementById('inp-key');
   let ok = true;
-  if (!keyEl.value.trim()) { keyEl.classList.add('error'); ok = false; }
-  if (!urlEl.value.trim()) { urlEl.classList.add('error'); urlEl.focus(); ok = false; }
-  if (ok) { supabaseUrl = urlEl.value.trim(); supabaseAnonKey = keyEl.value.trim(); goTo(5); }
+  if (!supabaseUrl) { urlEl.classList.add('error'); ok = false; }
+  if (!supabaseKey) { keyEl.classList.add('error'); ok = false; }
+  if (!ok) { (supabaseUrl ? keyEl : urlEl).focus(); return; }
+  goTo(6);
 }
 
-function validateStep8() {
-  const el = document.getElementById('input-deploy-url');
-  if (!el.value.trim()) { el.classList.add('error'); el.focus(); return; }
-  deployedUrl = el.value.trim().replace(/\/$/, '');
-  goTo(9);
+function validate6() {
+  onVercelInput();
+  const el = document.getElementById('inp-vercel');
+  if (!vercelUrl) { el.classList.add('error'); el.focus(); return; }
+  goTo(7);
 }
 
-// ── Step init functions ──────────────────────────────────────
-function initStep5() {
-  document.getElementById('env-pre').textContent =
-    'VITE_SUPABASE_URL=' + (supabaseUrl || 'your_supabase_project_url') + '\n' +
-    'VITE_SUPABASE_ANON_KEY=' + (supabaseAnonKey || 'your_supabase_anon_key');
-}
-
-function initStep7() {
-  const t = T[lang];
-  const el = document.getElementById('env-vars-display');
-  el.innerHTML =
-    '<p class="env-label">VITE_SUPABASE_URL</p>' +
-    '<div class="env-row">' +
-      '<div class="display-val">' + esc(supabaseUrl || '—') + '</div>' +
-      '<button type="button" class="env-copy-btn" onclick="copyText(' + JSON.stringify(supabaseUrl) + ',this)" title="' + esc(t.copy) + '">' + esc(t.copy) + '</button>' +
-    '</div>' +
-    '<p class="env-label">VITE_SUPABASE_ANON_KEY</p>' +
-    '<div class="env-row">' +
-      '<div class="display-val" style="font-size:11px;">' + esc(supabaseAnonKey || '—') + '</div>' +
-      '<button type="button" class="env-copy-btn" onclick="copyText(' + JSON.stringify(supabaseAnonKey) + ',this)" title="' + esc(t.copy) + '">' + esc(t.copy) + '</button>' +
-    '</div>';
-}
-
-function initStep9() {
-  const redirect = deployedUrl + '/**';
-  document.getElementById('display-site-url').textContent = deployedUrl || '—';
-  document.getElementById('display-redirect-url').textContent = redirect;
-  document.getElementById('copy-site-url').dataset.copy = deployedUrl;
-  document.getElementById('copy-redirect-url').dataset.copy = redirect;
-  // update button labels
-  const t = T[lang];
-  ['copy-site-url','copy-redirect-url'].forEach(id => {
-    const b = document.getElementById(id);
-    b.textContent = t.copy;
-    b.title = t.copy;
+// ── Step 6: build Vercel deploy URL ──────────────────────────────────────
+function onEnterVercelStep() {
+  const params = new URLSearchParams({
+    'repository-url': 'https://github.com/HoltropAF/myrecipes',
+    'env':            'VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY',
+    'envDescription': 'Your Supabase Project URL and anon public key from the previous step',
   });
+  document.getElementById('vercel-btn').href = 'https://vercel.com/new/clone?' + params.toString();
 }
 
-function initStep10() {
-  const link = document.getElementById('verify-link');
-  link.href = deployedUrl || '#';
-  link.textContent = T[lang].s10_open;
+// ── Step 7: fill auth URL displays ───────────────────────────────────────
+function onEnterAuthStep() {
+  const url = vercelUrl || 'https://myrecipes-xyz.vercel.app';
+  document.getElementById('vercel-url-display').textContent      = url;
+  document.getElementById('vercel-url-wild-display').textContent = url + '/**';
 }
 
-function initStep11() {
-  const t = T[lang];
-  const content = document.getElementById('pwa-content');
-  const btnWrap = document.getElementById('pwa-install-btn');
-  btnWrap.innerHTML = '';
-  const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua);
-  const isAndroid = /Android/.test(ua);
+// ── Step 8: platform-detected install ────────────────────────────────────
+function onEnterInstallStep() {
+  const t         = T[lang];
+  const ua        = navigator.userAgent || '';
+  const isIOS     = /iP(hone|ad|od)/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const appUrl    = vercelUrl || '(your Vercel URL from step 6)';
+  const body      = document.getElementById('install-body');
+  const actions   = document.getElementById('install-actions');
+
+  const navHtml = `
+    <button type="button" class="btn btn-secondary btn-full" onclick="goBack()">${esc(t.back_btn)}</button>
+    <button type="button" class="btn-start-over" onclick="startOver()" title="${esc(t.start_over)}">${esc(t.start_over)}</button>`;
 
   if (isIOS) {
-    content.innerHTML = platformBox(t.s11_ios_title, [t.s11_ios_1, t.s11_ios_2, t.s11_ios_3, t.s11_ios_4]);
-    if (deployedUrl) {
-      btnWrap.innerHTML = '<a href="' + esc(deployedUrl) + '" target="_blank" rel="noopener" class="btn-link-primary" style="margin-top:12px;">↗ Open in Safari</a>';
-    }
+    body.innerHTML    = buildIosSteps(appUrl, t);
+    actions.innerHTML = `<p class="muted">${t.ios_done}</p>` + navHtml;
+
   } else if (isAndroid) {
-    const hasPrompt = !!deferredInstallPrompt;
-    content.innerHTML = platformBox(t.s11_android_title, [t.s11_android_1, hasPrompt ? t.s11_android_prompt : t.s11_android_manual]);
-    if (hasPrompt) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn-install';
-      btn.style.marginTop = '12px';
-      btn.textContent = t.s11_install_btn;
-      btn.onclick = () => { deferredInstallPrompt.prompt(); deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; }); };
-      btnWrap.appendChild(btn);
-    }
+    body.innerHTML = `
+      <p>${t.android_p}</p>
+      <p class="muted"><a href="${esc(appUrl)}" target="_blank" rel="noopener">${esc(appUrl)}</a></p>`;
+    actions.innerHTML = (deferredPWA
+      ? `<button type="button" class="btn btn-install btn-full" id="pwa-btn" onclick="doInstall()">${esc(t.android_btn)}</button>
+         <p class="muted">${t.android_note}</p>`
+      : `<div class="callout"><span class="callout-icon">📲</span><div>${t.android_manual}</div></div>`)
+      + navHtml;
+
   } else {
-    content.innerHTML = platformBox(t.s11_desktop_title, [t.s11_desktop_1, t.s11_desktop_2]);
+    body.innerHTML = `
+      <p>${t.desktop_p}</p>
+      <div class="code-block">
+        <button type="button" class="copy-btn" data-copy="${esc(appUrl)}" onclick="copyFromAttr(this)" title="${esc(t.copy)}">${esc(t.copy)}</button>
+        <pre class="pre-sm">${esc(appUrl)}</pre>
+      </div>
+      <p>${t.desktop_iphone}</p>
+      ${buildIosSteps(appUrl, t)}
+      <p>${t.desktop_android}</p>`;
+    actions.innerHTML = `
+      <div class="callout"><span class="callout-icon">🎉</span><div>${t.desktop_done}</div></div>` + navHtml;
   }
 }
 
-function platformBox(title, steps) {
-  return '<div class="platform-box"><h3>' + esc(title) + '</h3><div class="platform-steps">' +
-    steps.map((s, i) => '<div class="platform-step"><strong>' + (i+1) + '.</strong> ' + s + '</div>').join('') +
-    '</div></div>';
+function buildIosSteps(appUrl, t) {
+  return `
+    <div class="ios-steps">
+      <div class="ios-step"><div class="ios-num">1</div><div class="ios-text">${t.ios_step1(esc(appUrl))}</div></div>
+      <div class="ios-step"><div class="ios-num">2</div><div class="ios-text">${t.ios_step2}</div></div>
+      <div class="ios-step"><div class="ios-num">3</div><div class="ios-text">${t.ios_step3}</div></div>
+      <div class="ios-step"><div class="ios-num">4</div><div class="ios-text">${t.ios_step4}</div></div>
+    </div>`;
 }
 
-function initStep12() {
-  const link = document.getElementById('done-app-link');
-  if (deployedUrl) link.href = deployedUrl;
+async function doInstall() {
+  if (!deferredPWA) return;
+  deferredPWA.prompt();
+  const { outcome } = await deferredPWA.userChoice;
+  deferredPWA = null;
+  const btn = document.getElementById('pwa-btn');
+  if (!btn) return;
+  btn.textContent = outcome === 'accepted' ? T[lang].installed : T[lang].android_btn;
+  if (outcome === 'accepted') btn.disabled = true;
 }
 
-// ── Clipboard ────────────────────────────────────────────────
+// ── Clipboard ─────────────────────────────────────────────────────────────
+function copySql(btn)          { copyText(SQL, btn); }
+function copyField(preId, btn) { copyText(document.getElementById(preId).textContent, btn); }
+function copyFromAttr(btn)     { copyText(btn.dataset.copy, btn); }
+
 function copyText(text, btn) {
   const t = T[lang];
-  const orig = btn.textContent;
-  const ok = () => { btn.textContent = t.copied; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000); };
-  const fail = () => { btn.textContent = t.copy_failed; setTimeout(() => { btn.textContent = orig; }, 2000); };
+  const finish = (ok) => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = ok ? t.copied : t.copy_failed;
+    btn.classList.toggle('copied', ok);
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(ok, () => fallback(text, ok, fail));
-  } else { fallback(text, ok, fail); }
+    navigator.clipboard.writeText(text).then(() => finish(true), () => legacyCopy(text, finish));
+  } else {
+    legacyCopy(text, finish);
+  }
 }
 
-function fallback(text, ok, fail) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;top:-9999px;opacity:0;';
-  document.body.appendChild(ta);
-  ta.focus(); ta.select();
-  try { document.execCommand('copy') ? ok() : fail(); } catch { fail(); }
-  document.body.removeChild(ta);
+function legacyCopy(text, finish) {
+  try {
+    const ta = Object.assign(document.createElement('textarea'), { value: text });
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    finish(ok);
+  } catch { finish(false); }
 }
 
-function copyField(id, btn) { copyText(document.getElementById(id).textContent, btn); }
-function copyFromAttr(btn) { copyText(btn.dataset.copy || '', btn); }
-
-// ── i18n ─────────────────────────────────────────────────────
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function setLang(l) {
-  lang = l;
-  document.documentElement.lang = l;
-  const t = T[l];
-
-  document.querySelectorAll('[data-t]').forEach(el => {
-    const v = t[el.getAttribute('data-t')];
-    if (v !== undefined) el.textContent = v;
-  });
-  document.querySelectorAll('[data-t-html]').forEach(el => {
-    const v = t[el.getAttribute('data-t-html')];
-    if (v !== undefined) el.innerHTML = v;
-  });
-  document.querySelectorAll('[data-t-title]').forEach(el => {
-    const v = t[el.getAttribute('data-t-title')];
-    if (v !== undefined) el.title = v;
-  });
-
-  const tog = document.getElementById('lang-toggle');
-  tog.textContent = t.lang_btn;
-  tog.title = t.lang_title;
-
-  document.getElementById('progress-label').textContent = t.progress(currentStep, TOTAL);
-
-  buildPrereqList();
-
-  // Re-init active dynamic step
-  if (currentStep === 5)  initStep5();
-  if (currentStep === 7)  initStep7();
-  if (currentStep === 9)  initStep9();
-  if (currentStep === 10) initStep10();
-  if (currentStep === 11) initStep11();
-}
-
-function toggleLang() { setLang(lang === 'en' ? 'nl' : 'en'); }
-
-// ── Prereq list ──────────────────────────────────────────────
-function buildPrereqList() {
-  const t = T[lang];
-  const items = [
-    { icon: '🟢', name: t.prereq_node, sub: t.prereq_node_sub, href: 'https://nodejs.org',        lnk: t.prereq_node_lnk },
-    { icon: '🐙', name: t.prereq_git,  sub: t.prereq_git_sub,  href: 'https://git-scm.com',       lnk: t.prereq_git_lnk  },
-    { icon: '🐱', name: t.prereq_gh,   sub: t.prereq_gh_sub,   href: 'https://github.com',        lnk: t.prereq_gh_lnk   },
-    { icon: '⚡', name: t.prereq_sb,   sub: t.prereq_sb_sub,   href: 'https://supabase.com',      lnk: t.prereq_sb_lnk   },
-    { icon: '▲', name: t.prereq_vc,   sub: t.prereq_vc_sub,   href: 'https://vercel.com',        lnk: t.prereq_vc_lnk   },
-  ];
-  document.getElementById('prereq-list').innerHTML = items.map(i =>
-    `<div class="prereq-item">
-      <span class="prereq-icon">${i.icon}</span>
-      <div class="prereq-text"><strong>${esc(i.name)}</strong><span>${esc(i.sub)}</span></div>
-      <a class="prereq-link" href="${i.href}" target="_blank" rel="noopener">${esc(i.lnk)}</a>
-    </div>`
-  ).join('');
-}
-
-// ── Copy buttons: set initial text from T ────────────────────
-function initCopyBtns() {
-  document.querySelectorAll('.copy-btn').forEach(b => { b.textContent = T[lang].copy; });
-}
-
-// ── Boot ─────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────
+document.getElementById('prog-fill').style.width = (1 / TOTAL * 100) + '%';
 setLang(lang);
-initCopyBtns();
-document.getElementById('progress-bar-fill').style.width = (1 / TOTAL * 100).toFixed(1) + '%';
 </script>
 </body>
 </html>
