@@ -245,6 +245,7 @@ function AppInner({ setLanguage }) {
     })
   }
 
+  const [setupBannerDismissed, setSetupBannerDismissed] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null) // { recipe, timeoutId }
 
   const handleDelete = (recipe) => {
@@ -343,19 +344,29 @@ function AppInner({ setLanguage }) {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
-      {isGuest && (
+      {isGuest && !setupBannerDismissed && (
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-          padding: '8px 16px', background: 'var(--sage-light)', borderBottom: '1px solid var(--line)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '9px 40px 9px 16px', position: 'relative',
+          background: 'var(--sage-light)', borderBottom: '1px solid var(--line)',
           fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)',
         }}>
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {t('app.guestBanner')}
-          </span>
+          <span>{t('app.setupPrompt')}</span>
+          <a
+            href="/setup.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--tomato)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
+          >{t('app.setupLink')}</a>
           <button
-            onClick={exitGuestMode}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sage)', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 11, flexShrink: 0 }}
-          >{t('app.guestExit')}</button>
+            onClick={() => setSetupBannerDismissed(true)}
+            style={{
+              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: 'var(--sage)',
+              cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '4px 6px',
+              fontFamily: 'inherit',
+            }}
+          >×</button>
         </div>
       )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
