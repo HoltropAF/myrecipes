@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>myrecipes – Setup Wizard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fdf8f0;
+      --surface: #ffffff;
+      --border: #e5ddd0;
+      --text: #1a1410;
+      --muted: #7a6e64;
+      --accent: #c1432f;
+      --accent-dim: #f9eeeb;
+      --green: #1a7a4a;
+      --green-dim: #e8f5ee;
+      --red: #c1432f;
+      --radius: 10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Progress header ── */
+    #progress-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+    }
+    #progress-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    #progress-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #lang-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    #progress-bar-bg {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Steps ── */
+    #steps-container {
+      width: 100%;
+      max-width: 640px;
+      padding: 0 20px 60px;
+    }
+    .step {
+      display: none;
+      flex-direction: column;
+      min-height: calc(100vh - 80px);
+      padding: 32px 0 24px;
+    }
+    .step.active { display: flex; }
+
+    .step-icon { font-size: 40px; margin-bottom: 16px; line-height: 1; }
+    .step h1 { font-size: 26px; font-weight: 700; line-height: 1.25; margin-bottom: 8px; }
+    .step .subtitle { font-size: 15px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+
+    /* ── Why callout ── */
+    .why {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .why strong { color: var(--text); }
+
+    /* ── Instructions ── */
+    .instructions { display: flex; flex-direction: column; gap: 14px; }
+    .instr { display: flex; gap: 12px; align-items: flex-start; }
+    .instr-num {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .instr-body { font-size: 14px; line-height: 1.65; }
+    .instr-body a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .instr-body a:hover { text-decoration: underline; }
+    .instr-body strong { font-weight: 600; }
+    .instr-body code {
+      background: var(--border);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Menlo', 'Consolas', monospace;
+    }
+
+    /* ── Code block ── */
+    .code-block {
+      position: relative;
+      background: #1e1a17;
+      border-radius: var(--radius);
+      margin-top: 10px;
+    }
+    .code-block pre {
+      padding: 14px 50px 14px 16px;
+      font-size: 12px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      color: #f0e8e0;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #f0e8e0;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.2); }
+    .copy-btn.copied { background: var(--green); border-color: var(--green); color: #fff; }
+
+    /* ── Fields ── */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .field label { font-size: 13px; font-weight: 600; }
+    .field input {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input.error { border-color: var(--red); }
+    .field-hint { display: none; font-size: 12px; color: var(--red); font-weight: 500; }
+    .field input.error ~ .field-hint { display: block; }
+
+    /* ── Display value ── */
+    .display-val {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 12px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      word-break: break-all;
+      color: var(--muted);
+      flex: 1;
+    }
+    .env-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+    .env-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; margin-top: 14px; }
+    .env-label:first-child { margin-top: 0; }
+
+    /* ── Prereq cards ── */
+    .prereq-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+    .prereq-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+    }
+    .prereq-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .prereq-text { flex: 1; }
+    .prereq-text strong { font-size: 13px; font-weight: 600; display: block; }
+    .prereq-text span { font-size: 11px; color: var(--muted); }
+    .prereq-link { font-size: 12px; color: var(--accent); font-weight: 500; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+    .prereq-link:hover { text-decoration: underline; }
+
+    /* ── Platform box ── */
+    .platform-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 8px;
+    }
+    .platform-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .platform-steps { display: flex; flex-direction: column; gap: 9px; }
+    .platform-step { font-size: 14px; line-height: 1.55; color: var(--muted); }
+    .platform-step strong { color: var(--text); }
+
+    /* ── Done card ── */
+    .done-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+    .done-link {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text);
+      font-size: 14px; font-weight: 500;
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .done-link:hover { background: var(--bg); }
+    .done-link .done-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+
+    /* ── Buttons ── */
+    .actions { margin-top: auto; padding-top: 28px; display: flex; flex-direction: column; gap: 10px; }
+    button { font-family: inherit; cursor: pointer; }
+
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 14px 20px; font-size: 15px; font-weight: 600;
+      width: 100%; transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-secondary {
+      background: var(--surface); color: var(--text);
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 12px 20px; font-size: 14px; font-weight: 500;
+      width: 100%; transition: border-color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); }
+
+    .btn-install {
+      background: var(--green); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 14px 20px; font-size: 15px; font-weight: 600;
+      width: 100%; transition: opacity 0.15s;
+    }
+    .btn-install:hover { opacity: 0.88; }
+
+    .btn-link-primary {
+      display: block; text-decoration: none; text-align: center;
+      background: var(--accent); color: #fff;
+      border-radius: var(--radius);
+      padding: 14px 20px; font-size: 15px; font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn-link-primary:hover { opacity: 0.88; }
+
+    .btn-start-over {
+      background: none; border: none;
+      color: var(--muted); font-size: 13px;
+      text-decoration: underline; cursor: pointer;
+      padding: 2px 0; align-self: flex-start;
+    }
+    .btn-start-over:hover { color: var(--text); }
+
+    .env-copy-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px; font-size: 11px; font-weight: 600;
+      cursor: pointer; color: var(--muted);
+      white-space: nowrap; font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .env-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .env-copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+    .spacer { margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<div id="progress-header">
+  <div id="progress-top">
+    <span id="progress-label"></span>
+    <button type="button" id="lang-toggle" onclick="toggleLang()" aria-label="Toggle language"></button>
+  </div>
+  <div id="progress-bar-bg">
+    <div id="progress-bar-fill"></div>
+  </div>
+</div>
+
+<div id="steps-container">
+
+  <!-- ═══════════════════════════════════════════════ STEP 1 -->
+  <section class="step active" id="step-1">
+    <div class="step-icon">🍳</div>
+    <h1 data-t="s1_title"></h1>
+    <p class="subtitle" data-t-html="s1_sub"></p>
+    <div class="why" data-t-html="s1_why"></div>
+    <div class="prereq-list" id="prereq-list"></div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(2)" data-t="s1_cta"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 2 -->
+  <section class="step" id="step-2">
+    <div class="step-icon">🗄️</div>
+    <h1 data-t="s2_title"></h1>
+    <div class="why" data-t-html="s2_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s2_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s2_i2"></div></div>
+      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s2_i3"></div></div>
+    </div>
+    <div class="actions">
+      <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener" class="btn-link-primary" data-t="s2_open"></a>
+      <button type="button" class="btn-primary" onclick="goTo(3)" data-t="s2_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 3 -->
+  <section class="step" id="step-3">
+    <div class="step-icon">📋</div>
+    <h1 data-t="s3_title"></h1>
+    <div class="why" data-t-html="s3_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s3_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s3_i2"></div></div>
+    </div>
+    <div class="code-block spacer">
+      <pre id="sql-pre">-- myrecipes — full database schema
+-- Run this against a fresh Supabase project.
+
+create table if not exists recipes (
+  id                    uuid primary key default gen_random_uuid(),
+  user_id               uuid references auth.users(id) on delete cascade,
+  title                 text not null,
+  tagline               text,
+  category              text,
+  subcategory           text,
+  servings              int,
+  total_minutes         int,
+  tags                  text[] not null default '{}',
+  ingredients           jsonb not null default '[]',
+  steps                 jsonb not null default '[]',
+  variants              jsonb not null default '[]',
+  notes                 text,
+  photo_url             text,
+  source                text,
+  freezer_friendly      boolean,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
+);
+
+create table if not exists shopping_list (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete cascade,
+  recipe_id  uuid references recipes(id) on delete set null,
+  name       text not null,
+  amount     numeric,
+  unit       text,
+  checked    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists cook_log (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users(id) on delete cascade,
+  recipe_id     uuid references recipes(id) on delete cascade,
+  cooked_date   date not null default current_date,
+  thumbs        text check (thumbs in ('up','down')),
+  notes         text,
+  variant_label text,
+  created_at    timestamptz not null default now()
+);
+
+create table if not exists user_preferences (
+  user_id            uuid primary key references auth.users(id) on delete cascade,
+  unit_system        text not null default 'metric' check (unit_system in ('metric', 'us')),
+  theme              text not null default 'auto' check (theme in ('light', 'dark', 'auto')),
+  default_category   text,
+  recipe_view_mode   text not null default 'folders' check (recipe_view_mode in ('folders', 'list')),
+  recipe_search_mode text not null default 'title' check (recipe_search_mode in ('title', 'ingredient')),
+  compact_mode       boolean not null default false,
+  updated_at         timestamptz not null default now()
+);
+
+create table if not exists meal_groups (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete cascade,
+  name       text not null,
+  notes      text,
+  recipe_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists ingredient_tags (
+  canonical_name text primary key,
+  tags           text[] not null default '{}'
+);
+
+create or replace view recipe_ingredient_tags as
+select
+  r.id                as recipe_id,
+  r.title,
+  item->>'name'       as raw_ingredient,
+  it.canonical_name,
+  it.tags
+from recipes r
+cross join lateral jsonb_array_elements(r.ingredients) as ig
+cross join lateral jsonb_array_elements(ig->'items')   as item
+join ingredient_tags it
+  on lower(item->>'name') ilike '%' || lower(it.canonical_name) || '%';
+
+create or replace view recipe_computed_tags as
+with matched as (
+  select distinct recipe_id, title, tag
+  from recipe_ingredient_tags,
+       unnest(tags) as tag
+)
+select
+  r.id as recipe_id,
+  r.title,
+  coalesce(
+    array_agg(distinct m.tag) filter (where m.tag is not null),
+    '{}'::text[]
+  ) as allergen_tags,
+  not exists (
+    select 1 from matched m2
+    where m2.recipe_id = r.id
+      and m2.tag in ('meat','fish','shellfish','dairy','egg')
+  ) as is_vegan,
+  not exists (
+    select 1 from matched m2
+    where m2.recipe_id = r.id
+      and m2.tag in ('meat','fish','shellfish')
+  ) as is_vegetarian,
+  not exists (
+    select 1 from matched m2
+    where m2.recipe_id = r.id
+      and m2.tag = 'meat'
+  ) as is_pescatarian_or_better
+from recipes r
+left join matched m on m.recipe_id = r.id
+group by r.id, r.title;
+
+alter table recipes          enable row level security;
+alter table shopping_list    enable row level security;
+alter table cook_log         enable row level security;
+alter table user_preferences enable row level security;
+alter table meal_groups      enable row level security;
+alter table ingredient_tags  enable row level security;
+
+create policy "Users manage their own recipes"
+  on recipes for all
+  using  ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users manage their own shopping list"
+  on shopping_list for all
+  using  ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users manage their own cook log"
+  on cook_log for all
+  using  ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users manage their own preferences"
+  on user_preferences for all
+  using  ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "Users manage their own meal groups"
+  on meal_groups for all
+  using  ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "Authenticated users can read ingredient_tags"
+  on ingredient_tags for select
+  using (auth.role() = 'authenticated');
+
+create index if not exists idx_recipes_user         on recipes(user_id);
+create index if not exists idx_recipes_category     on recipes(category);
+create index if not exists idx_shopping_list_user   on shopping_list(user_id);
+create index if not exists idx_shopping_list_recipe on shopping_list(recipe_id);
+create index if not exists idx_cook_log_user_recipe on cook_log(user_id, recipe_id);
+create index if not exists idx_cook_log_recipe      on cook_log(recipe_id);
+create index if not exists idx_cook_log_date        on cook_log(user_id, cooked_date);
+create index if not exists idx_meal_groups_user     on meal_groups(user_id);</pre>
+      <button type="button" class="copy-btn" onclick="copyField('sql-pre',this)" data-t-title="copy" aria-label="Copy SQL"></button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(4)" data-t="s3_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 4 -->
+  <section class="step" id="step-4">
+    <div class="step-icon">🔑</div>
+    <h1 data-t="s4_title"></h1>
+    <div class="why" data-t-html="s4_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s4_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s4_i2"></div></div>
+    </div>
+    <div class="spacer">
+      <div class="field">
+        <label for="input-url" data-t="s4_url_label"></label>
+        <input type="url" id="input-url" placeholder="https://xxxxxxxxxxxx.supabase.co"
+          oninput="supabaseUrl=this.value.trim();clearErr(this)" />
+        <span class="field-hint" data-t="s4_url_err"></span>
+      </div>
+      <div class="instructions">
+        <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s4_i3"></div></div>
+      </div>
+      <div class="field spacer">
+        <label for="input-key" data-t="s4_key_label"></label>
+        <input type="text" id="input-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          oninput="supabaseAnonKey=this.value.trim();clearErr(this)" />
+        <span class="field-hint" data-t="s4_key_err"></span>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="validateStep4()" data-t="s4_cta"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 5 -->
+  <section class="step" id="step-5">
+    <div class="step-icon">💻</div>
+    <h1 data-t="s5_title"></h1>
+    <div class="why" data-t-html="s5_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s5_i1"></div></div>
+    </div>
+    <div class="code-block">
+      <pre id="clone-pre">git clone https://github.com/HoltropAF/myrecipes.git
+cd myrecipes
+npm install</pre>
+      <button type="button" class="copy-btn" onclick="copyField('clone-pre',this)" data-t-title="copy" aria-label="Copy command"></button>
+    </div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s5_i2"></div></div>
+    </div>
+    <div class="code-block">
+      <pre id="env-pre"></pre>
+      <button type="button" class="copy-btn" onclick="copyField('env-pre',this)" data-t-title="copy" aria-label="Copy .env"></button>
+    </div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s5_i3"></div></div>
+    </div>
+    <div class="code-block">
+      <pre>npm run dev</pre>
+      <button type="button" class="copy-btn" onclick="copyText('npm run dev',this)" data-t-title="copy" aria-label="Copy command"></button>
+    </div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">4</div><div class="instr-body" data-t-html="s5_i4"></div></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(6)" data-t="s5_cta"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 6 -->
+  <section class="step" id="step-6">
+    <div class="step-icon">🚀</div>
+    <h1 data-t="s6_title"></h1>
+    <div class="why" data-t-html="s6_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s6_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s6_i2"></div></div>
+    </div>
+    <div class="actions">
+      <a href="https://vercel.com/new" target="_blank" rel="noopener" class="btn-link-primary" data-t="s6_import"></a>
+      <button type="button" class="btn-primary" onclick="goTo(7)" data-t="s6_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 7 -->
+  <section class="step" id="step-7">
+    <div class="step-icon">⚙️</div>
+    <h1 data-t="s7_title"></h1>
+    <div class="why" data-t-html="s7_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s7_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s7_i2"></div></div>
+    </div>
+    <div id="env-vars-display" class="spacer"></div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s7_i3"></div></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(8)" data-t="s7_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 8 -->
+  <section class="step" id="step-8">
+    <div class="step-icon">🌐</div>
+    <h1 data-t="s8_title"></h1>
+    <div class="why" data-t-html="s8_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s8_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s8_i2"></div></div>
+    </div>
+    <div class="field spacer">
+      <label for="input-deploy-url" data-t="s8_url_label"></label>
+      <input type="url" id="input-deploy-url" placeholder="https://myrecipes-xyz.vercel.app"
+        oninput="deployedUrl=this.value.trim().replace(/\/$/,'');clearErr(this)" />
+      <span class="field-hint" data-t="s8_url_err"></span>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="validateStep8()" data-t="s8_cta"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 9 -->
+  <section class="step" id="step-9">
+    <div class="step-icon">🔒</div>
+    <h1 data-t="s9_title"></h1>
+    <div class="why" data-t-html="s9_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s9_i1"></div></div>
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s9_i2"></div></div>
+    </div>
+    <div class="env-row spacer">
+      <div class="display-val" id="display-site-url"></div>
+      <button type="button" class="env-copy-btn" id="copy-site-url" onclick="copyFromAttr(this)" data-copy="" data-t-title="copy"></button>
+    </div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s9_i3"></div></div>
+    </div>
+    <div class="env-row spacer">
+      <div class="display-val" id="display-redirect-url"></div>
+      <button type="button" class="env-copy-btn" id="copy-redirect-url" onclick="copyFromAttr(this)" data-copy="" data-t-title="copy"></button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(10)" data-t="s9_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 10 -->
+  <section class="step" id="step-10">
+    <div class="step-icon">✅</div>
+    <h1 data-t="s10_title"></h1>
+    <div class="why" data-t-html="s10_why"></div>
+    <div class="instructions">
+      <div class="instr"><div class="instr-num">1</div><div class="instr-body" data-t-html="s10_i1"></div></div>
+    </div>
+    <div class="spacer">
+      <a id="verify-link" href="#" target="_blank" rel="noopener" class="btn-link-primary" data-t="s10_open"></a>
+    </div>
+    <div class="instructions spacer">
+      <div class="instr"><div class="instr-num">2</div><div class="instr-body" data-t-html="s10_i2"></div></div>
+      <div class="instr"><div class="instr-num">3</div><div class="instr-body" data-t-html="s10_i3"></div></div>
+      <div class="instr"><div class="instr-num">4</div><div class="instr-body" data-t-html="s10_i4"></div></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(11)" data-t="s10_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 11 -->
+  <section class="step" id="step-11">
+    <div class="step-icon">📲</div>
+    <h1 data-t="s11_title"></h1>
+    <div class="why" data-t-html="s11_why"></div>
+    <div id="pwa-content"></div>
+    <div id="pwa-install-btn"></div>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="goTo(12)" data-t="s11_done"></button>
+      <button type="button" class="btn-secondary" onclick="goBack()" data-t="back_btn"></button>
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ STEP 12 -->
+  <section class="step" id="step-12">
+    <div class="step-icon">🎉</div>
+    <h1 data-t="s12_title"></h1>
+    <p class="subtitle" data-t-html="s12_sub"></p>
+    <div class="done-card">
+      <a id="done-app-link" href="#" target="_blank" rel="noopener" class="done-link">
+        <span class="done-icon">🌐</span><span data-t="s12_app"></span>
+      </a>
+      <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="done-link">
+        <span class="done-icon">🗄️</span><span data-t="s12_supabase"></span>
+      </a>
+      <a href="https://vercel.com/dashboard" target="_blank" rel="noopener" class="done-link">
+        <span class="done-icon">🚀</span><span data-t="s12_vercel"></span>
+      </a>
+    </div>
+    <div class="why" data-t-html="s12_tip"></div>
+    <div class="actions">
+      <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over"></button>
+    </div>
+  </section>
+
+</div><!-- /steps-container -->
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let supabaseUrl = '';
+let supabaseAnonKey = '';
+let deployedUrl = '';
+let currentStep = 1;
+const TOTAL = 12;
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; });
+
+// ── Translations ─────────────────────────────────────────────
+const T = {
+  en: {
+    lang_btn: 'NL',
+    lang_title: 'Schakel naar Nederlands',
+    progress: (n, t) => `Step ${n} of ${t}`,
+    back_btn: '← Back',
+    start_over: 'Start over',
+    copy: 'Copy',
+    copied: 'Copied!',
+    copy_failed: 'Failed',
+
+    s1_title: 'Welcome to myrecipes setup',
+    s1_sub: 'This wizard walks you through every step to get your own <strong>myrecipes</strong> instance running — database, deployment, and app install.',
+    s1_why: '<strong>What you\'ll set up:</strong> a Supabase database, a Vercel deployment, and the installable PWA on your device. The whole process takes about 15–20 minutes.',
+    s1_cta: "Let's start →",
+
+    prereq_node: 'Node.js 18+', prereq_node_sub: 'For local development', prereq_node_lnk: 'Download ↗',
+    prereq_git:  'Git',         prereq_git_sub:  'For cloning the repo',  prereq_git_lnk:  'Download ↗',
+    prereq_gh:   'GitHub account', prereq_gh_sub: 'For hosting your code', prereq_gh_lnk: 'Sign up ↗',
+    prereq_sb:   'Supabase account', prereq_sb_sub: 'Free — no credit card', prereq_sb_lnk: 'Sign up ↗',
+    prereq_vc:   'Vercel account', prereq_vc_sub: 'Free — connects to GitHub', prereq_vc_lnk: 'Sign up ↗',
+
+    s2_title: 'Create a Supabase project',
+    s2_why: 'Supabase is the database and authentication backend. It\'s free for personal projects — no credit card needed.',
+    s2_i1: 'Go to <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener">supabase.com</a> and sign in (or create an account).',
+    s2_i2: 'Click <strong>New project</strong>, choose a name (e.g. <code>myrecipes</code>), pick a region close to you, and set a database password. <strong>Save that password somewhere safe.</strong>',
+    s2_i3: 'Wait ~60 seconds for the project to provision, then come back here and click the button below.',
+    s2_open: 'Open Supabase Dashboard ↗',
+    s2_done: 'My project is ready →',
+
+    s3_title: 'Set up the database',
+    s3_why: 'This SQL creates all tables, views, indexes, and Row-Level Security policies. It\'s safe to run on a fresh Supabase project.',
+    s3_i1: 'In your Supabase project, open <strong>SQL Editor</strong> in the left sidebar.',
+    s3_i2: 'Copy the SQL below, paste it into the editor, and click <strong>Run</strong>.',
+    s3_done: 'Schema applied →',
+
+    s4_title: 'Copy your Supabase credentials',
+    s4_why: 'The app connects to Supabase using your Project URL and anon key. You\'ll find both in <strong>Project Settings → API</strong>.',
+    s4_i1: 'In Supabase, click the gear icon → <strong>Project Settings → API</strong>.',
+    s4_i2: 'Under <strong>Project URL</strong>, copy the URL and paste it below.',
+    s4_i3: 'Under <strong>Project API keys</strong>, copy the <strong>anon / public</strong> key.',
+    s4_url_label: 'Project URL',
+    s4_url_err: 'Please enter your Supabase Project URL',
+    s4_key_label: 'Anon / public key',
+    s4_key_err: 'Please enter your Supabase anon key',
+    s4_cta: 'Save & continue →',
+
+    s5_title: 'Set up locally',
+    s5_why: 'Test the app on your machine before deploying. You need <strong>Node.js 18+</strong> and <strong>Git</strong>.',
+    s5_i1: 'Clone the repo and install dependencies:',
+    s5_i2: 'Create a <code>.env</code> file in the project root (your credentials are filled in):',
+    s5_i3: 'Start the dev server:',
+    s5_i4: 'Open <a href="http://localhost:5173" target="_blank" rel="noopener">localhost:5173</a> and sign in with your email — you\'ll get a magic link.',
+    s5_cta: 'Works locally →',
+
+    s6_title: 'Deploy to Vercel',
+    s6_why: 'Vercel hosts the app and auto-deploys on every push to your main branch. Free for personal projects.',
+    s6_i1: 'Go to <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> and sign in with GitHub.',
+    s6_i2: 'Click <strong>Add New → Project</strong>, pick your <code>myrecipes</code> repo, and click <strong>Import</strong>. Don\'t deploy yet — you need to add env vars first.',
+    s6_import: 'New project on Vercel ↗',
+    s6_done: 'I\'ve imported my repo →',
+
+    s7_title: 'Add environment variables in Vercel',
+    s7_why: 'Before deploying, add your Supabase credentials to Vercel so the build can connect to the database.',
+    s7_i1: 'In your new Vercel project, go to <strong>Settings → Environment Variables</strong>.',
+    s7_i2: 'Add these two variables (copy each value with the button):',
+    s7_i3: 'Save, then click <strong>Deploy</strong> (or go to <strong>Deployments → Redeploy</strong> if it auto-deployed already).',
+    s7_done: 'Variables added & deployed →',
+
+    s8_title: 'Enter your deployed URL',
+    s8_why: 'Supabase needs your live URL to send magic link emails that open your app correctly.',
+    s8_i1: 'In Vercel, open your project. Copy the URL shown at the top (e.g. <code>myrecipes-xyz.vercel.app</code>).',
+    s8_i2: 'Paste the full URL below, including <code>https://</code>.',
+    s8_url_label: 'Deployed URL',
+    s8_url_err: 'Please enter your deployment URL',
+    s8_cta: 'Continue →',
+
+    s9_title: 'Configure Supabase auth redirect',
+    s9_why: 'Magic links include a redirect URL. Supabase must whitelist your domain so clicking the link from email works.',
+    s9_i1: 'In Supabase, go to <strong>Authentication → URL Configuration</strong>.',
+    s9_i2: 'Set <strong>Site URL</strong> to:',
+    s9_i3: 'Under <strong>Redirect URLs</strong>, add:',
+    s9_done: 'Auth configured →',
+
+    s10_title: 'Verify your deployment',
+    s10_why: 'A quick end-to-end test to confirm sign-in works before installing the app.',
+    s10_i1: 'Open your live app:',
+    s10_open: 'Open live app ↗',
+    s10_i2: 'Enter your email and click the sign-in button. You should receive a magic link within a minute.',
+    s10_i3: 'Click the link in the email. It should open your app and sign you in.',
+    s10_i4: 'Once signed in, come back here and continue.',
+    s10_done: 'Sign-in works →',
+
+    s11_title: 'Install the app',
+    s11_why: 'myrecipes is a PWA — add it to your home screen for a full-screen app experience without a browser bar.',
+    s11_ios_title: 'Install on iPhone / iPad',
+    s11_ios_1: 'Open your app URL in <strong>Safari</strong>.',
+    s11_ios_2: 'Tap the <strong>Share</strong> button (square with an upward arrow).',
+    s11_ios_3: 'Scroll down and tap <strong>Add to Home Screen</strong>.',
+    s11_ios_4: 'Tap <strong>Add</strong> in the top right.',
+    s11_android_title: 'Install on Android',
+    s11_android_1: 'Open your app URL in <strong>Chrome</strong>.',
+    s11_android_prompt: 'Tap the <strong>Install app</strong> button below, or use Chrome\'s menu (⋮) → <strong>Add to home screen</strong>.',
+    s11_android_manual: 'Tap Chrome\'s menu (⋮) → <strong>Add to home screen</strong>.',
+    s11_desktop_title: 'Install on Desktop',
+    s11_desktop_1: 'Open your app URL in <strong>Chrome</strong> or <strong>Edge</strong>.',
+    s11_desktop_2: 'Click the install icon (⊕) in the address bar, or open the menu → <strong>Install myrecipes</strong>.',
+    s11_install_btn: 'Install app',
+    s11_done: 'App installed →',
+
+    s12_title: "You're all set!",
+    s12_sub: 'Your personal recipe book is live. Start adding recipes, build your shopping list, and log what you cook.',
+    s12_app: 'Open myrecipes',
+    s12_supabase: 'Supabase dashboard',
+    s12_vercel: 'Vercel dashboard',
+    s12_tip: '<strong>Tip:</strong> Share your app URL with others — each user signs in with their own email and gets their own private recipe collection.',
+  },
+
+  nl: {
+    lang_btn: 'EN',
+    lang_title: 'Switch to English',
+    progress: (n, t) => `Stap ${n} van ${t}`,
+    back_btn: '← Terug',
+    start_over: 'Opnieuw beginnen',
+    copy: 'Kopieer',
+    copied: 'Gekopieerd!',
+    copy_failed: 'Mislukt',
+
+    s1_title: 'Welkom bij de myrecipes-setup',
+    s1_sub: 'Deze wizard begeleidt je stap voor stap bij het opzetten van je eigen <strong>myrecipes</strong>-instantie — database, deployment en app-installatie.',
+    s1_why: '<strong>Wat je gaat instellen:</strong> een Supabase-database, een Vercel-deployment en de installeerbare PWA op je apparaat. Het hele proces duurt ongeveer 15–20 minuten.',
+    s1_cta: 'Aan de slag →',
+
+    prereq_node: 'Node.js 18+', prereq_node_sub: 'Voor lokale ontwikkeling', prereq_node_lnk: 'Download ↗',
+    prereq_git:  'Git',         prereq_git_sub:  'Voor het klonen van de repo', prereq_git_lnk: 'Download ↗',
+    prereq_gh:   'GitHub-account', prereq_gh_sub: 'Voor het hosten van de code', prereq_gh_lnk: 'Aanmelden ↗',
+    prereq_sb:   'Supabase-account', prereq_sb_sub: 'Gratis — geen creditcard', prereq_sb_lnk: 'Aanmelden ↗',
+    prereq_vc:   'Vercel-account', prereq_vc_sub: 'Gratis — koppelt met GitHub', prereq_vc_lnk: 'Aanmelden ↗',
+
+    s2_title: 'Maak een Supabase-project aan',
+    s2_why: 'Supabase is de database- en authenticatiebackend. Gratis voor persoonlijke projecten — geen creditcard nodig.',
+    s2_i1: 'Ga naar <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener">supabase.com</a> en log in (of maak een account aan).',
+    s2_i2: 'Klik op <strong>Nieuw project</strong>, kies een naam (bijv. <code>myrecipes</code>), kies een regio dicht bij jou en stel een databasewachtwoord in. <strong>Bewaar dit wachtwoord op een veilige plek.</strong>',
+    s2_i3: 'Wacht ~60 seconden tot het project klaar is en kom dan hier terug.',
+    s2_open: 'Open Supabase Dashboard ↗',
+    s2_done: 'Mijn project is klaar →',
+
+    s3_title: 'Database instellen',
+    s3_why: 'Dit SQL-script maakt alle tabellen, views, indexen en Row-Level Security-beleid aan. Veilig te gebruiken op een nieuw Supabase-project.',
+    s3_i1: 'Ga in je Supabase-project naar <strong>SQL Editor</strong> in de zijbalk.',
+    s3_i2: 'Kopieer de SQL hieronder, plak hem in de editor en klik op <strong>Run</strong>.',
+    s3_done: 'Schema toegepast →',
+
+    s4_title: 'Kopieer je Supabase-gegevens',
+    s4_why: 'De app maakt verbinding met Supabase via je Project URL en anon-sleutel. Je vindt beide onder <strong>Projectinstellingen → API</strong>.',
+    s4_i1: 'Klik in Supabase op het tandwiel → <strong>Projectinstellingen → API</strong>.',
+    s4_i2: 'Kopieer onder <strong>Project URL</strong> de URL en plak deze hieronder.',
+    s4_i3: 'Kopieer onder <strong>Project API-sleutels</strong> de <strong>anon / public</strong>-sleutel.',
+    s4_url_label: 'Project URL',
+    s4_url_err: 'Vul je Supabase Project URL in',
+    s4_key_label: 'Anon / public-sleutel',
+    s4_key_err: 'Vul je Supabase anon-sleutel in',
+    s4_cta: 'Opslaan & verder →',
+
+    s5_title: 'Lokaal instellen',
+    s5_why: 'Test de app lokaal vóór de deployment. Je hebt <strong>Node.js 18+</strong> en <strong>Git</strong> nodig.',
+    s5_i1: 'Kloon de repo en installeer de afhankelijkheden:',
+    s5_i2: 'Maak een <code>.env</code>-bestand aan in de projectmap (je gegevens zijn al ingevuld):',
+    s5_i3: 'Start de ontwikkelserver:',
+    s5_i4: 'Open <a href="http://localhost:5173" target="_blank" rel="noopener">localhost:5173</a> en log in met je e-mail — je ontvangt een magic link.',
+    s5_cta: 'Werkt lokaal →',
+
+    s6_title: 'Deployen naar Vercel',
+    s6_why: 'Vercel host de app en deployt automatisch bij elke push naar je main-branch. Gratis voor persoonlijke projecten.',
+    s6_i1: 'Ga naar <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a> en log in met GitHub.',
+    s6_i2: 'Klik op <strong>Nieuw toevoegen → Project</strong>, selecteer je <code>myrecipes</code>-repo en klik op <strong>Importeren</strong>. Deploy nog niet — je moet eerst omgevingsvariabelen toevoegen.',
+    s6_import: 'Nieuw project op Vercel ↗',
+    s6_done: 'Repo geïmporteerd →',
+
+    s7_title: 'Omgevingsvariabelen toevoegen in Vercel',
+    s7_why: 'Vercel heeft je Supabase-gegevens nodig voordat de build verbinding kan maken met de database.',
+    s7_i1: 'Ga in je Vercel-project naar <strong>Instellingen → Omgevingsvariabelen</strong>.',
+    s7_i2: 'Voeg deze twee variabelen toe (kopieer elke waarde met de knop):',
+    s7_i3: 'Sla op en klik daarna op <strong>Deploy</strong> (of ga naar <strong>Deployments → Opnieuw deployen</strong> als het al automatisch is gedeployd).',
+    s7_done: 'Variabelen toegevoegd & gedeployd →',
+
+    s8_title: 'Vul je deployment-URL in',
+    s8_why: 'Supabase heeft je live URL nodig om magic link-e-mails te sturen die je app correct openen.',
+    s8_i1: 'Open je project op Vercel. De URL staat bovenaan de overzichtspagina (bijv. <code>myrecipes-xyz.vercel.app</code>).',
+    s8_i2: 'Plak de volledige URL hieronder, inclusief <code>https://</code>.',
+    s8_url_label: 'Deployment-URL',
+    s8_url_err: 'Vul je deployment-URL in',
+    s8_cta: 'Verder →',
+
+    s9_title: 'Auth-redirect instellen in Supabase',
+    s9_why: 'Magic links bevatten een redirect-URL. Supabase moet je domein goedkeuren zodat de link vanuit e-mail correct werkt.',
+    s9_i1: 'Ga in Supabase naar <strong>Authenticatie → URL-configuratie</strong>.',
+    s9_i2: 'Stel <strong>Site URL</strong> in op:',
+    s9_i3: 'Voeg onder <strong>Redirect URL\'s</strong> toe:',
+    s9_done: 'Auth ingesteld →',
+
+    s10_title: 'Controleer je deployment',
+    s10_why: 'Een snelle end-to-end test om te bevestigen dat inloggen werkt vóór de app-installatie.',
+    s10_i1: 'Open je live app:',
+    s10_open: 'Open live app ↗',
+    s10_i2: 'Voer je e-mailadres in en klik op inloggen. Je ontvangt binnen een minuut een magic link.',
+    s10_i3: 'Klik op de link in de e-mail. De app zou moeten openen en je inloggen.',
+    s10_i4: 'Als het inloggen lukt, kom dan hier terug en ga verder.',
+    s10_done: 'Inloggen werkt →',
+
+    s11_title: 'App installeren',
+    s11_why: 'myrecipes is een PWA — voeg hem toe aan je beginscherm voor volledig scherm zonder browserbalk.',
+    s11_ios_title: 'Installeren op iPhone / iPad',
+    s11_ios_1: 'Open de app-URL in <strong>Safari</strong>.',
+    s11_ios_2: 'Tik op de <strong>Deel</strong>-knop (vierkant met pijl omhoog).',
+    s11_ios_3: 'Scroll omlaag en tik op <strong>Zet op beginscherm</strong>.',
+    s11_ios_4: 'Tik op <strong>Voeg toe</strong> rechtsboven.',
+    s11_android_title: 'Installeren op Android',
+    s11_android_1: 'Open de app-URL in <strong>Chrome</strong>.',
+    s11_android_prompt: 'Tik op de knop <strong>App installeren</strong> hieronder, of gebruik het Chrome-menu (⋮) → <strong>Toevoegen aan beginscherm</strong>.',
+    s11_android_manual: 'Tik op het Chrome-menu (⋮) → <strong>Toevoegen aan beginscherm</strong>.',
+    s11_desktop_title: 'Installeren op desktop',
+    s11_desktop_1: 'Open de app-URL in <strong>Chrome</strong> of <strong>Edge</strong>.',
+    s11_desktop_2: 'Klik op het installatiepictogram (⊕) in de adresbalk, of open het menu → <strong>myrecipes installeren</strong>.',
+    s11_install_btn: 'App installeren',
+    s11_done: 'App geïnstalleerd →',
+
+    s12_title: 'Alles is klaar!',
+    s12_sub: 'Je persoonlijke receptenboek is live. Begin met recepten toevoegen, bouw je boodschappenlijst en houd bij wat je kookt.',
+    s12_app: 'Open myrecipes',
+    s12_supabase: 'Supabase-dashboard',
+    s12_vercel: 'Vercel-dashboard',
+    s12_tip: '<strong>Tip:</strong> Deel je app-URL met anderen — elke gebruiker logt in met zijn eigen e-mail en krijgt zijn eigen privé-receptenverzameling.',
+  }
+};
+
+let lang = (navigator.language || 'en').toLowerCase().startsWith('nl') ? 'nl' : 'en';
+
+// ── Navigation ───────────────────────────────────────────────
+function goTo(n) {
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('step-' + n).classList.add('active');
+  document.getElementById('progress-bar-fill').style.width = (n / TOTAL * 100).toFixed(1) + '%';
+  document.getElementById('progress-label').textContent = T[lang].progress(n, TOTAL);
+  window.scrollTo(0, 0);
+  if (n === 5)  initStep5();
+  if (n === 7)  initStep7();
+  if (n === 9)  initStep9();
+  if (n === 10) initStep10();
+  if (n === 11) initStep11();
+  if (n === 12) initStep12();
+}
+
+function goBack() { if (currentStep > 1) goTo(currentStep - 1); }
+
+function startOver() {
+  supabaseUrl = ''; supabaseAnonKey = ''; deployedUrl = '';
+  ['input-url','input-key','input-deploy-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('error'); }
+  });
+  goTo(1);
+}
+
+// ── Validation ───────────────────────────────────────────────
+function clearErr(el) { el.classList.remove('error'); }
+
+function validateStep4() {
+  const urlEl = document.getElementById('input-url');
+  const keyEl = document.getElementById('input-key');
+  let ok = true;
+  if (!keyEl.value.trim()) { keyEl.classList.add('error'); ok = false; }
+  if (!urlEl.value.trim()) { urlEl.classList.add('error'); urlEl.focus(); ok = false; }
+  if (ok) { supabaseUrl = urlEl.value.trim(); supabaseAnonKey = keyEl.value.trim(); goTo(5); }
+}
+
+function validateStep8() {
+  const el = document.getElementById('input-deploy-url');
+  if (!el.value.trim()) { el.classList.add('error'); el.focus(); return; }
+  deployedUrl = el.value.trim().replace(/\/$/, '');
+  goTo(9);
+}
+
+// ── Step init functions ──────────────────────────────────────
+function initStep5() {
+  document.getElementById('env-pre').textContent =
+    'VITE_SUPABASE_URL=' + (supabaseUrl || 'your_supabase_project_url') + '\n' +
+    'VITE_SUPABASE_ANON_KEY=' + (supabaseAnonKey || 'your_supabase_anon_key');
+}
+
+function initStep7() {
+  const t = T[lang];
+  const el = document.getElementById('env-vars-display');
+  el.innerHTML =
+    '<p class="env-label">VITE_SUPABASE_URL</p>' +
+    '<div class="env-row">' +
+      '<div class="display-val">' + esc(supabaseUrl || '—') + '</div>' +
+      '<button type="button" class="env-copy-btn" onclick="copyText(' + JSON.stringify(supabaseUrl) + ',this)" title="' + esc(t.copy) + '">' + esc(t.copy) + '</button>' +
+    '</div>' +
+    '<p class="env-label">VITE_SUPABASE_ANON_KEY</p>' +
+    '<div class="env-row">' +
+      '<div class="display-val" style="font-size:11px;">' + esc(supabaseAnonKey || '—') + '</div>' +
+      '<button type="button" class="env-copy-btn" onclick="copyText(' + JSON.stringify(supabaseAnonKey) + ',this)" title="' + esc(t.copy) + '">' + esc(t.copy) + '</button>' +
+    '</div>';
+}
+
+function initStep9() {
+  const redirect = deployedUrl + '/**';
+  document.getElementById('display-site-url').textContent = deployedUrl || '—';
+  document.getElementById('display-redirect-url').textContent = redirect;
+  document.getElementById('copy-site-url').dataset.copy = deployedUrl;
+  document.getElementById('copy-redirect-url').dataset.copy = redirect;
+  // update button labels
+  const t = T[lang];
+  ['copy-site-url','copy-redirect-url'].forEach(id => {
+    const b = document.getElementById(id);
+    b.textContent = t.copy;
+    b.title = t.copy;
+  });
+}
+
+function initStep10() {
+  const link = document.getElementById('verify-link');
+  link.href = deployedUrl || '#';
+  link.textContent = T[lang].s10_open;
+}
+
+function initStep11() {
+  const t = T[lang];
+  const content = document.getElementById('pwa-content');
+  const btnWrap = document.getElementById('pwa-install-btn');
+  btnWrap.innerHTML = '';
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+
+  if (isIOS) {
+    content.innerHTML = platformBox(t.s11_ios_title, [t.s11_ios_1, t.s11_ios_2, t.s11_ios_3, t.s11_ios_4]);
+    if (deployedUrl) {
+      btnWrap.innerHTML = '<a href="' + esc(deployedUrl) + '" target="_blank" rel="noopener" class="btn-link-primary" style="margin-top:12px;">↗ Open in Safari</a>';
+    }
+  } else if (isAndroid) {
+    const hasPrompt = !!deferredInstallPrompt;
+    content.innerHTML = platformBox(t.s11_android_title, [t.s11_android_1, hasPrompt ? t.s11_android_prompt : t.s11_android_manual]);
+    if (hasPrompt) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-install';
+      btn.style.marginTop = '12px';
+      btn.textContent = t.s11_install_btn;
+      btn.onclick = () => { deferredInstallPrompt.prompt(); deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; }); };
+      btnWrap.appendChild(btn);
+    }
+  } else {
+    content.innerHTML = platformBox(t.s11_desktop_title, [t.s11_desktop_1, t.s11_desktop_2]);
+  }
+}
+
+function platformBox(title, steps) {
+  return '<div class="platform-box"><h3>' + esc(title) + '</h3><div class="platform-steps">' +
+    steps.map((s, i) => '<div class="platform-step"><strong>' + (i+1) + '.</strong> ' + s + '</div>').join('') +
+    '</div></div>';
+}
+
+function initStep12() {
+  const link = document.getElementById('done-app-link');
+  if (deployedUrl) link.href = deployedUrl;
+}
+
+// ── Clipboard ────────────────────────────────────────────────
+function copyText(text, btn) {
+  const t = T[lang];
+  const orig = btn.textContent;
+  const ok = () => { btn.textContent = t.copied; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000); };
+  const fail = () => { btn.textContent = t.copy_failed; setTimeout(() => { btn.textContent = orig; }, 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok, () => fallback(text, ok, fail));
+  } else { fallback(text, ok, fail); }
+}
+
+function fallback(text, ok, fail) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy') ? ok() : fail(); } catch { fail(); }
+  document.body.removeChild(ta);
+}
+
+function copyField(id, btn) { copyText(document.getElementById(id).textContent, btn); }
+function copyFromAttr(btn) { copyText(btn.dataset.copy || '', btn); }
+
+// ── i18n ─────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  const t = T[l];
+
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const v = t[el.getAttribute('data-t')];
+    if (v !== undefined) el.textContent = v;
+  });
+  document.querySelectorAll('[data-t-html]').forEach(el => {
+    const v = t[el.getAttribute('data-t-html')];
+    if (v !== undefined) el.innerHTML = v;
+  });
+  document.querySelectorAll('[data-t-title]').forEach(el => {
+    const v = t[el.getAttribute('data-t-title')];
+    if (v !== undefined) el.title = v;
+  });
+
+  const tog = document.getElementById('lang-toggle');
+  tog.textContent = t.lang_btn;
+  tog.title = t.lang_title;
+
+  document.getElementById('progress-label').textContent = t.progress(currentStep, TOTAL);
+
+  buildPrereqList();
+
+  // Re-init active dynamic step
+  if (currentStep === 5)  initStep5();
+  if (currentStep === 7)  initStep7();
+  if (currentStep === 9)  initStep9();
+  if (currentStep === 10) initStep10();
+  if (currentStep === 11) initStep11();
+}
+
+function toggleLang() { setLang(lang === 'en' ? 'nl' : 'en'); }
+
+// ── Prereq list ──────────────────────────────────────────────
+function buildPrereqList() {
+  const t = T[lang];
+  const items = [
+    { icon: '🟢', name: t.prereq_node, sub: t.prereq_node_sub, href: 'https://nodejs.org',        lnk: t.prereq_node_lnk },
+    { icon: '🐙', name: t.prereq_git,  sub: t.prereq_git_sub,  href: 'https://git-scm.com',       lnk: t.prereq_git_lnk  },
+    { icon: '🐱', name: t.prereq_gh,   sub: t.prereq_gh_sub,   href: 'https://github.com',        lnk: t.prereq_gh_lnk   },
+    { icon: '⚡', name: t.prereq_sb,   sub: t.prereq_sb_sub,   href: 'https://supabase.com',      lnk: t.prereq_sb_lnk   },
+    { icon: '▲', name: t.prereq_vc,   sub: t.prereq_vc_sub,   href: 'https://vercel.com',        lnk: t.prereq_vc_lnk   },
+  ];
+  document.getElementById('prereq-list').innerHTML = items.map(i =>
+    `<div class="prereq-item">
+      <span class="prereq-icon">${i.icon}</span>
+      <div class="prereq-text"><strong>${esc(i.name)}</strong><span>${esc(i.sub)}</span></div>
+      <a class="prereq-link" href="${i.href}" target="_blank" rel="noopener">${esc(i.lnk)}</a>
+    </div>`
+  ).join('');
+}
+
+// ── Copy buttons: set initial text from T ────────────────────
+function initCopyBtns() {
+  document.querySelectorAll('.copy-btn').forEach(b => { b.textContent = T[lang].copy; });
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+setLang(lang);
+initCopyBtns();
+document.getElementById('progress-bar-fill').style.width = (1 / TOTAL * 100).toFixed(1) + '%';
+</script>
+</body>
+</html>
