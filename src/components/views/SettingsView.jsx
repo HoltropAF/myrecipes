@@ -564,6 +564,7 @@ function IngredientAllergenSection() {
   const [busyId, setBusyId] = useState(null)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
 
   const allergenKeys = Object.keys(ALLERGEN_LABELS)
 
@@ -572,7 +573,7 @@ function IngredientAllergenSection() {
     ;(async () => {
       const { data } = await supabase
         .from('ingredient_tags')
-        .select('id, canonical_name, tags')
+        .select('id, canonical_name, tags, reviewed')
         .order('canonical_name')
       if (!cancelled) {
         setRows(data || [])
@@ -582,19 +583,38 @@ function IngredientAllergenSection() {
     return () => { cancelled = true }
   }, [])
 
+  const unreviewedCount = useMemo(() => rows.filter(r => !r.reviewed).length, [rows])
+
   const filtered = useMemo(() => {
+    let list = rows
+    if (onlyUnreviewed) list = list.filter(r => !r.reviewed)
     const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(r => r.canonical_name.toLowerCase().includes(q))
-  }, [rows, search])
+    if (q) list = list.filter(r => r.canonical_name.toLowerCase().includes(q))
+    return list
+  }, [rows, search, onlyUnreviewed])
 
   const toggleTag = async (row, key) => {
     setBusyId(row.id)
     const has = (row.tags || []).includes(key)
     const nextTags = has ? row.tags.filter(x => x !== key) : [...(row.tags || []), key]
-    const { error } = await supabase.from('ingredient_tags').update({ tags: nextTags }).eq('id', row.id)
+    const { error } = await supabase
+      .from('ingredient_tags')
+      .update({ tags: nextTags, reviewed: true })
+      .eq('id', row.id)
     if (!error) {
-      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: nextTags } : r))
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: nextTags, reviewed: true } : r))
+    }
+    setBusyId(null)
+  }
+
+  const markNone = async (row) => {
+    setBusyId(row.id)
+    const { error } = await supabase
+      .from('ingredient_tags')
+      .update({ tags: [], reviewed: true })
+      .eq('id', row.id)
+    if (!error) {
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: [], reviewed: true } : r))
     }
     setBusyId(null)
   }
@@ -618,8 +638,8 @@ function IngredientAllergenSection() {
     setAdding(true)
     const { data, error } = await supabase
       .from('ingredient_tags')
-      .insert({ canonical_name: clean, tags: [] })
-      .select('id, canonical_name, tags')
+      .insert({ canonical_name: clean, tags: [], reviewed: false })
+      .select('id, canonical_name, tags, reviewed')
       .single()
     if (!error && data) {
       setRows(prev => [...prev, data].sort((a, b) => a.canonical_name.localeCompare(b.canonical_name)))
@@ -638,7 +658,7 @@ function IngredientAllergenSection() {
           style={{ ...inputLikeStyle, width: '100%', marginBottom: 10, boxSizing: 'border-box' }}
         />
 
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           <input
             type="text" value={newName} onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addIngredient() }}
@@ -650,6 +670,20 @@ function IngredientAllergenSection() {
           </button>
         </div>
 
+        <button
+          onClick={() => setOnlyUnreviewed(v => !v)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 14,
+            padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+            border: `1px solid ${onlyUnreviewed ? 'var(--tomato)' : 'var(--line)'}`,
+            background: onlyUnreviewed ? 'var(--tomato)' : 'var(--card)',
+            color: onlyUnreviewed ? '#fffdf9' : 'var(--charcoal-soft)',
+            fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+          }}
+        >
+          {t('settings.onlyUnreviewed')} {unreviewedCount > 0 && `(${unreviewedCount})`}
+        </button>
+
         {loading && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
             {t('settings.loading')}
@@ -658,43 +692,64 @@ function IngredientAllergenSection() {
 
         {!loading && filtered.length === 0 && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-            {t('settings.noIngredientsFound')}
+            {onlyUnreviewed ? t('settings.allReviewed') : t('settings.noIngredientsFound')}
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 420, overflowY: 'auto' }}>
-          {filtered.map(row => (
-            <div key={row.id} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--charcoal)' }}>
-                  {row.canonical_name}
-                </span>
-                <button
-                  onClick={() => deleteRow(row)} disabled={busyId === row.id}
-                  style={{ ...linkBtnStyle, marginLeft: 'auto', color: 'var(--tomato)' }}
-                >{t('settings.delete')}</button>
+          {filtered.map(row => {
+            const hasNoTags = (row.tags || []).length === 0
+            return (
+              <div key={row.id} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--charcoal)' }}>
+                    {row.canonical_name}
+                  </span>
+                  {!row.reviewed && (
+                    <span style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em',
+                      color: 'var(--tomato-deep)', background: 'var(--tomato-light, rgba(196,90,60,0.12))',
+                      borderRadius: 99, padding: '2px 7px',
+                    }}>{t('settings.unreviewed')}</span>
+                  )}
+                  <button
+                    onClick={() => deleteRow(row)} disabled={busyId === row.id}
+                    style={{ ...linkBtnStyle, marginLeft: 'auto', color: 'var(--tomato)' }}
+                  >{t('settings.delete')}</button>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => markNone(row)}
+                    disabled={busyId === row.id}
+                    style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 10px', borderRadius: 99,
+                      border: `1px solid ${row.reviewed && hasNoTags ? 'var(--charcoal)' : 'var(--line)'}`,
+                      background: row.reviewed && hasNoTags ? 'var(--charcoal)' : 'var(--card)',
+                      color: row.reviewed && hasNoTags ? '#fffdf9' : 'var(--charcoal-soft)',
+                      cursor: 'pointer', fontWeight: 600,
+                    }}
+                  >{t('settings.none')}</button>
+                  {allergenKeys.map(key => {
+                    const active = (row.tags || []).includes(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleTag(row, key)}
+                        disabled={busyId === row.id}
+                        style={{
+                          fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 10px', borderRadius: 99,
+                          border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+                          background: active ? 'var(--tomato)' : 'var(--card)',
+                          color: active ? '#fffdf9' : 'var(--charcoal-soft)',
+                          cursor: 'pointer',
+                        }}
+                      >{t(`allergens.${key}`) || ALLERGEN_LABELS[key]}</button>
+                    )
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {allergenKeys.map(key => {
-                  const active = (row.tags || []).includes(key)
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => toggleTag(row, key)}
-                      disabled={busyId === row.id}
-                      style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 10px', borderRadius: 99,
-                        border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-                        background: active ? 'var(--tomato)' : 'var(--card)',
-                        color: active ? '#fffdf9' : 'var(--charcoal-soft)',
-                        cursor: 'pointer',
-                      }}
-                    >{t(`allergens.${key}`) || ALLERGEN_LABELS[key]}</button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', padding: '0 4px' }}>

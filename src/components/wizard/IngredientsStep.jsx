@@ -156,10 +156,10 @@ function IngredientRow({ item, onChange, onRemove }) {
     setTagBusy(true)
     const { data } = await supabase
       .from('ingredient_tags')
-      .select('id, canonical_name, tags')
+      .select('id, canonical_name, tags, reviewed')
       .ilike('canonical_name', name)
       .maybeSingle()
-    setTagRow(data || { id: null, canonical_name: name, tags: [] })
+    setTagRow(data || { id: null, canonical_name: name, tags: [], reviewed: false })
     setTagBusy(false)
   }
 
@@ -169,13 +169,30 @@ function IngredientRow({ item, onChange, onRemove }) {
     const has = (tagRow.tags || []).includes(key)
     const nextTags = has ? tagRow.tags.filter(x => x !== key) : [...(tagRow.tags || []), key]
     if (tagRow.id) {
-      await supabase.from('ingredient_tags').update({ tags: nextTags }).eq('id', tagRow.id)
-      setTagRow(prev => ({ ...prev, tags: nextTags }))
+      await supabase.from('ingredient_tags').update({ tags: nextTags, reviewed: true }).eq('id', tagRow.id)
+      setTagRow(prev => ({ ...prev, tags: nextTags, reviewed: true }))
     } else {
       const { data } = await supabase
         .from('ingredient_tags')
-        .insert({ canonical_name: tagRow.canonical_name, tags: nextTags })
-        .select('id, canonical_name, tags')
+        .insert({ canonical_name: tagRow.canonical_name, tags: nextTags, reviewed: true })
+        .select('id, canonical_name, tags, reviewed')
+        .single()
+      if (data) setTagRow(data)
+    }
+    setTagBusy(false)
+  }
+
+  const markTagRowNone = async () => {
+    if (!tagRow) return
+    setTagBusy(true)
+    if (tagRow.id) {
+      await supabase.from('ingredient_tags').update({ tags: [], reviewed: true }).eq('id', tagRow.id)
+      setTagRow(prev => ({ ...prev, tags: [], reviewed: true }))
+    } else {
+      const { data } = await supabase
+        .from('ingredient_tags')
+        .insert({ canonical_name: tagRow.canonical_name, tags: [], reviewed: true })
+        .select('id, canonical_name, tags, reviewed')
         .single()
       if (data) setTagRow(data)
     }
@@ -281,12 +298,29 @@ function IngredientRow({ item, onChange, onRemove }) {
                 <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>
                   {tagRow?.canonical_name || item.name}
                 </span>
+                {tagRow && !tagRow.reviewed && (
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em',
+                    color: 'var(--tomato-deep)', marginLeft: 6,
+                  }}>{t('settings.unreviewed')}</span>
+                )}
                 <button
                   onClick={() => setShowTagEditor(false)}
                   style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 14 }}
                 >×</button>
               </div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                <button
+                  onClick={markTagRowNone}
+                  disabled={tagBusy}
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10, padding: '3px 8px', borderRadius: 99,
+                    border: `1px solid ${tagRow?.reviewed && (tagRow?.tags || []).length === 0 ? 'var(--charcoal)' : 'var(--line)'}`,
+                    background: tagRow?.reviewed && (tagRow?.tags || []).length === 0 ? 'var(--charcoal)' : 'var(--card)',
+                    color: tagRow?.reviewed && (tagRow?.tags || []).length === 0 ? '#fffdf9' : 'var(--charcoal-soft)',
+                    cursor: 'pointer', fontWeight: 600,
+                  }}
+                >{t('settings.none')}</button>
                 {Object.keys(ALLERGEN_LABELS).map(key => {
                   const active = (tagRow?.tags || []).includes(key)
                   return (
