@@ -486,8 +486,8 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
               <div
                 onClick={e => e.stopPropagation()}
                 style={{
-                  position: 'absolute', top: '100%', left: 0, marginTop: 4,
-                  width: 280, maxWidth: 'calc(100vw - 64px)', zIndex: 8,
+                  position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                  width: 240, maxWidth: 'calc(100vw - 56px)', zIndex: 8,
                   background: isDark ? '#544738' : '#e3d6b8',
                   border: `1.5px solid ${isDark ? '#6b5c47' : 'var(--tomato)'}`,
                   borderRadius: 8, padding: '8px 10px', boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
