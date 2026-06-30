@@ -25,6 +25,7 @@ export default function SettingsView({
   ]
 
   const [activeSection, setActiveSection] = useState('general')
+  const [tagsSubTab, setTagsSubTab] = useState('recipe')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -238,8 +239,22 @@ export default function SettingsView({
 
         {activeSection === 'tags' && (
           <>
-            <TagsSection recipes={recipes} onRecipesChanged={onRecipesChanged} />
-            <IngredientAllergenSection />
+            <div style={{ marginBottom: 16 }}>
+              <SegmentedControl
+                value={tagsSubTab}
+                onChange={setTagsSubTab}
+                options={[
+                  { value: 'recipe',     label: t('settings.recipeTags') },
+                  { value: 'allergen',   label: t('settings.allergenTagsTab') },
+                ]}
+              />
+            </div>
+            {tagsSubTab === 'recipe' && (
+              <TagsSection recipes={recipes} onRecipesChanged={onRecipesChanged} />
+            )}
+            {tagsSubTab === 'allergen' && (
+              <IngredientAllergenSection />
+            )}
           </>
         )}
 
