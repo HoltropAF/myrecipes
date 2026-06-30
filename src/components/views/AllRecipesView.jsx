@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
@@ -266,10 +266,24 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   }, [recipes])
 
   const openCategoryPage = (cat) => {
+    window.history.pushState({ screen: 'category' }, '')
     setActiveCategory(cat)
     setLastOpened({ category: cat, subcategory: null })
   }
-  const closeCategoryPage = () => setActiveCategory(null)
+  const closeCategoryPage = () => {
+    setActiveCategory(null)
+    if (window.history.state?.screen === 'category') window.history.back()
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      // Phone back button/gesture while the category page is open: close it
+      // instead of letting the gesture exit the app.
+      setActiveCategory(null)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const toggleSubcategory = (cat, subcat) => {
     const key = `${cat}::${subcat}`
