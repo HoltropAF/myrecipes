@@ -240,7 +240,7 @@ function FilterGroup({ label, options, active, onSelect }) {
 // Folder/cookbook browse mode — operates on the already-filtered recipe list
 function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened, compactMode = false, cookCounts = {} }) {
   const { t } = useT()
-  const [openCategories, setOpenCategories] = useState(() => defaultOpenCategory ? { [defaultOpenCategory]: true } : {})
+  const [activeCategory, setActiveCategory] = useState(defaultOpenCategory || null)
   const [openSubcategories, setOpenSubcategories] = useState({})
 
   const tree = useMemo(() => {
@@ -265,13 +265,12 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
     })
   }, [recipes])
 
-  const toggleCategory = (cat) => {
-    setOpenCategories(prev => {
-      const next = { ...prev, [cat]: !prev[cat] }
-      if (next[cat]) setLastOpened({ category: cat, subcategory: null })
-      return next
-    })
+  const openCategoryPage = (cat) => {
+    setActiveCategory(cat)
+    setLastOpened({ category: cat, subcategory: null })
   }
+  const closeCategoryPage = () => setActiveCategory(null)
+
   const toggleSubcategory = (cat, subcat) => {
     const key = `${cat}::${subcat}`
     setOpenSubcategories(prev => {
@@ -291,76 +290,93 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
     )
   }
 
+  // Category detail page — shown when a top-level category has been tapped
+  const activeEntry = activeCategory ? tree.find(([cat]) => cat === activeCategory) : null
+  if (activeEntry) {
+    const [cat, { direct, subcategories }] = activeEntry
+    const subEntries = Object.entries(subcategories).sort((a, b) => b[1].length - a[1].length)
+    return (
+      <div>
+        <button
+          onClick={closeCategoryPage}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14,
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600,
+          }}
+        >‹ {t('recipesView.backToCategories')}</button>
+
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--charcoal)', marginBottom: 14 }}>
+          {cat}
+        </h2>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {subEntries.map(([subcat, items]) => {
+            const subKey = `${cat}::${subcat}`
+            const subOpen = !!openSubcategories[subKey]
+            return (
+              <div key={subcat} style={{ background: 'var(--parchment-dim)', borderRadius: 10, overflow: 'hidden' }}>
+                <button
+                  onClick={() => toggleSubcategory(cat, subcat)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <span style={{ flex: 1, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>{subcat}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>{items.length}</span>
+                  <span style={{
+                    color: 'var(--charcoal-soft)', fontSize: 12, transition: 'transform 0.15s ease',
+                    transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block',
+                  }}>›</span>
+                </button>
+                {subOpen && (
+                  <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {items.map(r => (
+                      <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {direct.length > 0 && subEntries.length > 0 && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
+              {t('recipesView.other')} {cat.toLowerCase()}
+            </div>
+          )}
+          {direct.map(r => (
+            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Top-level category list — tapping a category navigates to its detail page
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {tree.map(([cat, { direct, subcategories }], catIndex) => {
         const totalCount = direct.length + Object.values(subcategories).flat().length
-        const isOpen = !!openCategories[cat]
-        const subEntries = Object.entries(subcategories).sort((a, b) => b[1].length - a[1].length)
 
         return (
-          <div key={cat} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
-            <button
-              onClick={() => toggleCategory(cat)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '14px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-              }}
-            >
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--tomato-deep)', flexShrink: 0, minWidth: 20, opacity: 0.7 }}>
-                {String(catIndex + 1).padStart(2, '0')}
-              </span>
-              <span style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--charcoal)' }}>{cat}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', flexShrink: 0 }}>{totalCount}</span>
-              <span style={{
-                color: 'var(--charcoal-soft)', fontSize: 14, flexShrink: 0, transition: 'transform 0.15s ease',
-                transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block',
-              }}>›</span>
-            </button>
-
-            {isOpen && (
-              <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {subEntries.map(([subcat, items]) => {
-                  const subKey = `${cat}::${subcat}`
-                  const subOpen = !!openSubcategories[subKey]
-                  return (
-                    <div key={subcat} style={{ background: 'var(--parchment-dim)', borderRadius: 10, overflow: 'hidden' }}>
-                      <button
-                        onClick={() => toggleSubcategory(cat, subcat)}
-                        style={{
-                          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                        }}
-                      >
-                        <span style={{ flex: 1, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>{subcat}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)' }}>{items.length}</span>
-                        <span style={{
-                          color: 'var(--charcoal-soft)', fontSize: 12, transition: 'transform 0.15s ease',
-                          transform: subOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block',
-                        }}>›</span>
-                      </button>
-                      {subOpen && (
-                        <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {items.map(r => (
-                            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {direct.length > 0 && subEntries.length > 0 && (
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
-                    {t('recipesView.other')} {cat.toLowerCase()}
-                  </div>
-                )}
-                {direct.map(r => (
-                  <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            key={cat}
+            onClick={() => openCategoryPage(cat)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '14px 14px', background: 'var(--card)', border: '1px solid var(--line)',
+              borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--tomato-deep)', flexShrink: 0, minWidth: 20, opacity: 0.7 }}>
+              {String(catIndex + 1).padStart(2, '0')}
+            </span>
+            <span style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--charcoal)' }}>{cat}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', flexShrink: 0 }}>{totalCount}</span>
+            <span style={{ color: 'var(--charcoal-soft)', fontSize: 14, flexShrink: 0 }}>›</span>
+          </button>
         )
       })}
     </div>
