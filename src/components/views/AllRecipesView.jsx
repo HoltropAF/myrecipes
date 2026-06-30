@@ -370,6 +370,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
   const { t } = useT()
   const [showAllergenInfo, setShowAllergenInfo] = useState(false)
+  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
@@ -456,8 +457,8 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
                 onClick={e => e.stopPropagation()}
                 style={{
                   position: 'absolute', top: '100%', left: 0, marginTop: 4, width: 220, zIndex: 8,
-                  background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
-                  padding: '8px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  background: isDark ? '#3a322a' : '#efe6d4', border: '1px solid var(--line)', borderRadius: 8,
+                  padding: '8px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
                   fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', lineHeight: 1.4,
                 }}
               >{t('recipesView.allergenInfoText')}</div>
