@@ -149,6 +149,7 @@ const en = {
     notFreezer: 'Not freezer-friendly',
     whichVersion: 'Which version?',
     original: 'Original',
+    allergenInfoText: 'These tags are computed automatically from the ingredients in this recipe. Edit ingredient allergen tags in Settings → Tags → Allergens.',
   },
   cookingMode: {
     exit: '✕ Exit',
@@ -512,6 +513,7 @@ const nl = {
     notFreezer: 'Niet invriezen',
     whichVersion: 'Welke versie?',
     original: 'Origineel',
+    allergenInfoText: 'Deze tags worden automatisch berekend op basis van de ingrediënten in dit recept. Pas allergeen-tags aan via Instellingen → Tags → Allergenen.',
   },
   cookingMode: {
     exit: '✕ Afsluiten',

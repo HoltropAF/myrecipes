@@ -399,8 +399,6 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 
 export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
   const { t } = useT()
-  const [showAllergenInfo, setShowAllergenInfo] = useState(false)
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
@@ -466,36 +464,13 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
           </div>
         )}
         {(r.allergen_tags?.length > 0 || r.is_vegan || r.is_vegetarian || r.is_pescatarian_or_better) && (
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
             {r.is_vegan && <AllergenBadge diet>{t('diet.vegan')}</AllergenBadge>}
             {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{t('diet.vegetarian')}</AllergenBadge>}
             {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{t('diet.pescatarian')}</AllergenBadge>}
             {(r.allergen_tags || []).map(tag => (
               <AllergenBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
             ))}
-            <button
-              onClick={e => { e.stopPropagation(); setShowAllergenInfo(v => !v) }}
-              title={t('recipesView.allergenInfoTitle')}
-              style={{
-                width: 15, height: 15, borderRadius: 99, border: '1px solid var(--charcoal-soft)',
-                background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)',
-                fontSize: 9, lineHeight: '13px', padding: 0, cursor: 'pointer', flexShrink: 0,
-              }}
-            >i</button>
-            {showAllergenInfo && (
-              <div
-                onClick={e => e.stopPropagation()}
-                style={{
-                  position: 'absolute', top: '100%', right: 0, marginTop: 4,
-                  width: 240, maxWidth: 'calc(100vw - 56px)', zIndex: 8,
-                  background: isDark ? '#544738' : '#e3d6b8',
-                  border: `1.5px solid ${isDark ? '#6b5c47' : 'var(--tomato)'}`,
-                  borderRadius: 8, padding: '8px 10px', boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
-                  fontFamily: 'var(--font-mono)', fontSize: 10.5,
-                  color: isDark ? '#f3ece1' : 'var(--charcoal)', lineHeight: 1.4,
-                }}
-              >{t('recipesView.allergenInfoText')}</div>
-            )}
           </div>
         )}
       </div>

@@ -25,13 +25,18 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
 
       {/* Allergen + diet badges — computed server-side from ingredient_tags */}
       {(recipe.allergen_tags?.length > 0 || recipe.is_vegan || recipe.is_vegetarian || recipe.is_pescatarian_or_better) && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-          {recipe.is_vegan && <ComputedBadge diet>{t('diet.vegan')}</ComputedBadge>}
-          {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{t('diet.vegetarian')}</ComputedBadge>}
-          {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{t('diet.pescatarian')}</ComputedBadge>}
-          {(recipe.allergen_tags || []).map(tag => (
-            <ComputedBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
-          ))}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+            {recipe.is_vegan && <ComputedBadge diet>{t('diet.vegan')}</ComputedBadge>}
+            {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{t('diet.vegetarian')}</ComputedBadge>}
+            {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{t('diet.pescatarian')}</ComputedBadge>}
+            {(recipe.allergen_tags || []).map(tag => (
+              <ComputedBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
+            ))}
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', lineHeight: 1.4 }}>
+            {t('infoTab.allergenInfoText')}
+          </div>
         </div>
       )}
 
