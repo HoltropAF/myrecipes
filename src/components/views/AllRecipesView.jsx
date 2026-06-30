@@ -369,6 +369,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
 
 export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
   const { t } = useT()
+  const [showAllergenInfo, setShowAllergenInfo] = useState(false)
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
@@ -434,13 +435,33 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
           </div>
         )}
         {(r.allergen_tags?.length > 0 || r.is_vegan || r.is_vegetarian || r.is_pescatarian_or_better) && (
-          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
             {r.is_vegan && <AllergenBadge diet>{t('diet.vegan')}</AllergenBadge>}
             {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{t('diet.vegetarian')}</AllergenBadge>}
             {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{t('diet.pescatarian')}</AllergenBadge>}
             {(r.allergen_tags || []).map(tag => (
               <AllergenBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
             ))}
+            <button
+              onClick={e => { e.stopPropagation(); setShowAllergenInfo(v => !v) }}
+              title={t('recipesView.allergenInfoTitle')}
+              style={{
+                width: 15, height: 15, borderRadius: 99, border: '1px solid var(--charcoal-soft)',
+                background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)',
+                fontSize: 9, lineHeight: '13px', padding: 0, cursor: 'pointer', flexShrink: 0,
+              }}
+            >i</button>
+            {showAllergenInfo && (
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 4, width: 220, zIndex: 8,
+                  background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
+                  padding: '8px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', lineHeight: 1.4,
+                }}
+              >{t('recipesView.allergenInfoText')}</div>
+            )}
           </div>
         )}
       </div>

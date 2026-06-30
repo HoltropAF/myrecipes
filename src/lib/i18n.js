@@ -204,6 +204,8 @@ const en = {
   recipesView: {
     title: 'Recipes',
     addBtn: '+ Add',
+    allergenInfoTitle: 'Where do these come from?',
+    allergenInfoText: 'These tags are computed automatically from the ingredients in this recipe. Edit ingredient allergen tags in Settings → Tags → Allergens.',
     searchPlaceholder: 'Search recipes, notes, tags…',
     searchIngredientPlaceholder: 'e.g. knoflook, kip…',
     filtersBtn: 'Filters',
@@ -564,6 +566,8 @@ const nl = {
   recipesView: {
     title: 'Recepten',
     addBtn: '+ Toevoegen',
+    allergenInfoTitle: 'Waar komen deze vandaan?',
+    allergenInfoText: 'Deze tags worden automatisch berekend op basis van de ingrediënten in dit recept. Pas allergeen-tags aan via Instellingen → Tags → Allergenen.',
     searchPlaceholder: 'Zoek recepten, notities, tags…',
     searchIngredientPlaceholder: 'bijv. knoflook, kip…',
     filtersBtn: 'Filters',
