@@ -65,6 +65,13 @@ function AppInner({ setLanguage }) {
   const [prefillCategory, setPrefillCategory] = useState(null)
   const [collections, setCollections] = useState([])
   const [collectionRecipeMap, setCollectionRecipeMap] = useState({})
+  const [showAllergenDisclaimer, setShowAllergenDisclaimer] = useState(() => {
+    try { return localStorage.getItem('mr_allergen_disclaimer_seen_v1') !== 'true' } catch { return true }
+  })
+  const dismissAllergenDisclaimer = () => {
+    try { localStorage.setItem('mr_allergen_disclaimer_seen_v1', 'true') } catch {}
+    setShowAllergenDisclaimer(false)
+  }
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
@@ -344,6 +351,34 @@ function AppInner({ setLanguage }) {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+      {showAllergenDisclaimer && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}>
+          <div style={{
+            background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 14,
+            padding: '22px 20px', maxWidth: 360, width: '100%',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>⚠️</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 10 }}>
+              {t('app.disclaimerTitle')}
+            </h2>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6, marginBottom: 18 }}>
+              {t('app.disclaimerBody')}
+            </p>
+            <button
+              onClick={dismissAllergenDisclaimer}
+              style={{
+                width: '100%', padding: '11px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
+              }}
+            >{t('app.disclaimerAck')}</button>
+          </div>
+        </div>
+      )}
       {isGuest && !setupBannerDismissed && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,

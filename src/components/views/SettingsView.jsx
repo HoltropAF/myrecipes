@@ -770,6 +770,12 @@ function IngredientAllergenSection() {
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', padding: '0 4px' }}>
         {t('settings.allergenTagsHint')}
       </div>
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', padding: '8px 4px 0',
+        lineHeight: 1.5,
+      }}>
+        ⚠️ {t('settings.allergenDisclaimer')}
+      </div>
     </>
   )
 }
