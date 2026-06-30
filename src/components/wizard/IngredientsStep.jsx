@@ -4,6 +4,7 @@ import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
+import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 
 export default function IngredientsStep({ groups, setGroups, paste, setPaste, showGrouping, setShowGrouping, existingGroups }) {
   const { t } = useT()
@@ -144,6 +145,43 @@ function IngredientRow({ item, onChange, onRemove }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = useRef(null)
 
+  const [showTagEditor, setShowTagEditor] = useState(false)
+  const [tagRow, setTagRow] = useState(null) // { id, canonical_name, tags } or null if not found yet
+  const [tagBusy, setTagBusy] = useState(false)
+
+  const openTagEditor = async () => {
+    const name = (item.name || '').trim().toLowerCase()
+    if (!name) return
+    setShowTagEditor(true)
+    setTagBusy(true)
+    const { data } = await supabase
+      .from('ingredient_tags')
+      .select('id, canonical_name, tags')
+      .ilike('canonical_name', name)
+      .maybeSingle()
+    setTagRow(data || { id: null, canonical_name: name, tags: [] })
+    setTagBusy(false)
+  }
+
+  const toggleTag = async (key) => {
+    if (!tagRow) return
+    setTagBusy(true)
+    const has = (tagRow.tags || []).includes(key)
+    const nextTags = has ? tagRow.tags.filter(x => x !== key) : [...(tagRow.tags || []), key]
+    if (tagRow.id) {
+      await supabase.from('ingredient_tags').update({ tags: nextTags }).eq('id', tagRow.id)
+      setTagRow(prev => ({ ...prev, tags: nextTags }))
+    } else {
+      const { data } = await supabase
+        .from('ingredient_tags')
+        .insert({ canonical_name: tagRow.canonical_name, tags: nextTags })
+        .select('id, canonical_name, tags')
+        .single()
+      if (data) setTagRow(data)
+    }
+    setTagBusy(false)
+  }
+
   const handleNameChange = (value) => {
     onChange({ name: value })
     clearTimeout(debounceRef.current)
@@ -220,6 +258,53 @@ function IngredientRow({ item, onChange, onRemove }) {
                   )}
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={openTagEditor}
+            disabled={!item.name?.trim()}
+            title={t('ingredientsStep.editTags')}
+            style={{
+              background: 'none', border: 'none', cursor: item.name?.trim() ? 'pointer' : 'default',
+              opacity: item.name?.trim() ? 1 : 0.35, fontSize: 15, padding: '0 4px', flexShrink: 0,
+            }}
+          >🏷</button>
+          {showTagEditor && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 4, width: 220,
+              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
+              zIndex: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>
+                  {tagRow?.canonical_name || item.name}
+                </span>
+                <button
+                  onClick={() => setShowTagEditor(false)}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 14 }}
+                >×</button>
+              </div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {Object.keys(ALLERGEN_LABELS).map(key => {
+                  const active = (tagRow?.tags || []).includes(key)
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleTag(key)}
+                      disabled={tagBusy}
+                      style={{
+                        fontFamily: 'var(--font-mono)', fontSize: 10, padding: '3px 8px', borderRadius: 99,
+                        border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+                        background: active ? 'var(--tomato)' : 'var(--card)',
+                        color: active ? '#fffdf9' : 'var(--charcoal-soft)',
+                        cursor: 'pointer',
+                      }}
+                    >{t(`allergens.${key}`) || ALLERGEN_LABELS[key]}</button>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
