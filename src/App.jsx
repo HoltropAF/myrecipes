@@ -27,6 +27,7 @@ import FloatingActionButton from './components/FloatingActionButton'
 import AllRecipesView from './components/views/AllRecipesView'
 import UndoToast from './components/UndoToast'
 import PullToRefresh from './components/PullToRefresh'
+import FirstRunWizard from './components/FirstRunWizard'
 
 // Lazy-load heavy views and overlays that aren't needed on the initial screen
 const AddRecipeWizard  = lazy(() => import('./components/AddRecipeWizard'))
@@ -73,6 +74,7 @@ function AppInner({ setLanguage }) {
     setShowAllergenDisclaimer(false)
   }
   const [updateReady, setUpdateReady] = useState(false)
+  const [showFirstRun, setShowFirstRun] = useState(false)
 
   // Detect when a new service worker has taken over → show update banner
   useEffect(() => {
@@ -228,7 +230,10 @@ function AppInner({ setLanguage }) {
     if (!session || isGuest) return
     supabase.from('user_preferences').select('*').eq('user_id', session.user.id).maybeSingle()
       .then(({ data }) => {
-        if (!data) return
+        if (!data) {
+          setShowFirstRun(true)
+          return
+        }
         if (data.unit_system) setUnitSystem(data.unit_system)
         if (data.theme) setTheme(data.theme)
         if (data.default_category) setDefaultCategory(data.default_category)
@@ -372,6 +377,16 @@ function AppInner({ setLanguage }) {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+      {showFirstRun && (
+        <FirstRunWizard
+          userId={session?.user?.id}
+          setLanguage={setLanguage}
+          onDone={() => {
+            setShowFirstRun(false)
+            loadRecipes()
+          }}
+        />
+      )}
       {showAllergenDisclaimer && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
