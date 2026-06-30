@@ -72,6 +72,27 @@ function AppInner({ setLanguage }) {
     try { localStorage.setItem('mr_allergen_disclaimer_seen_v1', 'true') } catch {}
     setShowAllergenDisclaimer(false)
   }
+  const [updateReady, setUpdateReady] = useState(false)
+
+  // Detect when a new service worker has taken over → show update banner
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then(reg => {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        setUpdateReady(true)
+      })
+      if (reg.waiting) setUpdateReady(true)
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing
+        if (!newWorker) return
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            setUpdateReady(true)
+          }
+        })
+      })
+    })
+  }, [])
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
@@ -377,6 +398,38 @@ function AppInner({ setLanguage }) {
               }}
             >{t('app.disclaimerAck')}</button>
           </div>
+        </div>
+      )}
+      {updateReady && (
+        <div style={{
+          position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)', maxWidth: 448,
+          background: 'var(--card)', border: '1px solid var(--tomato)', borderRadius: 12,
+          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+          zIndex: 200, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--tomato-deep)' }}>
+              {t('app.updateAvailable')}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+              {t('app.updateReady')}{' '}
+              <a
+                href="https://github.com/HoltropAF/myrecipes/commits/main"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--tomato-deep)', fontWeight: 600 }}
+              >{t('app.updateChangelog')}</a>
+            </div>
+          </div>
+          <button
+            onClick={() => setUpdateReady(false)}
+            style={{ background: 'none', border: 'none', color: 'var(--charcoal-soft)', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}
+          >×</button>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: 'var(--tomato)', border: 'none', borderRadius: 8, color: '#fffdf9', fontSize: 12, fontWeight: 700, padding: '7px 14px', cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}
+          >{t('app.updateBtn')}</button>
         </div>
       )}
       {isGuest && !setupBannerDismissed && (

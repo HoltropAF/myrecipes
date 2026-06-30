@@ -50,6 +50,10 @@ const en = {
     disclaimerTitle: 'A note on allergen tags',
     disclaimerBody: 'Allergen and diet labels in this app (dairy, gluten, meat, etc.) are generated automatically from ingredient names and may be incomplete, outdated, or wrong. They are not medical advice. Always check ingredients yourself, especially for serious allergies — mistakes in this app are not the responsibility of whoever built or maintains it.',
     disclaimerAck: "Got it, I'll double-check myself",
+    updateAvailable: 'Update available',
+    updateReady: 'A new version of myrecipes is ready —',
+    updateChangelog: "see what's new",
+    updateBtn: 'Update',
   },
   wizard: {
     steps: ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants'],
@@ -418,6 +422,10 @@ const nl = {
     disclaimerTitle: 'Even over allergeen-tags',
     disclaimerBody: 'Allergeen- en dieetlabels in deze app (zuivel, gluten, vlees, enz.) worden automatisch gegenereerd op basis van ingrediëntnamen en kunnen onvolledig, verouderd of onjuist zijn. Dit is geen medisch advies. Controleer ingrediënten altijd zelf, zeker bij serieuze allergieën — fouten in deze app zijn niet de verantwoordelijkheid van wie de app heeft gebouwd of beheert.',
     disclaimerAck: 'Begrepen, ik controleer het zelf',
+    updateAvailable: 'Update beschikbaar',
+    updateReady: 'Een nieuwe versie van myrecipes is klaar —',
+    updateChangelog: 'bekijk wat er nieuw is',
+    updateBtn: 'Bijwerken',
   },
   wizard: {
     steps: ['Titel', 'Ingrediënten', 'Stappen', 'Extra', 'Varianten'],
