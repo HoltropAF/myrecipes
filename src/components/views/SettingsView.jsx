@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
+import { parseBackup, summariseAgainst, importBackup, ImportError, IMPORT_TABLES } from '../../lib/importUtils'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import BinderTabs, { getTabShades, tabBackground } from '../BinderTabs'
@@ -248,6 +249,12 @@ export default function SettingsView({
                 {t('settings.exportPDF')}
               </button>
             </div>
+
+            <SectionLabel>{t('settings.restoreLabel')}</SectionLabel>
+            <ImportBackupCard
+              existingRecipes={recipes}
+              onImported={onRecipesChanged}
+            />
           </>
         )}
       </div>
@@ -282,6 +289,197 @@ export default function SettingsView({
         />
       )}
     </div>
+  )
+}
+
+// Reading a backup back in. Deliberately three explicit stages — choose file,
+// look at what's in it, then commit — because "replace" deletes everything the
+// account currently has and that must never be one careless tap away.
+function ImportBackupCard({ existingRecipes, onImported }) {
+  const { t } = useT()
+  const fileRef = useRef(null)
+  const [parsed, setParsed] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const [mode, setMode] = useState('merge')
+  const [confirmText, setConfirmText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState(null)
+  const [error, setError] = useState(null)
+  const [done, setDone] = useState(null)
+
+  const reset = () => {
+    setParsed(null); setSummary(null); setMode('merge')
+    setConfirmText(''); setError(null); setProgress(null); setDone(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleFile = async (file) => {
+    if (!file) return
+    setError(null); setDone(null)
+    try {
+      const text = await file.text()
+      const result = parseBackup(text)
+      setParsed(result)
+      setSummary(summariseAgainst(result, existingRecipes))
+    } catch (err) {
+      reset()
+      setError(err instanceof ImportError ? err.message : t('settings.importGenericError'))
+    }
+  }
+
+  const handleImport = async () => {
+    setBusy(true); setError(null); setProgress(null)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id
+      const report = await importBackup(supabase, userId, parsed, {
+        mode,
+        onProgress: (step, i, total) => setProgress({ step, i, total }),
+      })
+      const restored = Object.values(report.inserted).reduce((a, b) => a + b, 0)
+      setDone({ restored, mode })
+      setParsed(null); setSummary(null); setConfirmText('')
+      if (fileRef.current) fileRef.current.value = ''
+      await onImported?.()
+    } catch (err) {
+      setError(err instanceof ImportError ? err.message : t('settings.importGenericError'))
+    } finally {
+      setBusy(false); setProgress(null)
+    }
+  }
+
+  const replaceArmed = mode !== 'replace' || confirmText.trim().toUpperCase() === t('settings.importConfirmWord')
+
+  return (
+    <div style={cardStyle}>
+      <RowLabel>{t('settings.importBackup')}</RowLabel>
+      <div style={hintStyle}>{t('settings.importDesc')}</div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={e => handleFile(e.target.files?.[0])}
+        style={{ display: 'none' }}
+      />
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={busy}
+        style={{ ...secondaryBtnStyle, width: '100%' }}
+      >{t('settings.chooseBackupFile')}</button>
+
+      {error && (
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 8 }}>
+          {error}
+        </div>
+      )}
+
+      {done && (
+        <div style={{
+          marginTop: 10, padding: '10px 12px', borderRadius: 8,
+          background: 'var(--sage-light)', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)',
+        }}>{t('settings.importDone')(done.restored)}</div>
+      )}
+
+      {parsed && summary && (
+        <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginBottom: 8 }}>
+            {t('settings.importFound')}
+            {parsed.exportedAt && ` · ${parsed.exportedAt.slice(0, 10)}`}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+            {IMPORT_TABLES.filter(table => parsed.counts[table] > 0).map(table => (
+              <div key={table} style={{
+                display: 'flex', justifyContent: 'space-between',
+                fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal)',
+              }}>
+                <span>{t(`settings.importTable.${table}`, table)}</span>
+                <span style={{ fontWeight: 700 }}>
+                  {parsed.counts[table]}
+                  {table === 'recipes' && summary.newCount > 0 && (
+                    <span style={{ color: 'var(--sage)', fontWeight: 600 }}> · {t('settings.importNew')(summary.newCount)}</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <ModeButton active={mode === 'merge'} onClick={() => setMode('merge')}>
+              {t('settings.importMerge')}
+            </ModeButton>
+            <ModeButton active={mode === 'replace'} onClick={() => setMode('replace')}>
+              {t('settings.importReplace')}
+            </ModeButton>
+          </div>
+
+          <div style={{ ...hintStyle, marginTop: 0 }}>
+            {mode === 'merge' ? t('settings.importMergeHint') : t('settings.importReplaceHint')}
+          </div>
+
+          {mode === 'replace' && summary.willDelete > 0 && (
+            <div style={{
+              marginTop: 10, padding: '10px 12px', borderRadius: 8,
+              background: 'var(--parchment-dim)', border: '1px solid var(--tomato)',
+            }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--tomato-deep)', fontWeight: 600 }}>
+                {t('settings.importReplaceWarning')(summary.willDelete)}
+              </div>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder={t('settings.importConfirmWord')}
+                style={{
+                  width: '100%', marginTop: 8, padding: '8px 10px', borderRadius: 7,
+                  border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--charcoal)',
+                  fontFamily: 'var(--font-mono)', fontSize: 13, boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          )}
+
+          {progress && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 10 }}>
+              {progress.step} {progress.total ? `${progress.i}/${progress.total}` : ''}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={reset} disabled={busy} style={{ ...secondaryBtnStyle, flex: 1 }}>
+              {t('settings.importCancel')}
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={busy || !replaceArmed}
+              style={{
+                flex: 2, padding: '11px 0', borderRadius: 9, border: 'none',
+                background: mode === 'replace' ? 'var(--tomato-deep)' : 'var(--tomato)',
+                color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
+                cursor: busy || !replaceArmed ? 'default' : 'pointer',
+                opacity: busy || !replaceArmed ? 0.5 : 1,
+              }}
+            >{busy ? t('settings.importing') : t('settings.importStart')}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModeButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+        border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? '#fffdf9' : 'var(--charcoal)',
+        fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
+      }}
+    >{children}</button>
   )
 }
 
