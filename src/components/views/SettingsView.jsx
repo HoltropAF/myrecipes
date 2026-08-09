@@ -675,6 +675,83 @@ function ModeButton({ active, onClick, children }) {
   )
 }
 
+// One ingredient at a time, with a Confirm. 351 rows in a scrolling list reads
+// as endless; a single card with a count left reads as finite.
+//
+// Mounted with key={row.id} so each ingredient gets a fresh component and the
+// draft resets by itself, rather than syncing state in an effect.
+function ReviewCard({ row, allergenKeys, busy, remaining, onConfirm, onSkip, onClose }) {
+  const { t } = useT()
+  const [tags, setTags] = useState(() => row.tags || [])
+
+  const toggle = (key) => setTags(prev => (
+    prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+  ))
+
+  return (
+    <div style={{
+      marginTop: 10, border: '1px solid var(--tomato)', borderRadius: 10,
+      padding: '12px 13px', background: 'var(--card)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: 15, fontWeight: 700, color: 'var(--charcoal)' }}>
+          {row.canonical_name}
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', flexShrink: 0 }}>
+          {t('settings.reviewRemaining')(remaining)}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '10px 0' }}>
+        {allergenKeys.map(key => {
+          const on = tags.includes(key)
+          return (
+            <button
+              key={key}
+              onClick={() => toggle(key)}
+              style={{
+                padding: '4px 11px', borderRadius: 99, cursor: 'pointer',
+                border: `1px solid ${on ? 'var(--tomato)' : 'var(--line)'}`,
+                background: on ? 'var(--tomato)' : 'var(--card)',
+                color: on ? '#fffdf9' : 'var(--charcoal-soft)',
+                fontFamily: 'var(--font-mono)', fontSize: 11.5, fontWeight: 600,
+              }}
+            >{t(`allergens.${key}`, ALLERGEN_LABELS[key])}</button>
+          )
+        })}
+      </div>
+
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', marginBottom: 9 }}>
+        {tags.length === 0 ? t('settings.reviewNoneHint') : t('settings.reviewSomeHint')}
+      </div>
+
+      <div style={{ display: 'flex', gap: 7 }}>
+        <button onClick={onSkip} disabled={busy} style={{ ...secondaryBtnStyle, flex: 1 }}>
+          {t('settings.reviewSkip')}
+        </button>
+        <button
+          onClick={() => onConfirm(tags)}
+          disabled={busy}
+          style={{
+            flex: 2, padding: '10px 0', borderRadius: 9, border: 'none',
+            background: 'var(--sage)', color: '#fffdf9',
+            fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13.5,
+            cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+          }}
+        >{busy ? t('settings.reviewSaving') : t('settings.reviewConfirm')}</button>
+      </div>
+
+      <button
+        onClick={onClose}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', marginTop: 7,
+          color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11, width: '100%',
+        }}
+      >{t('settings.reviewStop')}</button>
+    </div>
+  )
+}
+
 function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
   const { t } = useT()
   // Recipes with no category used to be silently unselectable — dropped by
@@ -948,6 +1025,11 @@ function IngredientAllergenSection() {
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
+  const [tagError, setTagError] = useState(null)
+  const [reviewing, setReviewing] = useState(false)
+  // Skipping is per-session and deliberately not persisted: "not now" should
+  // not become "never ask again".
+  const [skipped, setSkipped] = useState(() => new Set())
 
   const allergenKeys = Object.keys(ALLERGEN_LABELS)
 
@@ -984,7 +1066,9 @@ function IngredientAllergenSection() {
       .from('ingredient_tags')
       .update({ tags: nextTags, reviewed: true })
       .eq('id', row.id)
-    if (!error) {
+    if (error) setTagError(t('settings.tagSaveError'))
+    else {
+      setTagError(null)
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: nextTags, reviewed: true } : r))
     }
     setBusyId(null)
@@ -996,8 +1080,34 @@ function IngredientAllergenSection() {
       .from('ingredient_tags')
       .update({ tags: [], reviewed: true })
       .eq('id', row.id)
-    if (!error) {
+    if (error) setTagError(t('settings.tagSaveError'))
+    else {
+      setTagError(null)
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: [], reviewed: true } : r))
+    }
+    setBusyId(null)
+  }
+
+  const queue = useMemo(
+    () => rows.filter(r => !r.reviewed && !skipped.has(r.id)),
+    [rows, skipped]
+  )
+  const currentReview = queue[0] || null
+  const reviewedCount = rows.length - unreviewedCount
+  const progressPct = rows.length > 0 ? (reviewedCount / rows.length) * 100 : 0
+
+  // One write per decision, unlike the inline list where every tag tap is its
+  // own round trip — in the queue you set the whole answer, then confirm it.
+  const saveReview = async (row, tags) => {
+    setBusyId(row.id)
+    const { error } = await supabase
+      .from('ingredient_tags')
+      .update({ tags, reviewed: true })
+      .eq('id', row.id)
+    if (error) setTagError(t('settings.tagSaveError'))
+    else {
+      setTagError(null)
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags, reviewed: true } : r))
     }
     setBusyId(null)
   }
@@ -1052,6 +1162,61 @@ function IngredientAllergenSection() {
             {t('settings.add')}
           </button>
         </div>
+
+        {rows.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
+                {t('settings.reviewProgress')}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal)', fontWeight: 700 }}>
+                {reviewedCount} / {rows.length}
+              </span>
+            </div>
+            <div style={{ height: 7, borderRadius: 99, background: 'var(--parchment-dim)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.max(progressPct, 1)}%`, background: 'var(--sage)' }} />
+            </div>
+
+            {unreviewedCount > 0 && !reviewing && (
+              <button
+                onClick={() => { setReviewing(true); setSkipped(new Set()) }}
+                style={{ ...secondaryBtnStyle, width: '100%', marginTop: 10 }}
+              >{t('settings.startReview')(unreviewedCount)}</button>
+            )}
+
+            {reviewing && currentReview && (
+              <ReviewCard
+                key={currentReview.id}
+                row={currentReview}
+                allergenKeys={allergenKeys}
+                busy={busyId === currentReview.id}
+                remaining={queue.length}
+                onConfirm={(tags) => saveReview(currentReview, tags)}
+                onSkip={() => setSkipped(prev => new Set(prev).add(currentReview.id))}
+                onClose={() => setReviewing(false)}
+              />
+            )}
+
+            {reviewing && !currentReview && (
+              <div style={{
+                marginTop: 10, padding: '12px 14px', borderRadius: 9, background: 'var(--sage-light)',
+                fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)',
+              }}>
+                {t('settings.reviewCleared')}
+                <button
+                  onClick={() => setReviewing(false)}
+                  style={{ ...secondaryBtnStyle, width: '100%', marginTop: 8 }}
+                >{t('settings.reviewDone')}</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tagError && (
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginBottom: 10 }}>
+            {tagError}
+          </div>
+        )}
 
         <button
           onClick={() => setOnlyUnreviewed(v => !v)}
