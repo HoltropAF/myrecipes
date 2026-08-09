@@ -586,7 +586,7 @@ function AppInner({ setLanguage }) {
         )}
         {activeTab === 'shopping' && (
           <LazyScreen>
-            <ShoppingListView userId={session?.user?.id} isGuest={isGuest} />
+            <ShoppingListView userId={session?.user?.id} isGuest={isGuest} recipes={recipes} />
           </LazyScreen>
         )}
         {activeTab === 'stats' && (

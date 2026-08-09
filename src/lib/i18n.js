@@ -256,6 +256,13 @@ const en = {
     changeRecipe: '‹ Change recipe',
   },
   shopping: {
+    grouping: { aisle: 'By aisle', flat: 'Flat list' },
+    probablyHave: 'probably have',
+    aisle: {
+      groente: 'Fruit & veg', brood: 'Bread & bakery', zuivel: 'Dairy & eggs',
+      vlees: 'Meat & fish', diepvries: 'Frozen', kruiden: 'Herbs & spices',
+      dranken: 'Drinks', voorraad: 'Cupboard', overig: 'Other', staples: 'Staples',
+    },
     title: 'Shopping list',
     addPlaceholder: 'Add an item…',
     addBtn: 'Add',
@@ -717,6 +724,13 @@ const nl = {
     changeRecipe: '‹ Ander recept',
   },
   shopping: {
+    grouping: { aisle: 'Op schap', flat: 'Platte lijst' },
+    probablyHave: 'heb je vast',
+    aisle: {
+      groente: 'Groente & fruit', brood: 'Brood & bakkerij', zuivel: 'Zuivel & eieren',
+      vlees: 'Vlees & vis', diepvries: 'Diepvries', kruiden: 'Kruiden & specerijen',
+      dranken: 'Dranken', voorraad: 'Voorraadkast', overig: 'Overig', staples: 'Basis',
+    },
     title: 'Boodschappenlijst',
     addPlaceholder: 'Item toevoegen…',
     addBtn: 'Toevoegen',

@@ -2,15 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName } from '../../lib/ingredientParser'
 import { MAIN_INGREDIENTS, getMainIngredientKeys } from '../../lib/recipeTags'
+import { PANTRY_STAPLES } from '../../lib/aisles'
 import LoadingGyoza from '../LoadingGyoza'
 import { useT } from '../../lib/i18n'
 
 // Pantry staples so common to almost every recipe that sharing them is meaningless
 // for a "these go well together" suggestion (would otherwise pair nearly everything).
-const PANTRY_STAPLES = new Set([
-  'zout', 'peper', 'olijfolie', 'olie', 'water', 'suiker', 'boter', 'bloem',
-  'salt', 'pepper', 'oil', 'sugar', 'butter', 'flour', 'ui', 'onion', 'knoflook', 'garlic',
-])
 
 function getIngredientSet(recipe) {
   const names = new Set()
