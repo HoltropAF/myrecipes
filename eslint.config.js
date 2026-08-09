@@ -14,7 +14,8 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      globals: globals.browser,
+      // __BUILD_DATE__ is injected by vite.config.js at build time.
+      globals: { ...globals.browser, __BUILD_DATE__: 'readonly' },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

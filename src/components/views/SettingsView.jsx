@@ -2,6 +2,10 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
 import { parseBackup, summariseAgainst, importBackup, ImportError, IMPORT_TABLES } from '../../lib/importUtils'
+import {
+  formatBytes, readLocalStorageUsage, readCachedRecipeCount, readQuotaEstimate,
+  clearLocalCaches, clearServiceWorkerCaches, readInstanceInfo,
+} from '../../lib/storageInfo'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import BinderTabs, { getTabShades, tabBackground } from '../BinderTabs'
@@ -10,6 +14,29 @@ import { useCompact } from '../../lib/useCompact'
 // Sentinel key for recipes with no category, so they can be selected in the
 // PDF filter alongside real category names.
 const UNCATEGORIZED = '__uncategorized__'
+
+// What Settings search looks through. Hand-maintained rather than derived,
+// because the point is to match what someone would *call* the thing — people
+// look for "dark mode", not "theme", and for "Dutch", not "language".
+//
+// `extra` holds those alternative words in both languages; it is never shown.
+const SEARCH_INDEX = [
+  { section: 'general',    key: 'settings.aboutLabel',           extra: 'about account email sign out uitloggen account' },
+  { section: 'general',    key: 'settings.languageLabel',        extra: 'language taal english nederlands dutch' },
+  { section: 'general',    key: 'settings.linksLabel',           extra: 'github wiki issues instagram links' },
+  { section: 'appearance', key: 'settings.themeLabel',           extra: 'theme dark light auto donker licht thema night mode' },
+  { section: 'appearance', key: 'settings.measurementsLabel',    extra: 'units metric us cups grams eenheden maten gram' },
+  { section: 'recipes',    key: 'settings.defaultViewLabel',     extra: 'view list folders cookbook weergave lijst mappen' },
+  { section: 'recipes',    key: 'settings.searchBy',             extra: 'search ingredient title zoeken ingredient titel' },
+  { section: 'recipes',    key: 'settings.cookbookLabel',        extra: 'category default open categorie standaard' },
+  { section: 'tags',       key: 'settings.manageTags',           extra: 'tags labels recipe tags beheren' },
+  { section: 'tags',       key: 'settings.manageAllergenTags',   extra: 'allergens allergy gluten dairy nuts allergenen lactose noten' },
+  { section: 'backup',     key: 'settings.fullBackup',           extra: 'backup export json download reservekopie' },
+  { section: 'backup',     key: 'settings.printableCookbook',    extra: 'pdf print cookbook printen kookboek' },
+  { section: 'backup',     key: 'settings.importBackup',         extra: 'import restore merge replace herstellen importeren' },
+  { section: 'backup',     key: 'settings.storageLabel',         extra: 'storage cache space offline opslag ruimte wissen' },
+  { section: 'general',    key: 'settings.instanceLabel',        extra: 'instance version build supabase project versie' },
+]
 
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
@@ -94,10 +121,15 @@ export default function SettingsView({
       }}>
         <h1 style={{
           fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600,
-          color: 'var(--tomato-deep)', marginBottom: 14,
+          color: 'var(--tomato-deep)', marginBottom: 10,
         }}>
           {t('settings.title')}
         </h1>
+
+        <SettingsSearch
+          sections={SECTIONS}
+          onJump={(sectionId) => setActiveSection(sectionId)}
+        />
 
         <BinderTabs
           tabs={SECTIONS}
@@ -255,6 +287,9 @@ export default function SettingsView({
               existingRecipes={recipes}
               onImported={onRecipesChanged}
             />
+
+            <SectionLabel>{t('settings.onThisDevice')}</SectionLabel>
+            <StorageCard />
           </>
         )}
       </div>
@@ -288,6 +323,163 @@ export default function SettingsView({
           onCancel={() => setShowPdfFilter(false)}
         />
       )}
+    </div>
+  )
+}
+
+// Five tabs and ~850 lines is the point where "which tab was that on again?"
+// stops being a rare question.
+function SettingsSearch({ sections, onJump }) {
+  const { t } = useT()
+  const [query, setQuery] = useState('')
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+    return SEARCH_INDEX
+      .map(entry => ({ ...entry, label: t(entry.key) }))
+      .filter(entry =>
+        String(entry.label).toLowerCase().includes(q) || entry.extra.includes(q)
+      )
+      .slice(0, 6)
+  }, [query, t])
+
+  const sectionLabel = (id) => sections.find(s => s.id === id)?.label || id
+
+  return (
+    <div style={{ position: 'relative', marginBottom: 12 }}>
+      <input
+        type="search"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder={t('settings.searchPlaceholder')}
+        style={{
+          width: '100%', padding: '8px 11px', borderRadius: 8,
+          border: '1px solid var(--line)', background: 'var(--parchment)',
+          color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 13.5,
+          boxSizing: 'border-box', outline: 'none',
+        }}
+      />
+      {results.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, marginTop: 4,
+          background: 'var(--card)', border: '1px solid var(--line-strong, var(--line))',
+          borderRadius: 9, overflow: 'hidden', boxShadow: '0 8px 24px rgba(42,36,32,0.16)',
+        }}>
+          {results.map(result => (
+            <button
+              key={result.key}
+              onClick={() => { onJump(result.section); setQuery('') }}
+              style={{
+                display: 'flex', width: '100%', alignItems: 'baseline', gap: 8,
+                padding: '9px 12px', border: 'none', borderBottom: '1px solid var(--line)',
+                background: 'none', cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--charcoal)', flex: 1 }}>
+                {result.label}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)' }}>
+                {sectionLabel(result.section)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// "How much space is this taking" and "can I get it back", answerable without
+// leaving the app.
+function StorageCard() {
+  const { t } = useT()
+  const [usage, setUsage] = useState(() => readLocalStorageUsage())
+  const [cachedCount, setCachedCount] = useState(() => readCachedRecipeCount())
+  const [quota, setQuota] = useState(null)
+  const [cleared, setCleared] = useState(null)
+
+  useEffect(() => { readQuotaEstimate().then(setQuota) }, [])
+
+  const refresh = () => {
+    setUsage(readLocalStorageUsage())
+    setCachedCount(readCachedRecipeCount())
+    readQuotaEstimate().then(setQuota)
+  }
+
+  const handleClear = async () => {
+    const removed = clearLocalCaches()
+    await clearServiceWorkerCaches()
+    refresh()
+    setCleared(removed)
+  }
+
+  const quotaPct = quota?.quota ? Math.min(100, (quota.usage / quota.quota) * 100) : null
+
+  return (
+    <div style={cardStyle}>
+      <RowLabel>{t('settings.storageLabel')}</RowLabel>
+      <div style={hintStyle}>{t('settings.storageDesc')}</div>
+
+      {quotaPct !== null && (
+        <div style={{ margin: '4px 0 12px' }}>
+          <div style={{ height: 7, borderRadius: 99, background: 'var(--parchment-dim)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.max(1, quotaPct)}%`, background: 'var(--sage)' }} />
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', marginTop: 5 }}>
+            {formatBytes(quota.usage)} {t('settings.storageOf')} {formatBytes(quota.quota)}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
+        <StorageRow label={t('settings.storageRecipes')(cachedCount)} value={formatBytes(usage.recipeCache)} />
+        <StorageRow label={t('settings.storageChecks')} value={formatBytes(usage.checkState)} />
+        <StorageRow label={t('settings.storageSettings')} value={formatBytes(usage.flags)} />
+      </div>
+
+      <button onClick={handleClear} style={{ ...secondaryBtnStyle, width: '100%' }}>
+        {t('settings.clearCache')}
+      </button>
+      <div style={{ ...hintStyle, marginTop: 6 }}>
+        {cleared !== null ? t('settings.cacheCleared') : t('settings.clearCacheHint')}
+      </div>
+    </div>
+  )
+}
+
+function StorageRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>
+      <span style={{ color: 'var(--charcoal-soft)' }}>{label}</span>
+      <span style={{ color: 'var(--charcoal)', fontWeight: 600 }}>{value}</span>
+    </div>
+  )
+}
+
+// Which build and which database — the two things you need before you can
+// report a problem on a self-hosted copy.
+function InstanceCard() {
+  const { t } = useT()
+  const info = useMemo(() => readInstanceInfo(), [])
+
+  return (
+    <div style={cardStyle}>
+      <RowLabel>{t('settings.instanceLabel')}</RowLabel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 4 }}>
+        <StorageRow label={t('settings.instanceProject')} value={info.projectRef || t('settings.instanceUnknown')} />
+        {info.buildDate && (
+          <StorageRow label={t('settings.instanceBuild')} value={info.buildDate.slice(0, 10)} />
+        )}
+      </div>
+      <a
+        href="https://github.com/HoltropAF/myrecipes/commits/main"
+        target="_blank" rel="noopener noreferrer"
+        style={{
+          display: 'inline-block', marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 11.5,
+          color: 'var(--tomato-deep)', fontWeight: 600, textDecoration: 'none',
+        }}
+      >{t('settings.instanceChangelog')}</a>
     </div>
   )
 }
@@ -582,6 +774,9 @@ function GeneralSection({ userEmail, language, onLanguageChange }) {
           ]}
         />
       </div>
+
+      <SectionLabel>{t('settings.instanceSectionLabel')}</SectionLabel>
+      <InstanceCard />
 
       <SectionLabel>{t('settings.linksLabel')}</SectionLabel>
       <div style={cardStyle}>

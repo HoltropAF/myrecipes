@@ -4,6 +4,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Stamped into the bundle so Settings can show which build is running. The
+  // update banner tells people a new version exists; this tells them which one
+  // they're on, which is the other half of that conversation.
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({
