@@ -346,6 +346,9 @@ const en = {
     noMatch: 'No matches yet — try fewer or different ingredients.',
   },
   mealPrep: {
+    rebuildTitle: 'Being rebuilt',
+    rebuildBody: 'Meal planning is getting a proper redesign. Your saved plans are untouched, and adding a recipe to a plan still works.',
+    plansSafe: (n) => `${n} saved plan${n === 1 ? '' : 's'} waiting`,
     dopamineSaved: 'your collection',
     dopamineDerived: 'worked out from what you cook again and again',
     dopamineSave: 'Save this as a collection',
@@ -879,6 +882,9 @@ const nl = {
     noMatch: 'Geen overeenkomsten — probeer minder of andere ingrediënten.',
   },
   mealPrep: {
+    rebuildTitle: 'Wordt opnieuw gebouwd',
+    rebuildBody: 'Maaltijdplanning krijgt een echte herziening. Je opgeslagen plannen blijven staan en een recept toevoegen aan een plan werkt gewoon.',
+    plansSafe: (n) => `${n} opgeslagen ${n === 1 ? 'plan' : 'plannen'} bewaard`,
     dopamineSaved: 'jouw collectie',
     dopamineDerived: 'afgeleid uit wat je steeds opnieuw maakt',
     dopamineSave: 'Bewaar dit als collectie',
