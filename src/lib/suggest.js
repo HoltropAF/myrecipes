@@ -124,3 +124,24 @@ export function suggestForNow(recipes, cookStats = {}, now = new Date()) {
   const best = scored[0]
   return { recipe: best.recipe, reasons: best.reasons.slice(0, 2) }
 }
+
+// Cooked again and again, and liked — a workable definition of "always makes me
+// happy to cook" from data already in the log. Used as a stand-in until the user
+// saves a real Dopamine Menu collection.
+const DOPAMINE_MIN_COOKS = 2
+
+export function deriveDopamineMenu(recipes, cookStats = {}, limit = 8) {
+  return recipes
+    .filter(isSuggestable)
+    .map(recipe => {
+      const stat = cookStats[recipe.id] || {}
+      const up = stat.up || 0
+      const down = stat.down || 0
+      const count = stat.count || 0
+      if (count < DOPAMINE_MIN_COOKS || up === 0 || down >= up) return null
+      return { recipe, score: up * 2 + count, stat }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+}

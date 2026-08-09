@@ -4,6 +4,7 @@ import { normalizeName } from '../../lib/ingredientParser'
 import { MAIN_INGREDIENTS, getMainIngredientKeys } from '../../lib/recipeTags'
 import { PANTRY_STAPLES } from '../../lib/aisles'
 import LoadingGyoza from '../LoadingGyoza'
+import DopamineShelf from '../DopamineShelf'
 import { useT } from '../../lib/i18n'
 
 // Pantry staples so common to almost every recipe that sharing them is meaningless
@@ -84,7 +85,10 @@ function suggestionTitle(s, t) {
   return `${t('mealPrep.recipesWith')}${s.label}`
 }
 
-export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null }) {
+export default function MealPrepView({
+  recipes, onSelectRecipe, isGuest = false, demoMealGroups = null,
+  cookStats = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged,
+}) {
   const { t } = useT()
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
@@ -109,6 +113,22 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const handleDeleteGroup = async (id) => {
     await supabase.from('meal_groups').delete().eq('id', id)
     loadGroups()
+  }
+
+  const saveDopamineCollection = async (name, recipeIds) => {
+    const { data: userData } = await supabase.auth.getUser()
+    const user_id = userData?.user?.id
+    if (!user_id) return
+    const { data: collection, error } = await supabase
+      .from('collections')
+      .insert({ user_id, name, emoji: '✨' })
+      .select().single()
+    if (error || !collection) return
+    if (recipeIds.length > 0) {
+      await supabase.from('collection_recipes')
+        .insert(recipeIds.map(recipe_id => ({ collection_id: collection.id, recipe_id })))
+    }
+    await onCollectionsChanged?.()
   }
 
   const saveSuggestionAsGroup = async (suggestion) => {
@@ -137,6 +157,16 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
           onSaved={() => { setShowBuilder(false); loadGroups() }}
         />
       )}
+
+      <DopamineShelf
+        recipes={recipes}
+        cookStats={cookStats}
+        collections={collections}
+        collectionRecipeMap={collectionRecipeMap}
+        onSelect={onSelectRecipe}
+        onCreateCollection={saveDopamineCollection}
+        isGuest={isGuest}
+      />
 
       {/* Your saved groups */}
       <SectionLabel>{t('mealPrep.yourGroups')}</SectionLabel>

@@ -346,6 +346,9 @@ const en = {
     noMatch: 'No matches yet — try fewer or different ingredients.',
   },
   mealPrep: {
+    dopamineSaved: 'your collection',
+    dopamineDerived: 'worked out from what you cook again and again',
+    dopamineSave: 'Save this as a collection',
     title: 'Meal Prep',
     newGroup: '+ New group',
     yourGroups: 'Your groups',
@@ -876,6 +879,9 @@ const nl = {
     noMatch: 'Geen overeenkomsten — probeer minder of andere ingrediënten.',
   },
   mealPrep: {
+    dopamineSaved: 'jouw collectie',
+    dopamineDerived: 'afgeleid uit wat je steeds opnieuw maakt',
+    dopamineSave: 'Bewaar dit als collectie',
     title: 'Weekmenu',
     newGroup: '+ Nieuwe groep',
     yourGroups: 'Jouw groepen',

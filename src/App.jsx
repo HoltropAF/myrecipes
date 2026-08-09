@@ -654,7 +654,16 @@ function AppInner({ setLanguage }) {
         )}
         {activeTab === 'mealprep' && (
           <LazyScreen>
-            <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} isGuest={isGuest} demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null} />
+            <MealPrepView
+              recipes={recipes}
+              onSelectRecipe={openRecipe}
+              isGuest={isGuest}
+              demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null}
+              cookStats={cookCounts}
+              collections={isGuest ? [] : collections}
+              collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
+              onCollectionsChanged={loadCollections}
+            />
           </LazyScreen>
         )}
         {activeTab === 'settings' && (
