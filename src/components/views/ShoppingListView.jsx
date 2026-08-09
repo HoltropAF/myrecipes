@@ -11,7 +11,7 @@ const GROUPING_KEY = 'mr_shopping_grouping_v1'
 export default function ShoppingListView({ userId, isGuest = false, recipes = [] }) {
   const { t } = useT()
   const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loaded, setLoaded] = useState(false)
   const [manualInput, setManualInput] = useState('')
   // Remembered because it's a standing preference about how you shop, not a
   // per-visit choice — but kept local rather than in user_preferences, which is
@@ -25,20 +25,21 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
     try { localStorage.setItem(GROUPING_KEY, next) } catch { /* storage disabled */ }
   }
 
-  const loadItems = async () => {
-    if (isGuest) {
-      setItems([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    const { data } = await supabase.from('shopping_list').select('*').order('created_at', { ascending: true })
-    setItems(data || [])
-    setLoading(false)
-  }
+  const loading = !isGuest && !loaded
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadItems() }, [isGuest])
+  // Guests start with an empty list and can still add to it locally, so there
+  // is nothing to fetch.
+  useEffect(() => {
+    if (isGuest) return
+    let cancelled = false
+    supabase.from('shopping_list').select('*').order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (cancelled) return
+        setItems(data || [])
+        setLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [isGuest])
 
   const addManualItem = async () => {
     if (!manualInput.trim()) return

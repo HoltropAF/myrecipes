@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { parseStepBlock } from '../../lib/stepParser'
 import ComboInput from '../ComboInput'
-import { titleStyle, inputStyle } from './TitleStep'
+import { titleStyle, inputStyle } from '../../lib/formStyles'
 import { useT } from '../../lib/i18n'
 import { detectDurationSeconds, formatDurationShort, parseTimerInput } from '../../lib/durationParser'
 

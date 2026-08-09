@@ -9,9 +9,11 @@ import InfoTab from './recipe_tabs/InfoTab'
 import IngredientsTab from './recipe_tabs/IngredientsTab'
 import StepsTab from './recipe_tabs/StepsTab'
 import StorageTab from './recipe_tabs/StorageTab'
-import BinderTabs, { getTabShades, tabBackground } from './BinderTabs'
+import BinderTabs from './BinderTabs'
+import { getTabShades, tabBackground } from '../lib/tabShades'
 import { useCompact } from '../lib/useCompact'
-import CollectionForm, { DEFAULT_COLLECTION_EMOJI } from './CollectionForm'
+import CollectionForm from './CollectionForm'
+import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
   const { t } = useT()
@@ -31,6 +33,9 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const [addedToList, setAddedToList] = useState(false)
   const [showCollectionPicker, setShowCollectionPicker] = useState(false)
   const [showPlanPicker, setShowPlanPicker] = useState(false)
+  // Read once on mount. App keys this component on the recipe id, so opening a
+  // different recipe remounts and re-reads rather than correcting state in an
+  // effect after the first render has already shown the wrong ticks.
   const [checkedIngredients, setCheckedIngredients] = useState(() => {
     try {
       const raw = localStorage.getItem(`recipe_check_${recipe.id}`)
@@ -40,19 +45,14 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const [showCookingMode, setShowCookingMode] = useState(false)
   const compact = useCompact()
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(`recipe_check_${recipe.id}`)
-      setCheckedIngredients(raw ? new Set(JSON.parse(raw)) : new Set())
-    } catch { setCheckedIngredients(new Set()) }
-  }, [recipe.id])
-
   const toggleIngredientChecked = (id) => {
     setCheckedIngredients(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      try { localStorage.setItem(`recipe_check_${recipe.id}`, JSON.stringify([...next])) } catch {}
+      try {
+        localStorage.setItem(`recipe_check_${recipe.id}`, JSON.stringify([...next]))
+      } catch { /* storage disabled — ticks last for this visit only */ }
       return next
     })
   }

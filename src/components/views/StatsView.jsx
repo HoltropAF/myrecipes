@@ -16,20 +16,21 @@ const relativeLabels = (t) => ({
 
 export default function StatsView({ recipes, isGuest = false, demoCookLog = null, onSelectRecipe }) {
   const { t, lang } = useT()
-  const [cookLog, setCookLog] = useState([])
-  const [loading, setLoading] = useState(true)
+  // null means "not fetched yet". Guest data arrives as a prop, so it is read
+  // during render rather than copied into state by an effect.
+  const [remoteLog, setRemoteLog] = useState(null)
 
   useEffect(() => {
-    if (isGuest) {
-      setCookLog(demoCookLog || [])
-      setLoading(false)
-      return
-    }
+    if (isGuest) return
+    let cancelled = false
     supabase.from('cook_log').select('*').then(({ data }) => {
-      setCookLog(data || [])
-      setLoading(false)
+      if (!cancelled) setRemoteLog(data || [])
     })
-  }, [])
+    return () => { cancelled = true }
+  }, [isGuest])
+
+  const cookLog = isGuest ? (demoCookLog || []) : (remoteLog || [])
+  const loading = !isGuest && remoteLog === null
 
   const stats = useMemo(() => {
     const recipeById = Object.fromEntries(recipes.map(r => [r.id, r]))

@@ -8,7 +8,8 @@ import {
 } from '../../lib/storageInfo'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
-import BinderTabs, { getTabShades, tabBackground } from '../BinderTabs'
+import BinderTabs from '../BinderTabs'
+import { getTabShades, tabBackground } from '../../lib/tabShades'
 import { useCompact } from '../../lib/useCompact'
 
 // Sentinel key for recipes with no category, so they can be selected in the
@@ -66,12 +67,22 @@ export default function SettingsView({
   const [saving, setSaving] = useState(false)
   const compact = useCompact()
 
-  const [draft, setDraft] = useState({
-    theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language,
-  })
-  useEffect(() => {
-    setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language })
-  }, [theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language])
+  const saved = { theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language }
+  const savedKey = JSON.stringify(saved)
+
+  const [draft, setDraft] = useState(saved)
+  const [draftBase, setDraftBase] = useState(savedKey)
+
+  // Settings is draft + Save (a831fea), so the draft must restart whenever the
+  // saved values change underneath it — which happens when preferences finish
+  // loading, and again after a save. Adjusted during render rather than in an
+  // effect: an effect would let one frame paint with a stale draft first, and
+  // React handles a set-state-during-render by re-running this component
+  // immediately, before anything reaches the screen.
+  if (savedKey !== draftBase) {
+    setDraftBase(savedKey)
+    setDraft(saved)
+  }
 
   const isDirty = (
     draft.theme !== theme ||

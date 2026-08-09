@@ -1,4 +1,5 @@
 import { useT } from '../lib/i18n'
+import { COLLECTION_EMOJIS } from '../lib/collectionEmojis'
 
 // Emoji picker + name field + Create button for a new collection. Previously
 // duplicated between the CollectionsBar on the Recipes screen and the
@@ -7,9 +8,7 @@ import { useT } from '../lib/i18n'
 //
 // Emoji here are user content (they decorate a collection the user named), which
 // is why they're allowed — unlike structural navigation, which stays plain.
-export const COLLECTION_EMOJIS = ['📚', '✨', '❤️', '🌟', '🍝', '🔥', '🌿', '🎉', '🧁', '☕', '🥗', '🍜']
 
-export const DEFAULT_COLLECTION_EMOJI = '📚'
 
 /**
  * @param onCancel  optional — renders a ✕ button when provided

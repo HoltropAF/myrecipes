@@ -215,8 +215,6 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       </div>
 
       <WizardFooter
-        stepIndex={stepIndex}
-        total={STEPS.length}
         canGoNext={canProceed(step, { title, ingredientGroups, stepGroups })}
         onNext={stepIndex === STEPS.length - 1 ? handleSave : goNext}
         saving={saving}
@@ -282,7 +280,7 @@ const navBtnStyle = {
   fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, width: 50, textAlign: 'left',
 }
 
-function WizardFooter({ stepIndex, total, canGoNext, onNext, saving, isLast, isEditing }) {
+function WizardFooter({ canGoNext, onNext, saving, isLast, isEditing }) {
   const { t } = useT()
   return (
     <div style={{

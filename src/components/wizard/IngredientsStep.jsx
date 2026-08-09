@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { parseIngredientBlock } from '../../lib/ingredientParser'
 import ComboInput from '../ComboInput'
-import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { titleStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'
 import { supabase, escapeLike } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'

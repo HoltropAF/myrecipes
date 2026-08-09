@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
+import { CATEGORY_ICONS } from '../../lib/categories'
 import WhatCanIMake from '../WhatCanIMake'
 import DecideCard from '../DecideCard'
 import CategoryBar from './CategoryBar'
@@ -7,26 +8,10 @@ import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngred
 import { useT } from '../../lib/i18n'
 import { relativeDayLabel } from '../../lib/dateUtils'
 import { supabase } from '../../lib/supabase'
-import CollectionForm, { DEFAULT_COLLECTION_EMOJI } from '../CollectionForm'
+import CollectionForm from '../CollectionForm'
+import { DEFAULT_COLLECTION_EMOJI } from '../../lib/collectionEmojis'
 
-export const CATEGORY_ICONS = {
-  'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
-  'Main dishes': '🍽', 'Sides': '🍚', 'Desserts': '🍰', 'Baking': '🥐',
-  'Drinks': '🍹', 'Household': '🧴', 'Soups': '🍲', 'Salads': '🥗',
-}
 
-// Fixed category order for the cookbook folder view
-export const CATEGORY_ORDER = [
-  'Main dishes',
-  'Sides',
-  'Soups',
-  'Salads',
-  'Breakfast & Brunch',
-  'Appetizers & Snacks',
-  'Desserts',
-  'Drinks',
-  'Household',
-]
 
 // dateUtils formats the shape; i18n supplies the words.
 const relativeLabels = (t) => ({

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import TagPicker from '../TagPicker'
-import { titleStyle, labelStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { titleStyle, labelStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'
 import { useT } from '../../lib/i18n'
 
 export default function ExtrasStep({

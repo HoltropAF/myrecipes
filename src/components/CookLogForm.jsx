@@ -1,4 +1,5 @@
 import { useT } from '../lib/i18n'
+import { labelTextStyle, inputStyleCompact as inputStyle } from '../lib/formStyles'
 
 // The date / version / thumbs / notes / save form, shared by the Log tab on a
 // recipe (CookLogSection) and the quick-log bottom sheet (QuickLogCook). Both
@@ -7,15 +8,7 @@ import { useT } from '../lib/i18n'
 // Fully controlled — the parent owns the state and the save handler, since the
 // two callers insert into cook_log slightly differently.
 
-export const labelTextStyle = {
-  fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)',
-}
 
-export const inputStyle = {
-  padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-  background: 'var(--card)', color: 'var(--charcoal)',
-  fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
-}
 
 export function ThumbButton({ active, onClick, children }) {
   return (

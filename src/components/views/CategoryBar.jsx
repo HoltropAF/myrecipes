@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { useT } from '../../lib/i18n'
-import { CATEGORY_ORDER } from './AllRecipesView'
+import { CATEGORY_ORDER } from '../../lib/categories'
 
 // Categories as a filter bar rather than a folder you walk into.
 //

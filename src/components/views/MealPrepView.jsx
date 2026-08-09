@@ -21,19 +21,17 @@ export default function MealPrepView({
   cookStats = {}, collections = [], collectionRecipeMap = {},
 }) {
   const { t } = useT()
-  const [groupCount, setGroupCount] = useState(null)
+  const [remoteCount, setRemoteCount] = useState(null)
 
   useEffect(() => {
-    if (isGuest) {
-      setGroupCount((demoMealGroups || []).length)
-      return
-    }
+    if (isGuest) return
     let cancelled = false
     supabase.from('meal_groups').select('id', { count: 'exact', head: true })
-      .then(({ count }) => { if (!cancelled) setGroupCount(count ?? 0) })
+      .then(({ count }) => { if (!cancelled) setRemoteCount(count ?? 0) })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest])
+
+  const groupCount = isGuest ? (demoMealGroups || []).length : remoteCount
 
   return (
     <div style={{ padding: '0 20px 100px' }}>

@@ -6,8 +6,7 @@ import CookLogForm from './CookLogForm'
 
 export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null, onLogged }) {
   const { t } = useT()
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [remoteEntries, setRemoteEntries] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [date, setDate] = useState(todayLocalISO)
   const [thumbs, setThumbs] = useState(null)
@@ -17,23 +16,28 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
   const [error, setError] = useState(null)
 
   const load = async () => {
-    if (isGuest) {
-      setEntries(demoEntries || [])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
+    if (isGuest) return
     const { data } = await supabase
       .from('cook_log')
       .select('*')
       .eq('recipe_id', recipeId)
       .order('cooked_date', { ascending: false })
-    setEntries(data || [])
-    setLoading(false)
+    setRemoteEntries(data || [])
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [recipeId, isGuest])
+  useEffect(() => {
+    if (isGuest) return
+    let cancelled = false
+    supabase
+      .from('cook_log').select('*').eq('recipe_id', recipeId)
+      .order('cooked_date', { ascending: false })
+      .then(({ data }) => { if (!cancelled) setRemoteEntries(data || []) })
+    return () => { cancelled = true }
+  }, [recipeId, isGuest])
+
+  // Guest entries come from a prop; only the fetched copy needs state.
+  const entries = isGuest ? (demoEntries || []) : (remoteEntries || [])
+  const loading = !isGuest && remoteEntries === null
 
   const handleSave = async () => {
     setSaving(true)

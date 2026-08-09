@@ -1,6 +1,6 @@
 import { parseIngredientBlock } from '../../lib/ingredientParser'
 import { parseStepBlock } from '../../lib/stepParser'
-import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { titleStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'
 import { useT } from '../../lib/i18n'
 
 export default function VariantStep({

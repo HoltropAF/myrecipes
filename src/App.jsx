@@ -18,7 +18,9 @@ function readCachedRecipes(userId) {
 
 function writeCachedRecipes(userId, recipes) {
   if (!userId) return
-  try { localStorage.setItem(recipeCacheKey(userId), JSON.stringify(recipes)) } catch {}
+  try {
+    localStorage.setItem(recipeCacheKey(userId), JSON.stringify(recipes))
+  } catch { /* quota full or storage disabled — the app works without a cache */ }
 }
 
 // Drop every user's cache (on sign-out), plus the legacy unscoped key.
@@ -31,7 +33,7 @@ function clearRecipeCaches() {
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith('recipe_check_')) localStorage.removeItem(key)
     }
-  } catch {}
+  } catch { /* storage disabled — nothing was cached, so nothing to clear */ }
 }
 
 /**
@@ -117,7 +119,9 @@ function AppInner({ setLanguage }) {
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
   const [editInitialStep, setEditInitialStep] = useState(0)
-  const [loadingRecipes, setLoadingRecipes] = useState(false)
+  // True until the first fetch resolves. With a warm cache there is something
+  // to read immediately, so the spinner is only for a genuinely empty screen.
+  const [recipesLoaded, setRecipesLoaded] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState('recipes')
   const [unitSystem, setUnitSystem] = useState('metric')
@@ -134,7 +138,9 @@ function AppInner({ setLanguage }) {
     try { return localStorage.getItem('mr_allergen_disclaimer_seen_v1') !== 'true' } catch { return true }
   })
   const dismissAllergenDisclaimer = () => {
-    try { localStorage.setItem('mr_allergen_disclaimer_seen_v1', 'true') } catch {}
+    try {
+      localStorage.setItem('mr_allergen_disclaimer_seen_v1', 'true')
+    } catch { /* storage disabled — the disclaimer reappears next visit */ }
     setShowAllergenDisclaimer(false)
   }
   const [updateReady, setUpdateReady] = useState(false)
@@ -226,6 +232,9 @@ function AppInner({ setLanguage }) {
     setSelectedRecipe(recipe)
   }
   const openWizard = (prefill) => {
+    // Guest mode is read-only for creating and editing. Refused here rather
+    // than closed again afterwards, so no history entry is ever pushed.
+    if (isGuest) return
     window.history.pushState({ screen: 'wizard' }, '')
     setEditingRecipe(null)
     setPrefillCategory(prefill || null)
@@ -275,7 +284,6 @@ function AppInner({ setLanguage }) {
       setCookCounts(buildCookStats(DEMO_COOK_LOG))
       return
     }
-    setLoadingRecipes(true)
     const [{ data, error }, { data: logData }, { data: tagData }] = await Promise.all([
       supabase.from('recipes').select('*').order('created_at', { ascending: false }),
       // cooked_date and thumbs come along so cards can show "last cooked" and
@@ -287,7 +295,7 @@ function AppInner({ setLanguage }) {
     // Keep whatever is already on screen and in the cache rather than replacing
     // the cookbook with an empty list and destroying the offline copy.
     if (error || !Array.isArray(data)) {
-      setLoadingRecipes(false)
+      setRecipesLoaded(true)
       return
     }
     const tagMap = {}
@@ -302,7 +310,7 @@ function AppInner({ setLanguage }) {
     setRecipes(freshRecipes)
     writeCachedRecipes(session?.user?.id, freshRecipes)
     if (Array.isArray(logData)) setCookCounts(buildCookStats(logData))
-    setLoadingRecipes(false)
+    setRecipesLoaded(true)
     return freshRecipes
   }
 
@@ -324,6 +332,7 @@ function AppInner({ setLanguage }) {
   const enterGuestMode = () => {
     setIsGuest(true)
     setRecipes(DEMO_RECIPES)
+    setCookCounts(buildCookStats(DEMO_COOK_LOG))
   }
 
   const exitGuestMode = () => {
@@ -336,14 +345,15 @@ function AppInner({ setLanguage }) {
   // session object every time the access token rotates (hourly), which would
   // otherwise re-run these and clobber unsaved Settings edits.
   useEffect(() => {
-    if (session) { loadRecipes(); loadCollections() }
+    if (!session) return
+    let cancelled = false
+    ;(async () => {
+      await Promise.all([loadRecipes(), loadCollections()])
+      if (cancelled) return
+    })()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id])
-
-  useEffect(() => {
-    if (isGuest) loadRecipes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuest])
 
   useEffect(() => {
     if (!session || isGuest) return
@@ -424,14 +434,6 @@ function AppInner({ setLanguage }) {
 
   const dismissPendingDelete = useCallback(() => setPendingDelete(null), [])
 
-  // Guest mode is read-only for recipe creation/editing. The FAB and Add buttons
-  // are hidden for guests as the first line of defence; this closes the wizard if
-  // anything still manages to call openWizard. Done in an effect, not during
-  // render, so it doesn't fire history.back() twice under StrictMode.
-  useEffect(() => {
-    if (showWizard && isGuest) closeWizard()
-  }, [showWizard, isGuest])
-
   if (session === undefined) {
     return (
       <div style={{
@@ -495,6 +497,7 @@ function AppInner({ setLanguage }) {
     return (
       <LazyScreen>
         <RecipeDetail
+          key={selectedRecipe.id}
           recipe={selectedRecipe}
           onClose={closeRecipe}
           onDelete={isGuest ? null : handleDelete}
@@ -629,7 +632,7 @@ function AppInner({ setLanguage }) {
         {activeTab === 'recipes' && (
           <AllRecipesView
             recipes={recipes}
-            loading={loadingRecipes && recipes.length === 0}
+            loading={!isGuest && !recipesLoaded && recipes.length === 0}
             onSelect={openRecipe}
             onAdd={isGuest ? null : openWizard}
             defaultOpenCategory={defaultCategory}
