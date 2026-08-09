@@ -23,3 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local agent config (subagent definitions, permissions)
+.claude/
