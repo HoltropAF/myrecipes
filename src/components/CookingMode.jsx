@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { convertStepTemperatures } from '../lib/unitConverter'
 import { useT } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
 import { todayLocalISO } from '../lib/dateUtils'
+import { detectDurationSeconds, formatDuration } from '../lib/durationParser'
+import { useTimers, remainingOf, ringAlarm } from '../lib/useTimers'
+import { useWakeLock } from '../lib/useWakeLock'
 
 export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogged }) {
   const { t } = useT()
@@ -18,9 +21,6 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
   }, [steps])
 
   const [index, setIndex] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(null)
-  const [timerRunning, setTimerRunning] = useState(false)
-  const intervalRef = useRef(null)
 
   // End-screen state
   const [showEndScreen, setShowEndScreen] = useState(false)
@@ -28,41 +28,38 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
+  // Nobody wants to wipe their hands to wake the screen mid-recipe.
+  useWakeLock(!showEndScreen)
+
+  const { timers, start, toggle, addTime, dismiss } = useTimers(ringAlarm)
+
   const current = flatSteps[index]
   const isLast = index === flatSteps.length - 1
   const isFirst = index === 0
 
-  useEffect(() => {
-    clearInterval(intervalRef.current)
-    setTimerRunning(false)
-    setTimeLeft(current?.timer_seconds || null)
-  }, [index, current?.timer_seconds])
+  // A step's timer is either one the author set explicitly, or a duration we
+  // spotted in the text. Most existing recipes have no timer_seconds at all —
+  // the wizard only started writing it recently.
+  const stepSeconds = useMemo(() => {
+    if (!current) return null
+    return current.timer_seconds || detectDurationSeconds(current.content) || null
+  }, [current])
 
-  useEffect(() => {
-    if (!timerRunning) return
-    intervalRef.current = setInterval(() => {
-      setTimeLeft(secs => {
-        if (secs === null || secs <= 1) {
-          clearInterval(intervalRef.current)
-          setTimerRunning(false)
-          return 0
-        }
-        return secs - 1
-      })
-    }, 1000)
-    return () => clearInterval(intervalRef.current)
-  }, [timerRunning])
+  const stepTimerId = current?.id ? `step_${current.id}` : `step_${index}`
+  const stepTimer = timers[stepTimerId]
+  const stepRemaining = stepTimer ? remainingOf(stepTimer) : stepSeconds
 
-  useEffect(() => () => clearInterval(intervalRef.current), [])
+  const startStepTimer = useCallback(() => {
+    const label = current?.section || `${t('cookingMode.stepLabel')} ${index + 1}`
+    start(stepTimerId, label, stepSeconds)
+  }, [current, index, start, stepSeconds, stepTimerId, t])
+
+  // Timers from other steps that are still counting — the whole point of
+  // running several at once.
+  const otherTimers = Object.values(timers).filter(timer => timer.id !== stepTimerId)
 
   const goNext = () => setIndex(i => Math.min(i + 1, flatSteps.length - 1))
   const goBack = () => setIndex(i => Math.max(i - 1, 0))
-
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60)
-    const s = secs % 60
-    return `${m}:${String(s).padStart(2, '0')}`
-  }
 
   const getUserId = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -213,32 +210,95 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
             {current.section}
           </div>
         )}
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600, lineHeight: 1.4, marginBottom: current.timer_seconds ? 28 : 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600, lineHeight: 1.4, marginBottom: stepSeconds ? 28 : 0 }}>
           {convertStepTemperatures(current.content, unitSystem)}
         </div>
 
-        {current.timer_seconds && (
+        {stepSeconds && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 44, fontWeight: 700, color: timeLeft === 0 ? 'var(--tomato)' : 'var(--parchment)' }}>
-              {formatTime(timeLeft ?? current.timer_seconds)}
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 44, fontWeight: 700,
+              color: stepTimer && stepRemaining === 0 ? 'var(--tomato)' : 'var(--parchment)',
+            }}>
+              {formatDuration(stepRemaining ?? stepSeconds)}
             </div>
-            <button
-              onClick={() => {
-                // At 0 the button reads "Restart", so put the clock back before
-                // starting — otherwise the interval immediately re-freezes at 0.
-                if (!timerRunning && timeLeft === 0) setTimeLeft(current.timer_seconds)
-                setTimerRunning(r => !r)
-              }}
-              style={{
-                padding: '10px 22px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                background: timerRunning ? 'rgba(253,248,240,0.15)' : 'var(--tomato)',
-                color: timerRunning ? 'var(--parchment)' : '#fffdf9',
-                fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
-              }}
-            >{timerRunning ? t('cookingMode.pause') : timeLeft === 0 ? t('cookingMode.restart') : t('cookingMode.startTimer')}</button>
+
+            {/* The timer wasn't set by the author — say so, so a wrong guess is
+                obviously a guess rather than something the recipe promised. */}
+            {!current.timer_seconds && !stepTimer && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(253,248,240,0.45)' }}>
+                {t('cookingMode.detectedTimer')}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => (stepTimer ? toggle(stepTimerId) : startStepTimer())}
+                style={{
+                  padding: '10px 22px', borderRadius: 99, border: 'none', cursor: 'pointer',
+                  background: stepTimer?.running ? 'rgba(253,248,240,0.15)' : 'var(--tomato)',
+                  color: stepTimer?.running ? 'var(--parchment)' : '#fffdf9',
+                  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
+                }}
+              >
+                {stepTimer?.running
+                  ? t('cookingMode.pause')
+                  : stepTimer && stepRemaining === 0
+                    ? t('cookingMode.restart')
+                    : t('cookingMode.startTimer')}
+              </button>
+              {stepTimer && (
+                <button
+                  onClick={() => addTime(stepTimerId, 60)}
+                  style={{
+                    padding: '10px 14px', borderRadius: 99, cursor: 'pointer',
+                    border: '1px solid rgba(253,248,240,0.25)', background: 'none',
+                    color: 'var(--parchment)', fontFamily: 'var(--font-mono)', fontSize: 13,
+                  }}
+                >{t('cookingMode.addMinute')}</button>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Timers started on other steps, still counting down */}
+      {otherTimers.length > 0 && (
+        <div style={{ borderTop: '1px solid rgba(253,248,240,0.12)', padding: '10px 20px 2px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(253,248,240,0.4)', marginBottom: 7 }}>
+            {t('cookingMode.alsoRunning')}
+          </div>
+          <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 8 }}>
+            {otherTimers.map(timer => {
+              const left = remainingOf(timer)
+              const done = left === 0
+              return (
+                <div
+                  key={timer.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+                    padding: '6px 8px 6px 11px', borderRadius: 99,
+                    border: `1px solid ${done ? 'var(--tomato)' : 'rgba(253,248,240,0.25)'}`,
+                    background: done ? 'rgba(193,67,47,0.22)' : 'none',
+                  }}
+                >
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(253,248,240,0.75)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {timer.label}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: done ? 'var(--tomato-deep)' : 'var(--parchment)' }}>
+                    {done ? t('cookingMode.timerDone') : formatDuration(left)}
+                  </span>
+                  <button
+                    onClick={() => dismiss(timer.id)}
+                    aria-label={t('cookingMode.dismissTimer')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(253,248,240,0.5)', fontSize: 15, lineHeight: 1, padding: '0 2px' }}
+                  >×</button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Nav buttons */}
       <div style={{ display: 'flex', gap: 10, padding: '16px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
