@@ -24,6 +24,14 @@ export function useT() {
 }
 
 const en = {
+  relative: {
+    today: 'today',
+    yesterday: 'yesterday',
+    days: (n) => `${n} days ago`,
+    weeks: (n) => `${n} week${n === 1 ? '' : 's'} ago`,
+    months: (n) => `${n} month${n === 1 ? '' : 's'} ago`,
+    years: (n) => `${n} year${n === 1 ? '' : 's'} ago`,
+  },
   collections: {
     title: 'Collections',
     empty: 'No collections yet.',
@@ -35,6 +43,8 @@ const en = {
     switchUnits: 'Switch units',
   },
   stats: {
+    forgotten: 'Loved, but not lately',
+    forgottenDesc: 'You rated these well and haven’t made them in months.',
     title: 'Stats',
     loading: 'loading stats…',
     tileRecipes: 'recipes',
@@ -231,6 +241,10 @@ const en = {
     saving: 'Saving…',
   },
   cookLog: {
+    trend: 'Over time',
+    lastCookedLabel: 'last',
+    byVariant: 'By version',
+    variantOriginal: 'Original',
     title: 'Cook log',
     cancel: 'Cancel',
     logCook: '+ Log a cook',
@@ -271,6 +285,7 @@ const en = {
     loading: 'loading your list…',
   },
   recipesView: {
+    lastCooked: (when) => `last ${when}`,
     title: 'Recipes',
     addBtn: '+ Add',
     allergenInfoTitle: 'Where do these come from?',
@@ -495,6 +510,14 @@ const en = {
 }
 
 const nl = {
+  relative: {
+    today: 'vandaag',
+    yesterday: 'gisteren',
+    days: (n) => `${n} dagen geleden`,
+    weeks: (n) => `${n} ${n === 1 ? 'week' : 'weken'} geleden`,
+    months: (n) => `${n} ${n === 1 ? 'maand' : 'maanden'} geleden`,
+    years: (n) => `${n} jaar geleden`,
+  },
   collections: {
     title: 'Collecties',
     empty: 'Nog geen collecties.',
@@ -506,6 +529,8 @@ const nl = {
     switchUnits: 'Eenheden wisselen',
   },
   stats: {
+    forgotten: 'Geliefd, maar al even niet',
+    forgottenDesc: 'Deze beoordeelde je goed en maakte je al maanden niet meer.',
     title: 'Statistieken',
     loading: 'statistieken laden…',
     tileRecipes: 'recepten',
@@ -702,6 +727,10 @@ const nl = {
     saving: 'Opslaan…',
   },
   cookLog: {
+    trend: 'Door de tijd',
+    lastCookedLabel: 'laatst',
+    byVariant: 'Per versie',
+    variantOriginal: 'Origineel',
     title: 'Kooklog',
     cancel: 'Annuleren',
     logCook: '+ Kookbeurt noteren',
@@ -742,6 +771,7 @@ const nl = {
     loading: 'lijst laden…',
   },
   recipesView: {
+    lastCooked: (when) => `laatst ${when}`,
     title: 'Recepten',
     addBtn: '+ Toevoegen',
     allergenInfoTitle: 'Waar komen deze vandaan?',

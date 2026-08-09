@@ -34,6 +34,31 @@ function clearRecipeCaches() {
   } catch {}
 }
 
+/**
+ * Roll the cook log up per recipe: how many times, when last, and how it went.
+ *
+ * One pass over the log rather than a query per card. `count` keeps the shape
+ * the recipe cards already expected, so nothing downstream had to change to
+ * gain the rest.
+ */
+function buildCookStats(entries) {
+  const stats = {}
+  for (const entry of entries || []) {
+    const id = entry?.recipe_id
+    if (!id) continue
+    if (!stats[id]) stats[id] = { count: 0, lastCooked: null, up: 0, down: 0 }
+    const stat = stats[id]
+    stat.count += 1
+    if (entry.thumbs === 'up') stat.up += 1
+    if (entry.thumbs === 'down') stat.down += 1
+    // Dates are plain YYYY-MM-DD, so string comparison is date comparison.
+    if (entry.cooked_date && (!stat.lastCooked || entry.cooked_date > stat.lastCooked)) {
+      stat.lastCooked = entry.cooked_date
+    }
+  }
+  return stats
+}
+
 // Read the Supabase session synchronously from localStorage so returning
 // users skip the splash entirely. Returns null if not logged in, undefined
 // if we can't tell (expired token or storage error — fall back to async getSession).
@@ -227,15 +252,15 @@ function AppInner({ setLanguage }) {
   const loadRecipes = async () => {
     if (isGuest) {
       setRecipes(DEMO_RECIPES)
-      const counts = {}
-      for (const entry of DEMO_COOK_LOG) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
-      setCookCounts(counts)
+      setCookCounts(buildCookStats(DEMO_COOK_LOG))
       return
     }
     setLoadingRecipes(true)
     const [{ data, error }, { data: logData }, { data: tagData }] = await Promise.all([
       supabase.from('recipes').select('*').order('created_at', { ascending: false }),
-      supabase.from('cook_log').select('recipe_id'),
+      // cooked_date and thumbs come along so cards can show "last cooked" and
+      // Stats can surface loved-but-forgotten recipes, without a second query.
+      supabase.from('cook_log').select('recipe_id, cooked_date, thumbs'),
       supabase.from('recipe_computed_tags').select('recipe_id, allergen_tags, is_vegan, is_vegetarian, is_pescatarian_or_better'),
     ])
     // A failed fetch (offline, expired refresh token, 5xx) yields data === null.
@@ -256,11 +281,7 @@ function AppInner({ setLanguage }) {
     }))
     setRecipes(freshRecipes)
     writeCachedRecipes(session?.user?.id, freshRecipes)
-    if (Array.isArray(logData)) {
-      const counts = {}
-      for (const entry of logData) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
-      setCookCounts(counts)
-    }
+    if (Array.isArray(logData)) setCookCounts(buildCookStats(logData))
     setLoadingRecipes(false)
     return freshRecipes
   }
@@ -591,7 +612,7 @@ function AppInner({ setLanguage }) {
         )}
         {activeTab === 'stats' && (
           <LazyScreen>
-            <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} />
+            <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} onSelectRecipe={openRecipe} />
           </LazyScreen>
         )}
         {activeTab === 'mealprep' && (

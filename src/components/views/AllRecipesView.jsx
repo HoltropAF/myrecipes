@@ -3,6 +3,7 @@ import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
+import { relativeDayLabel } from '../../lib/dateUtils'
 import { supabase } from '../../lib/supabase'
 import CollectionForm, { DEFAULT_COLLECTION_EMOJI } from '../CollectionForm'
 
@@ -24,6 +25,16 @@ export const CATEGORY_ORDER = [
   'Drinks',
   'Household',
 ]
+
+// dateUtils formats the shape; i18n supplies the words.
+const relativeLabels = (t) => ({
+  today: t('relative.today'),
+  yesterday: t('relative.yesterday'),
+  days: (n) => t('relative.days')(n),
+  weeks: (n) => t('relative.weeks')(n),
+  months: (n) => t('relative.months')(n),
+  years: (n) => t('relative.years')(n),
+})
 
 const GRID_PLACEHOLDER_COLORS = ['#fde8d8','#e8f3e0','#e0eaf8','#f8e8f0','#f8f3e0','#e8f0f8','#f0e8f8']
 
@@ -197,7 +208,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
       ) : viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {visibleRecipes.map(r => (
-            <GridCard key={r.id} recipe={r} onClick={() => onSelect(r)} cookCount={cookCounts[r.id] || 0} />
+            <GridCard key={r.id} recipe={r} onClick={() => onSelect(r)} cookStat={cookCounts[r.id]} />
           ))}
         </div>
       ) : (
@@ -206,7 +217,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
             <RecipeCard
               key={r.id} recipe={r} onClick={() => onSelect(r)}
               highlightIngredient={searchMode === 'ingredient' ? query : null}
-              compactMode={compactMode} cookCount={cookCounts[r.id] || 0}
+              compactMode={compactMode} cookStat={cookCounts[r.id]}
             />
           ))}
         </div>
@@ -358,7 +369,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
                 {subOpen && (
                   <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {items.map(r => (
-                      <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
+                      <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookStat={cookCounts[r.id]} />
                     ))}
                   </div>
                 )}
@@ -372,7 +383,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
             </div>
           )}
           {direct.map(r => (
-            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookCount={cookCounts[r.id] || 0} />
+            <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookStat={cookCounts[r.id]} />
           ))}
         </div>
       </div>
@@ -408,8 +419,12 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   )
 }
 
-export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookCount = 0 }) {
+export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookStat }) {
   const { t } = useT()
+  const cookCount = cookStat?.count || 0
+  // How long ago beats how many times when you're deciding what to cook —
+  // "3 weeks ago" tells you something "7x" does not.
+  const lastCooked = relativeDayLabel(cookStat?.lastCooked, relativeLabels(t))
   const matchedIngredient = highlightIngredient
     ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
@@ -430,8 +445,15 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
             </div>
           )}
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', flexShrink: 0, fontWeight: 600 }}>
-          {cookCount > 0 ? t('recipesView.cookedCount')(cookCount) : t('recipesView.notYetCooked')}
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', fontWeight: 600 }}>
+            {cookCount > 0 ? t('recipesView.cookedCount')(cookCount) : t('recipesView.notYetCooked')}
+          </div>
+          {lastCooked && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--charcoal-soft)', marginTop: 1 }}>
+              {lastCooked}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -461,6 +483,7 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
             : <>
                 {(r.ingredients || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.ingredients')} · {(r.steps || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.steps')}
                 {r.category ? ` · ${r.category}` : ''}
+                {lastCooked ? ` · ${t('recipesView.lastCooked')(lastCooked)}` : ''}
               </>
           }
         </div>
@@ -579,7 +602,8 @@ function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, 
   )
 }
 
-function GridCard({ recipe: r, onClick, cookCount = 0 }) {
+function GridCard({ recipe: r, onClick, cookStat }) {
+  const cookCount = cookStat?.count || 0
   const placeholderColor = GRID_PLACEHOLDER_COLORS[r.title.charCodeAt(0) % GRID_PLACEHOLDER_COLORS.length]
   return (
     <div onClick={onClick} style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--card)' }}>

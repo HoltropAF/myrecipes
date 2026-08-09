@@ -2,8 +2,19 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import LoadingGyoza from '../LoadingGyoza'
 import { useT } from '../../lib/i18n'
+import { daysBetween, relativeDayLabel } from '../../lib/dateUtils'
 
-export default function StatsView({ recipes, isGuest = false, demoCookLog = null }) {
+// dateUtils formats the shape; i18n supplies the words.
+const relativeLabels = (t) => ({
+  today: t('relative.today'),
+  yesterday: t('relative.yesterday'),
+  days: (n) => t('relative.days')(n),
+  weeks: (n) => t('relative.weeks')(n),
+  months: (n) => t('relative.months')(n),
+  years: (n) => t('relative.years')(n),
+})
+
+export default function StatsView({ recipes, isGuest = false, demoCookLog = null, onSelectRecipe }) {
   const { t, lang } = useT()
   const [cookLog, setCookLog] = useState([])
   const [loading, setLoading] = useState(true)
@@ -51,12 +62,29 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
     }
     const categoryList = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
 
+    const FORGOTTEN_AFTER_DAYS = 120
+    const forgotten = recipes
+      .map(recipe => {
+        const entries = cookLog.filter(e => e.recipe_id === recipe.id)
+        if (entries.length === 0) return null
+        const up = entries.filter(e => e.thumbs === 'up').length
+        const down = entries.filter(e => e.thumbs === 'down').length
+        if (up === 0 || down >= up) return null
+        const last = entries.reduce((a, e) => (e.cooked_date > a ? e.cooked_date : a), '')
+        const days = daysBetween(last)
+        if (days === null || days < FORGOTTEN_AFTER_DAYS) return null
+        return { recipe, up, last, days }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.days - a.days)
+      .slice(0, 5)
+
     const totalCooks = cookLog.length
     const totalRecipes = recipes.length
     const triedCount = recipes.filter(r => countByRecipe[r.id]).length
     const neverCooked = recipes.filter(r => !countByRecipe[r.id]).length
 
-    return { mostCooked, topRated, categoryList, totalCooks, totalRecipes, triedCount, neverCooked }
+    return { mostCooked, topRated, forgotten, categoryList, totalCooks, totalRecipes, triedCount, neverCooked }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes, cookLog, lang])
 
@@ -105,6 +133,35 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
             {stats.mostCooked.map(({ recipe, count }, i) => (
               <RankRow key={recipe.id} rank={i + 1} title={recipe.title} value={`${count}×`} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {stats.forgotten.length > 0 && (
+        <>
+          <SectionLabel>{t('stats.forgotten')}</SectionLabel>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: -4, marginBottom: 8 }}>
+            {t('stats.forgottenDesc')}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
+            {stats.forgotten.map(({ recipe, up, last }) => (
+              <button
+                key={recipe.id}
+                onClick={() => onSelectRecipe?.(recipe)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                  background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
+                  padding: '10px 12px', cursor: onSelectRecipe ? 'pointer' : 'default',
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {recipe.title}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', flexShrink: 0 }}>
+                  {'👍'} {up} · {relativeDayLabel(last, relativeLabels(t))}
+                </span>
+              </button>
             ))}
           </div>
         </>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
-import { todayLocalISO } from '../lib/dateUtils'
+import { todayLocalISO, relativeDayLabel } from '../lib/dateUtils'
 import CookLogForm from './CookLogForm'
 
 export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null, onLogged }) {
@@ -81,6 +81,34 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
   const upCount = entries.filter(e => e.thumbs === 'up').length
   const downCount = entries.filter(e => e.thumbs === 'down').length
 
+  // Entries arrive newest-first; the sparkline reads left-to-right in time.
+  const chronological = [...entries].reverse()
+  const lastCookedLabel = entries[0]?.cooked_date
+    ? relativeDayLabel(entries[0].cooked_date, {
+        today: t('relative.today'),
+        yesterday: t('relative.yesterday'),
+        days: (n) => t('relative.days')(n),
+        weeks: (n) => t('relative.weeks')(n),
+        months: (n) => t('relative.months')(n),
+        years: (n) => t('relative.years')(n),
+      })
+    : null
+
+  // variant_label has been written by every cook-log form since the beginning
+  // and never read back, so "which version actually wins" was unanswerable.
+  const byVariant = (() => {
+    const map = new Map()
+    for (const entry of entries) {
+      const key = entry.variant_label || ''
+      if (!map.has(key)) map.set(key, { label: key, count: 0, up: 0, down: 0 })
+      const row = map.get(key)
+      row.count += 1
+      if (entry.thumbs === 'up') row.up += 1
+      if (entry.thumbs === 'down') row.down += 1
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count)
+  })()
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -105,10 +133,65 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
         </div>
       )}
 
-      {!loading && entries.length > 0 && (upCount > 0 || downCount > 0) && (
-        <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-          {upCount > 0 && <span>👍 {upCount}</span>}
-          {downCount > 0 && <span>👎 {downCount}</span>}
+      {!loading && entries.length > 0 && (
+        <div style={{
+          background: 'var(--parchment-dim)', borderRadius: 10, padding: '11px 13px', marginBottom: 12,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
+              {t('cookLog.trend')}
+            </span>
+            {lastCookedLabel && (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
+                {t('cookLog.lastCookedLabel')} {lastCookedLabel}
+              </span>
+            )}
+          </div>
+
+          {/* One bar per cook, in order. Rated up is tall and sage, rated down
+              is short and tomato, unrated sits in between — so the shape of the
+              run is readable at a glance without a legend. */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 30, marginTop: 8 }}>
+            {chronological.map(entry => (
+              <div
+                key={entry.id}
+                title={entry.cooked_date}
+                style={{
+                  flex: 1, minWidth: 3, borderRadius: '2px 2px 0 0',
+                  height: entry.thumbs === 'up' ? '100%' : entry.thumbs === 'down' ? '35%' : '65%',
+                  background: entry.thumbs === 'down' ? 'var(--tomato)' : entry.thumbs === 'up' ? 'var(--sage)' : 'var(--line)',
+                }}
+              />
+            ))}
+          </div>
+
+          {(upCount > 0 || downCount > 0) && (
+            <div style={{ display: 'flex', gap: 14, marginTop: 7, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
+              {upCount > 0 && <span>👍 {upCount}</span>}
+              {downCount > 0 && <span>👎 {downCount}</span>}
+            </div>
+          )}
+
+          {byVariant.length > 1 && (
+            <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--charcoal-soft)', marginBottom: 5 }}>
+                {t('cookLog.byVariant')}
+              </div>
+              {byVariant.map(row => (
+                <div key={row.label || 'original'} style={{
+                  display: 'flex', justifyContent: 'space-between', gap: 10,
+                  fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--charcoal)', padding: '2px 0',
+                }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {row.label || t('cookLog.variantOriginal')}
+                  </span>
+                  <span style={{ flexShrink: 0, color: 'var(--charcoal-soft)' }}>
+                    {row.count}×{row.up > 0 ? ` · 👍 ${row.up}` : ''}{row.down > 0 ? ` · 👎 ${row.down}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
