@@ -297,11 +297,14 @@ const en = {
     loadingLabel: 'loading recipes…',
   },
   whatCanIMake: {
+    makeableNow: 'Makeable now',
+    missingOne: 'Missing one thing',
+    missingTwo: 'Missing two',
+    allBadge: 'all',
     heading: 'What can I make tonight?',
     placeholder: 'e.g. kip, knoflook, tomaat',
-    hint: 'Separate ingredients with commas.',
+    hint: 'Separate with commas. Salt, oil and other staples are assumed.',
     noMatch: 'No matches yet — try fewer or different ingredients.',
-    matchCount: (matched, total) => `${matched}/${total} match`,
   },
   mealPrep: {
     title: 'Meal Prep',
@@ -765,11 +768,14 @@ const nl = {
     loadingLabel: 'recepten laden…',
   },
   whatCanIMake: {
+    makeableNow: 'Nu te maken',
+    missingOne: 'Mist één ding',
+    missingTwo: 'Mist er twee',
+    allBadge: 'alles',
     heading: 'Wat kan ik vanavond maken?',
     placeholder: 'bijv. kip, knoflook, tomaat',
-    hint: 'Scheidt ingrediënten met komma\'s.',
+    hint: "Scheiden met komma's. Zout, olie en andere basics tellen we mee.",
     noMatch: 'Geen overeenkomsten — probeer minder of andere ingrediënten.',
-    matchCount: (matched, total) => `${matched}/${total} match`,
   },
   mealPrep: {
     title: 'Weekmenu',

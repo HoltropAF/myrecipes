@@ -1,37 +1,33 @@
 import { useState, useMemo } from 'react'
-import { normalizeName } from '../lib/ingredientParser'
 import { useT } from '../lib/i18n'
+import { rankByFridge, parseHaveList } from '../lib/fridgeMatch'
 
 export default function WhatCanIMake({ recipes, onSelect }) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
 
-  // Filter *after* normalising, not before. normalizeName strips descriptor words
-  // outright, so "fresh" or "verse" normalises to "" — and an empty needle makes
-  // name.includes(have) true for every recipe.
-  const haveIngredients = useMemo(
-    () => input.split(',').map(s => normalizeName(s.trim())).filter(s => s.length > 0),
-    [input]
+  const haveIngredients = useMemo(() => parseHaveList(input), [input])
+
+  const { makeable, missingOne, missingTwo } = useMemo(
+    () => rankByFridge(recipes, haveIngredients),
+    [recipes, haveIngredients]
   )
 
-  const matches = useMemo(() => {
-    if (haveIngredients.length === 0) return []
-    const scored = recipes.map(r => {
-      const recipeIngredientNames = (r.ingredients || [])
-        .flatMap(g => g.items || [])
-        .map(item => normalizeName(item.name || ''))
-        .filter(name => name.length > 0)
-      const matchCount = haveIngredients.filter(have =>
-        recipeIngredientNames.some(name => name.includes(have) || have.includes(name))
-      ).length
-      return { recipe: r, matchCount }
+  const totalResults = makeable.length + missingOne.length + missingTwo.length
+
+  // Remove one term by rewriting the box, so the text field stays the single
+  // source of truth rather than keeping a parallel list in state.
+  const removeTerm = (index) => {
+    const parts = input.split(',')
+    let seen = -1
+    const kept = parts.filter(part => {
+      if (parseHaveList(part).length === 0) return true
+      seen += 1
+      return seen !== index
     })
-    return scored
-      .filter(s => s.matchCount > 0)
-      .sort((a, b) => b.matchCount - a.matchCount)
-      .slice(0, 8)
-  }, [recipes, haveIngredients])
+    setInput(kept.join(',').replace(/^\s*,\s*/, ''))
+  }
 
   return (
     <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
@@ -63,38 +59,112 @@ export default function WhatCanIMake({ recipes, onSelect }) {
               boxSizing: 'border-box', marginBottom: 10,
             }}
           />
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', marginBottom: matches.length > 0 ? 10 : 0 }}>
+          {haveIngredients.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+              {haveIngredients.map((term, i) => (
+                <button
+                  key={term}
+                  onClick={() => removeTerm(i)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 9px', borderRadius: 99, cursor: 'pointer',
+                    border: '1px solid var(--sage)', background: 'var(--sage-light)',
+                    color: 'var(--sage)', fontFamily: 'var(--font-mono)', fontSize: 11,
+                  }}
+                >{term}<span style={{ opacity: 0.7 }}>✕</span></button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', marginBottom: totalResults > 0 ? 10 : 0 }}>
             {t('whatCanIMake.hint')}
           </div>
 
-          {haveIngredients.length > 0 && matches.length === 0 && (
+          {haveIngredients.length > 0 && totalResults === 0 && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
               {t('whatCanIMake.noMatch')}
             </div>
           )}
 
-          {matches.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {matches.map(({ recipe, matchCount }) => (
-                <button
-                  key={recipe.id}
-                  onClick={() => onSelect(recipe)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    padding: '10px 12px', borderRadius: 9, border: '1px solid var(--line)',
-                    background: 'var(--parchment)', cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>{recipe.title}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)', flexShrink: 0 }}>
-                    {t('whatCanIMake.matchCount')(matchCount, haveIngredients.length)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          <ResultGroup
+            label={t('whatCanIMake.makeableNow')}
+            tone="sage"
+            results={makeable}
+            onSelect={onSelect}
+            t={t}
+          />
+          <ResultGroup
+            label={t('whatCanIMake.missingOne')}
+            tone="amber"
+            results={missingOne}
+            onSelect={onSelect}
+            t={t}
+          />
+          <ResultGroup
+            label={t('whatCanIMake.missingTwo')}
+            tone="muted"
+            results={missingTwo}
+            onSelect={onSelect}
+            t={t}
+          />
         </div>
       )}
+    </div>
+  )
+}
+
+const TONES = {
+  sage:  { border: 'var(--sage)',  text: 'var(--sage)' },
+  amber: { border: 'var(--tomato)', text: 'var(--tomato-deep)' },
+  muted: { border: 'var(--line)',  text: 'var(--charcoal-soft)' },
+}
+
+function ResultGroup({ label, tone, results, onSelect, t }) {
+  if (results.length === 0) return null
+  const colours = TONES[tone] || TONES.muted
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase',
+        letterSpacing: '0.08em', color: 'var(--charcoal-soft)', marginBottom: 5,
+      }}>{label} · {results.length}</div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {results.map(({ recipe, missing }) => (
+          <button
+            key={recipe.id}
+            onClick={() => onSelect(recipe)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: '10px 12px', borderRadius: 9,
+              border: `1px solid ${colours.border}`,
+              background: 'var(--parchment)', cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, flexShrink: 0,
+              color: colours.text, minWidth: 26, textAlign: 'center',
+            }}>
+              {missing.length === 0 ? t('whatCanIMake.allBadge') : `−${missing.length}`}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--charcoal)' }}>
+                {recipe.title}
+              </span>
+              {/* Naming what's missing is the whole point — "one mango away"
+                  beats any score. */}
+              {missing.length > 0 && (
+                <span style={{
+                  display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10.5,
+                  color: 'var(--charcoal-soft)', marginTop: 2,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{missing.join(' · ')}</span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

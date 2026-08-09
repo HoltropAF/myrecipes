@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName, formatAmount } from '../../lib/ingredientParser'
-import { classifyAisle, isPantryStaple, AISLE_ORDER } from '../../lib/aisles'
+import { classifyAisle, isAlwaysStocked, AISLE_ORDER } from '../../lib/aisles'
 import LoadingGyoza from '../LoadingGyoza'
 import SwipeToDelete from '../SwipeToDelete'
 import { useT } from '../../lib/i18n'
@@ -96,7 +96,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
           recipeIds: new Set(),
           checked: true,
           aisle: classifyAisle(item.name),
-          staple: isPantryStaple(key),
+          staple: isAlwaysStocked(key),
         }
       }
       const g = grouped[key]

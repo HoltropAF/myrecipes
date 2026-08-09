@@ -71,17 +71,32 @@ export function classifyAisle(name) {
   return 'overig'
 }
 
-// Things almost everyone already has in the cupboard. Used to fade them down
-// the shopping list instead of letting "zout" sit between two things you
-// genuinely need to buy, and to keep them out of meal-prep pairing suggestions.
+// Two different questions that look like one.
 //
-// Lived in MealPrepView until now, which is why it was invisible to the
-// shopping list — pure helpers belong in lib/.
+// PANTRY_STAPLES — "so common that sharing it means nothing". Used by meal-prep
+// pairing, where onion and garlic genuinely are noise: nearly every savoury
+// recipe has them, so pairing on them would suggest everything goes with
+// everything. Lived in MealPrepView until now, which is why it was invisible to
+// the shopping list.
 export const PANTRY_STAPLES = new Set([
   'zout', 'peper', 'olijfolie', 'olie', 'water', 'suiker', 'boter', 'bloem',
   'salt', 'pepper', 'oil', 'sugar', 'butter', 'flour', 'ui', 'onion', 'knoflook', 'garlic',
 ])
 
+// ALWAYS_STOCKED — "you certainly have this already". A narrower claim, and the
+// right one for fading the shopping list and for deciding whether a recipe is
+// makeable tonight. Onion and garlic are deliberately absent: you often do need
+// to buy them, and treating them as assumed made onion recipes vanish from
+// "what can I make".
+export const ALWAYS_STOCKED = new Set([
+  'zout', 'peper', 'olijfolie', 'olie', 'zonnebloemolie', 'water', 'suiker', 'boter', 'bloem',
+  'salt', 'pepper', 'oil', 'olive oil', 'sugar', 'butter', 'flour',
+])
+
 export function isPantryStaple(normalisedName) {
   return PANTRY_STAPLES.has(String(normalisedName || '').trim())
+}
+
+export function isAlwaysStocked(normalisedName) {
+  return ALWAYS_STOCKED.has(String(normalisedName || '').trim())
 }
