@@ -36,6 +36,7 @@ const SEARCH_INDEX = [
   { section: 'backup',     key: 'settings.importBackup',         extra: 'import restore merge replace herstellen importeren' },
   { section: 'backup',     key: 'settings.storageLabel',         extra: 'storage cache space offline opslag ruimte wissen' },
   { section: 'general',    key: 'settings.instanceLabel',        extra: 'instance version build supabase project versie' },
+  { section: 'general',    key: 'settings.checkForUpdates',      extra: 'update upgrade new version bijwerken update versie nieuw' },
 ]
 
 export default function SettingsView({
@@ -44,6 +45,9 @@ export default function SettingsView({
   recipeViewMode, recipeSearchMode, compactMode,
   language,
   onSavePreferences,
+  updateReady = false,
+  onApplyUpdate,
+  onCheckUpdate,
 }) {
   const { t } = useT()
 
@@ -151,6 +155,9 @@ export default function SettingsView({
             userEmail={userEmail}
             language={draft.language}
             onLanguageChange={v => patch('language', v)}
+            updateReady={updateReady}
+            onApplyUpdate={onApplyUpdate}
+            onCheckUpdate={onCheckUpdate}
           />
         )}
 
@@ -459,9 +466,31 @@ function StorageRow({ label, value }) {
 
 // Which build and which database — the two things you need before you can
 // report a problem on a self-hosted copy.
-function InstanceCard() {
+function InstanceCard({ updateReady, onApplyUpdate, onCheckUpdate }) {
   const { t } = useT()
   const info = useMemo(() => readInstanceInfo(), [])
+  const [checking, setChecking] = useState(false)
+  const [result, setResult] = useState(null)
+
+  // The update banner has a dismiss button, and dismissing it used to be the
+  // end of the road until the next reload — there was nowhere else to update
+  // from, and no way to tell whether you were already current.
+  const handleCheck = async () => {
+    setChecking(true)
+    setResult(null)
+    const outcome = await onCheckUpdate?.()
+    setChecking(false)
+    if (!outcome?.supported) setResult('unsupported')
+    else if (outcome.failed) setResult('failed')
+    else setResult(outcome.found ? 'found' : 'current')
+  }
+
+  const RESULT_TEXT = {
+    current: t('settings.updateCurrent'),
+    found: t('settings.updateFound'),
+    failed: t('settings.updateCheckFailed'),
+    unsupported: t('settings.updateUnsupported'),
+  }
 
   return (
     <div style={cardStyle}>
@@ -472,6 +501,39 @@ function InstanceCard() {
           <StorageRow label={t('settings.instanceBuild')} value={info.buildDate.slice(0, 10)} />
         )}
       </div>
+
+      <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }} />
+
+      {updateReady ? (
+        <>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, marginBottom: 8 }}>
+            {t('settings.updateWaiting')}
+          </div>
+          <button
+            onClick={onApplyUpdate}
+            style={{
+              width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+              background: 'var(--tomato)', color: '#fffdf9',
+              fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+            }}
+          >{t('settings.updateNow')}</button>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={handleCheck}
+            disabled={checking}
+            style={{ ...secondaryBtnStyle, width: '100%' }}
+          >{checking ? t('settings.updateChecking') : t('settings.checkForUpdates')}</button>
+          {result && (
+            <div style={{
+              ...hintStyle, marginTop: 6,
+              color: result === 'current' ? 'var(--sage)' : 'var(--charcoal-soft)',
+            }}>{RESULT_TEXT[result]}</div>
+          )}
+        </>
+      )}
+
       <a
         href="https://github.com/HoltropAF/myrecipes/commits/main"
         target="_blank" rel="noopener noreferrer"
@@ -823,7 +885,7 @@ function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
   )
 }
 
-function GeneralSection({ userEmail, language, onLanguageChange }) {
+function GeneralSection({ userEmail, language, onLanguageChange, updateReady, onApplyUpdate, onCheckUpdate }) {
   const { t } = useT()
   return (
     <>
@@ -853,7 +915,7 @@ function GeneralSection({ userEmail, language, onLanguageChange }) {
       </div>
 
       <SectionLabel>{t('settings.instanceSectionLabel')}</SectionLabel>
-      <InstanceCard />
+      <InstanceCard updateReady={updateReady} onApplyUpdate={onApplyUpdate} onCheckUpdate={onCheckUpdate} />
 
       <SectionLabel>{t('settings.linksLabel')}</SectionLabel>
       <div style={cardStyle}>

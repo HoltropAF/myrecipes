@@ -145,6 +145,7 @@ function AppInner({ setLanguage }) {
   // so it can't purge the running tab's chunks out from under it). We show the
   // banner, and only activate it when the user says so.
   const waitingWorkerRef = useRef(null)
+  const registrationRef = useRef(null)
   const updatingRef = useRef(false)
 
   useEffect(() => {
@@ -155,6 +156,7 @@ function AppInner({ setLanguage }) {
       if (updatingRef.current) window.location.reload()
     })
     navigator.serviceWorker.ready.then(reg => {
+      registrationRef.current = reg
       const markWaiting = (worker) => {
         waitingWorkerRef.current = worker
         setUpdateReady(true)
@@ -171,6 +173,22 @@ function AppInner({ setLanguage }) {
       })
     })
   }, [])
+
+  const checkForUpdate = async () => {
+    const reg = registrationRef.current
+    if (!reg) return { supported: false, found: false }
+    try {
+      await reg.update()
+      const waiting = reg.waiting
+      if (waiting) {
+        waitingWorkerRef.current = waiting
+        setUpdateReady(true)
+      }
+      return { supported: true, found: !!waiting }
+    } catch {
+      return { supported: true, found: false, failed: true }
+    }
+  }
 
   const applyUpdate = () => {
     const waiting = waitingWorkerRef.current
@@ -670,6 +688,9 @@ function AppInner({ setLanguage }) {
                 compactMode={compactMode}
                 language={lang}
                 onSavePreferences={handleSaveSettings}
+                updateReady={updateReady}
+                onApplyUpdate={applyUpdate}
+                onCheckUpdate={checkForUpdate}
               />
             </LazyScreen>
           )
