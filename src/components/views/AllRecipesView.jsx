@@ -205,6 +205,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
           recipes={visibleRecipes} onSelect={onSelect} onAdd={onAdd} defaultOpenCategory={defaultOpenCategory}
           lastOpened={lastOpenedFolder} setLastOpened={setLastOpenedFolder}
           compactMode={compactMode} cookCounts={cookCounts}
+          onSearchEverywhere={(term) => setQuery(term)}
         />
       ) : visibleRecipes.length === 0 ? (
         <Empty>{query || activeFilterCount > 0 || activeCollection ? t('recipesView.noMatch') : t('recipesView.noRecipes')}</Empty>
@@ -253,8 +254,11 @@ function FilterGroup({ label, options, active, onSelect }) {
 }
 
 // Folder/cookbook browse mode — operates on the already-filtered recipe list
-function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened, compactMode = false, cookCounts = {} }) {
+function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened, setLastOpened, compactMode = false, cookCounts = {}, onSearchEverywhere }) {
   const { t } = useT()
+  // Search inside the open category. Scoped by default, because when you are
+  // standing in Main dishes that is almost always what you meant.
+  const [catSearch, setCatSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState(defaultOpenCategory || null)
   const [openSubcategories, setOpenSubcategories] = useState({})
 
@@ -280,6 +284,12 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
         map[cat].direct.push(r)
       }
     }
+    // Categories in CATEGORY_ORDER that hold nothing are included rather than
+    // silently absent, so the editorial structure stays visible and an empty
+    // shelf reads as a prompt to fill it or drop it. They are folded away below.
+    for (const cat of CATEGORY_ORDER) {
+      if (!map[cat]) map[cat] = { direct: [], subcategories: {}, empty: true }
+    }
     return Object.entries(map).sort((a, b) => {
       const ai = CATEGORY_ORDER.indexOf(a[0])
       const bi = CATEGORY_ORDER.indexOf(b[0])
@@ -290,12 +300,18 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
     })
   }, [recipes])
 
+  const [showEmpty, setShowEmpty] = useState(false)
+  const filled = tree.filter(([, v]) => !v.empty)
+  const empties = tree.filter(([, v]) => v.empty)
+
   const openCategoryPage = (cat) => {
     window.history.pushState({ screen: 'category' }, '')
+    setCatSearch('')
     setActiveCategory(cat)
     setLastOpened({ category: cat, subcategory: null })
   }
   const closeCategoryPage = () => {
+    setCatSearch('')
     setActiveCategory(null)
     if (window.history.state?.screen === 'category') window.history.back()
   }
@@ -333,7 +349,23 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   const activeEntry = activeCategory ? tree.find(([cat]) => cat === activeCategory) : null
   if (activeEntry) {
     const [cat, { direct, subcategories }] = activeEntry
-    const subEntries = Object.entries(subcategories).sort((a, b) => b[1].length - a[1].length)
+    const q = catSearch.trim().toLowerCase()
+    const hits = (r) =>
+      !q ||
+      r.title.toLowerCase().includes(q) ||
+      (r.tagline || '').toLowerCase().includes(q) ||
+      (r.subcategory || '').toLowerCase().includes(q) ||
+      (r.tags || []).some(tag => tag.toLowerCase().includes(q))
+
+    const subEntries = Object.entries(subcategories)
+      .map(([name, items]) => [name, items.filter(hits)])
+      .filter(([, items]) => items.length > 0)
+      .sort((a, b) => b[1].length - a[1].length)
+    const directHits = direct.filter(hits)
+    const inHere = directHits.length + subEntries.reduce((n, [, items]) => n + items.length, 0)
+    // How much you would gain by widening — the number is the argument for it.
+    const elsewhere = q ? recipes.filter(r => r.category !== cat && hits(r)).length : 0
+
     return (
       <div>
         <button
@@ -345,14 +377,50 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
           }}
         >‹ {t('recipesView.backToCategories')}</button>
 
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--charcoal)', marginBottom: 14 }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--charcoal)', marginBottom: 10 }}>
           {cat}
         </h2>
+
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 12 }}>
+          <input
+            type="search"
+            value={catSearch}
+            onChange={e => setCatSearch(e.target.value)}
+            placeholder={t('recipesView.searchInCategory')(cat)}
+            style={{
+              flex: 1, minWidth: 0, padding: '9px 12px', borderRadius: 9, border: '1px solid var(--line)',
+              background: 'var(--card)', color: 'var(--charcoal)',
+              fontFamily: 'var(--font-body)', fontSize: 14, boxSizing: 'border-box', outline: 'none',
+            }}
+          />
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)',
+            flexShrink: 0, whiteSpace: 'nowrap',
+          }}>{t('recipesView.inHere')(inHere)}</span>
+        </div>
+
+        {q && elsewhere > 0 && (
+          <button
+            onClick={() => { const term = catSearch; closeCategoryPage(); onSearchEverywhere?.(term) }}
+            style={{
+              display: 'block', width: '100%', marginBottom: 12, padding: '8px 12px',
+              borderRadius: 9, border: '1px dashed var(--tomato)', background: 'none',
+              color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 11.5,
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >{t('recipesView.searchEverywhere')(elsewhere)}</button>
+        )}
+
+        {q && inHere === 0 && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--charcoal-soft)', marginBottom: 12 }}>
+            {t('recipesView.noneInCategory')(cat)}
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {subEntries.map(([subcat, items]) => {
             const subKey = `${cat}::${subcat}`
-            const subOpen = !!openSubcategories[subKey]
+            const subOpen = !!openSubcategories[subKey] || !!q
             return (
               <div key={subcat} style={{ background: 'var(--parchment-dim)', borderRadius: 10, overflow: 'hidden' }}>
                 <button
@@ -380,12 +448,12 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
             )
           })}
 
-          {direct.length > 0 && subEntries.length > 0 && (
+          {directHits.length > 0 && subEntries.length > 0 && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>
               {t('recipesView.other')} {cat.toLowerCase()}
             </div>
           )}
-          {direct.map(r => (
+          {directHits.map(r => (
             <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} compactMode={compactMode} cookStat={cookCounts[r.id]} />
           ))}
         </div>
@@ -396,7 +464,7 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   // Top-level category list — tapping a category navigates to its detail page
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {tree.map(([cat, { direct, subcategories }], catIndex) => {
+      {filled.map(([cat, { direct, subcategories }], catIndex) => {
         const totalCount = direct.length + Object.values(subcategories).flat().length
 
         return (
@@ -418,6 +486,42 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
           </button>
         )
       })}
+
+      {empties.length > 0 && (
+        <>
+          <button
+            onClick={() => setShowEmpty(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px',
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase',
+              letterSpacing: '0.09em', color: 'var(--charcoal-soft)', flexShrink: 0,
+            }}>{t('recipesView.emptyCategories')(empties.length)}</span>
+            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+          </button>
+
+          {showEmpty && (
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', padding: '0 2px' }}>
+              {empties.map(([cat]) => (
+                <button
+                  key={cat}
+                  onClick={() => onAdd?.({ category: cat, subcategory: null })}
+                  disabled={!onAdd}
+                  style={{
+                    padding: '5px 11px', borderRadius: 99, cursor: onAdd ? 'pointer' : 'default',
+                    border: '1px dashed var(--line)', background: 'none',
+                    color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11,
+                  }}
+                >{cat}{onAdd ? ' +' : ''}</button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

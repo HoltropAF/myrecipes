@@ -304,6 +304,11 @@ const en = {
     loading: 'loading your list…',
   },
   recipesView: {
+    emptyCategories: (n) => `${n} empty ${n === 1 ? 'category' : 'categories'}`,
+    searchInCategory: (cat) => `Search ${cat.toLowerCase()}`,
+    inHere: (n) => `${n} here`,
+    searchEverywhere: (n) => `${n} more elsewhere — search everything`,
+    noneInCategory: (cat) => `Nothing in ${cat.toLowerCase()} matches.`,
     lastCooked: (when) => `last ${when}`,
     title: 'Recipes',
     addBtn: '+ Add',
@@ -829,6 +834,11 @@ const nl = {
     loading: 'lijst laden…',
   },
   recipesView: {
+    emptyCategories: (n) => `${n} lege ${n === 1 ? 'categorie' : 'categorieën'}`,
+    searchInCategory: (cat) => `Zoek in ${cat.toLowerCase()}`,
+    inHere: (n) => `${n} hier`,
+    searchEverywhere: (n) => `${n} elders — zoek overal`,
+    noneInCategory: (cat) => `Niets in ${cat.toLowerCase()} komt overeen.`,
     lastCooked: (when) => `laatst ${when}`,
     title: 'Recepten',
     addBtn: '+ Toevoegen',
