@@ -4,6 +4,7 @@ import WhatCanIMake from '../WhatCanIMake'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
+import CollectionForm, { DEFAULT_COLLECTION_EMOJI } from '../CollectionForm'
 
 export const CATEGORY_ICONS = {
   'Breakfast & Brunch': '🍳', 'Appetizers & Snacks': '🥟', 'Soups & Salads': '🥗',
@@ -243,6 +244,16 @@ function FolderView({ recipes, onSelect, onAdd, defaultOpenCategory, lastOpened,
   const [activeCategory, setActiveCategory] = useState(defaultOpenCategory || null)
   const [openSubcategories, setOpenSubcategories] = useState({})
 
+  // Opening straight into a default category skips openCategoryPage, so no
+  // history entry exists for it. Push one on mount, otherwise the first back
+  // swipe pops the app's own entry and leaves the site instead of returning to
+  // the category list.
+  useEffect(() => {
+    if (!defaultOpenCategory) return
+    window.history.pushState({ screen: 'category' }, '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const tree = useMemo(() => {
     const map = {}
     for (const r of recipes) {
@@ -469,7 +480,7 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
             {!r.is_vegan && r.is_vegetarian && <AllergenBadge diet>{t('diet.vegetarian')}</AllergenBadge>}
             {!r.is_vegan && !r.is_vegetarian && r.is_pescatarian_or_better && <AllergenBadge diet>{t('diet.pescatarian')}</AllergenBadge>}
             {(r.allergen_tags || []).map(tag => (
-              <AllergenBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</AllergenBadge>
+              <AllergenBadge key={tag}>{t(`allergens.${tag}`, ALLERGEN_LABELS[tag] || tag)}</AllergenBadge>
             ))}
           </div>
         )}
@@ -478,12 +489,11 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
   )
 }
 
-const COLLECTION_EMOJIS = ['📚','✨','❤️','🌟','🍝','🔥','🌿','🎉','🧁','☕','🥗','🍜']
-
 function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, onChanged }) {
+  const { t } = useT()
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newEmoji, setNewEmoji] = useState('📚')
+  const [newEmoji, setNewEmoji] = useState(DEFAULT_COLLECTION_EMOJI)
   const [busy, setBusy] = useState(false)
 
   const handleCreate = async () => {
@@ -497,7 +507,7 @@ function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, 
     }
     setCreating(false)
     setNewName('')
-    setNewEmoji('📚')
+    setNewEmoji(DEFAULT_COLLECTION_EMOJI)
     setBusy(false)
   }
 
@@ -505,13 +515,13 @@ function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, 
     return (
       <div style={{ marginBottom: 14 }}>
         <button
-          onClick={() => { setCreating(true); setNewName('Dopamine Menu'); setNewEmoji('✨') }}
+          onClick={() => { setCreating(true); setNewName(t('collections.dopamineMenu')); setNewEmoji('✨') }}
           style={{
             padding: '7px 14px', borderRadius: 99, border: '1px dashed var(--line)',
             background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)',
             fontSize: 12, cursor: 'pointer',
           }}
-        >✨ Dopamine Menu</button>
+        >✨ {t('collections.dopamineMenu')}</button>
       </div>
     )
   }
@@ -555,30 +565,14 @@ function CollectionsBar({ collections, collectionRecipeMap, activeId, onSelect, 
 
       {creating && (
         <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
-            {COLLECTION_EMOJIS.map(e => (
-              <button key={e} onClick={() => setNewEmoji(e)} style={{
-                fontSize: 18, border: newEmoji === e ? '2px solid var(--tomato)' : '2px solid transparent',
-                background: 'none', borderRadius: 6, cursor: 'pointer', padding: '2px 4px',
-              }}>{e}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              autoFocus value={newName} onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
-              placeholder="Collection name"
-              style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'var(--font-body)', fontSize: 13, background: 'var(--parchment)', color: 'var(--charcoal)', outline: 'none' }}
-            />
-            <button onClick={handleCreate} disabled={busy || !newName.trim()} style={{
-              padding: '8px 14px', borderRadius: 8, border: 'none',
-              background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            }}>Create</button>
-            <button onClick={() => setCreating(false)} style={{
-              padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)',
-              background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
-            }}>✕</button>
-          </div>
+          <CollectionForm
+            name={newName} setName={setNewName}
+            emoji={newEmoji} setEmoji={setNewEmoji}
+            onCreate={handleCreate}
+            onCancel={() => setCreating(false)}
+            busy={busy}
+            compactPadding
+          />
         </div>
       )}
     </div>

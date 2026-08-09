@@ -23,10 +23,25 @@ const UNCONVERTIBLE = new Set([
   'blok', 'stengel', 'kop',
 ])
 
+// Normalise unit spellings that mean the same thing, so "cups" converts exactly
+// like "cup" instead of silently refusing.
+const UNIT_ALIASES = {
+  cups: 'cup', tsps: 'tsp', teaspoon: 'tsp', teaspoons: 'tsp',
+  tbsps: 'tbsp', tablespoon: 'tbsp', tablespoons: 'tbsp',
+  ounce: 'oz', ounces: 'oz', pound: 'lb', pounds: 'lb', lbs: 'lb',
+  gram: 'g', grams: 'g', gr: 'g', kilogram: 'kg', kilograms: 'kg',
+  milliliter: 'ml', milliliters: 'ml', liter: 'l', liters: 'l', litre: 'l', litres: 'l',
+}
+
 export function convertIngredient(item, targetSystem) {
   // targetSystem: 'metric' | 'us'
-  if (item.amount === null || item.amount === undefined || !item.unit) return item
-  const unit = item.unit.toLowerCase()
+  // Amounts are numeric in the DB, but older rows may hold a string from a
+  // wizard bug — coerce rather than trusting the type.
+  const amount = typeof item.amount === 'number' ? item.amount : Number(item.amount)
+  if (!Number.isFinite(amount) || !item.unit) return item
+  if (amount !== item.amount) item = { ...item, amount }
+  const raw = String(item.unit).toLowerCase().trim()
+  const unit = UNIT_ALIASES[raw] || raw
   if (UNCONVERTIBLE.has(unit)) return item
 
   if (targetSystem === 'us' && METRIC_TO_US[unit]) {
@@ -47,10 +62,13 @@ function roundNice(value) {
 }
 
 // Convert oven temperatures mentioned in step text, e.g. "200°C" <-> "400°F", "180 graden" -> "356°F"
-const CELSIUS_PATTERN = /(\d{2,3})\s*(?:°c|graden|degrees?\s*c)\b/gi
-const FAHRENHEIT_PATTERN = /(\d{3})\s*(?:°f|degrees?\s*f)\b/gi
+// `\b` after "c"/"f" never matched "…degrees Celsius", and requiring three
+// digits for Fahrenheit meant "95°F" never converted back.
+const CELSIUS_PATTERN = /(\d{2,3})\s*(?:°\s*c|graden(?:\s*celsius)?|degrees?\s*c(?:elsius)?)(?![a-z])/gi
+const FAHRENHEIT_PATTERN = /(\d{2,3})\s*(?:°\s*f|graden\s*fahrenheit|degrees?\s*f(?:ahrenheit)?)(?![a-z])/gi
 
 export function convertStepTemperatures(text, targetSystem) {
+  if (typeof text !== 'string') return text
   if (targetSystem === 'us') {
     return text.replace(CELSIUS_PATTERN, (match, num) => {
       const f = Math.round((parseInt(num, 10) * 9 / 5) + 32)
@@ -64,8 +82,11 @@ export function convertStepTemperatures(text, targetSystem) {
   }
 }
 
-export function formatConvertedAmount(amount) {
-  if (amount === null || amount === undefined) return ''
+export function formatConvertedAmount(value) {
+  if (value === null || value === undefined || value === '') return ''
+  // Tolerate a non-numeric amount rather than throwing during render.
+  const amount = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(amount)) return String(value)
   if (Number.isInteger(amount)) return String(amount)
   // Show common fractions nicely for US units (0.25 -> 1/4, 0.5 -> 1/2, 0.75 -> 3/4)
   const fractions = { 0.25: '¼', 0.5: '½', 0.75: '¾', 0.33: '⅓', 0.67: '⅔' }

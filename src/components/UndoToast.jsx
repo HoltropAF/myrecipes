@@ -1,10 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useT } from '../lib/i18n'
 
 export default function UndoToast({ message, onUndo, onDismiss, duration = 5000 }) {
+  const { t } = useT()
+  // Held in a ref so a new onDismiss identity from the parent doesn't restart
+  // the auto-dismiss timer — the toast used to outlive the 5s undo window.
+  const dismissRef = useRef(onDismiss)
+  useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
+
   useEffect(() => {
-    const t = setTimeout(onDismiss, duration)
-    return () => clearTimeout(t)
-  }, [onDismiss, duration])
+    const timer = setTimeout(() => dismissRef.current?.(), duration)
+    return () => clearTimeout(timer)
+  }, [duration])
 
   return (
     <div style={{
@@ -18,7 +25,7 @@ export default function UndoToast({ message, onUndo, onDismiss, duration = 5000 
         <button
           onClick={onUndo}
           style={{ background: 'none', border: 'none', color: 'var(--tomato-deep)', fontWeight: 700, fontFamily: 'var(--font-body)', fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
-        >Undo</button>
+        >{t('app.undo')}</button>
       )}
     </div>
   )

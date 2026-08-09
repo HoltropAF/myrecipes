@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 
 export default function TagPicker({ tags, setTags, existingTags = [] }) {
+  const { t } = useT()
   const [input, setInput] = useState('')
 
   const addTag = (tag) => {
@@ -35,7 +37,7 @@ export default function TagPicker({ tags, setTags, existingTags = [] }) {
         onKeyDown={e => {
           if (e.key === 'Enter') { e.preventDefault(); addTag(input) }
         }}
-        placeholder="Type a tag and press Enter…"
+        placeholder={t('tagPicker.placeholder')}
         style={{
           width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
           background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, boxSizing: 'border-box',

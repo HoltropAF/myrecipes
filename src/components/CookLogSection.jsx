@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
+import { todayLocalISO } from '../lib/dateUtils'
+import CookLogForm from './CookLogForm'
 
-export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null }) {
+export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null, onLogged }) {
   const { t } = useT()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayLocalISO)
   const [thumbs, setThumbs] = useState(null)
   const [notes, setNotes] = useState('')
   const [variantLabel, setVariantLabel] = useState('')
@@ -30,7 +32,8 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [recipeId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [recipeId, isGuest])
 
   const handleSave = async () => {
     setSaving(true)
@@ -60,13 +63,19 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
     setThumbs(null)
     setNotes('')
     setVariantLabel('')
-    setDate(new Date().toISOString().slice(0, 10))
+    setDate(todayLocalISO())
     load()
+    onLogged?.()
   }
 
   const handleDeleteEntry = async (id) => {
-    await supabase.from('cook_log').delete().eq('id', id)
+    const { error: deleteError } = await supabase.from('cook_log').delete().eq('id', id)
+    if (deleteError) {
+      setError(t('cookLog.saveError'))
+      return
+    }
     load()
+    onLogged?.()
   }
 
   const upCount = entries.filter(e => e.thumbs === 'up').length
@@ -85,50 +94,14 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
       {showForm && (
         <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-            <span style={labelTextStyle}>{t('cookLog.dateLabel')}</span>
-            <input
-              type="date" value={date} onChange={e => setDate(e.target.value)}
-              style={inputStyle}
-            />
-          </label>
-
-          {variants.length > 0 && (
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-              <span style={labelTextStyle}>{t('cookLog.whichVersion')}</span>
-              <select value={variantLabel} onChange={e => setVariantLabel(e.target.value)} style={inputStyle}>
-                <option value="">{t('cookLog.original')}</option>
-                {variants.map(v => <option key={v.id} value={v.label}>{v.label}</option>)}
-              </select>
-            </label>
-          )}
-
-          <div style={{ marginBottom: 12 }}>
-            <span style={labelTextStyle}>{t('cookLog.howWasIt')}</span>
-            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-              <ThumbButton active={thumbs === 'up'} onClick={() => setThumbs(thumbs === 'up' ? null : 'up')}>{t('cookLog.good')}</ThumbButton>
-              <ThumbButton active={thumbs === 'down'} onClick={() => setThumbs(thumbs === 'down' ? null : 'down')}>{t('cookLog.notGreat')}</ThumbButton>
-            </div>
-          </div>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-            <span style={labelTextStyle}>{t('cookLog.notesLabel')}</span>
-            <textarea
-              value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder={t('cookLog.notesPlaceholder')}
-              rows={2}
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
-          </label>
-
-          <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
-            {saving ? t('cookLog.saving') : t('cookLog.save')}
-          </button>
-          {error && (
-            <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--tomato-deep)' }}>
-              {error}
-            </div>
-          )}
+          <CookLogForm
+            date={date} setDate={setDate}
+            variants={variants}
+            variantLabel={variantLabel} setVariantLabel={setVariantLabel}
+            thumbs={thumbs} setThumbs={setThumbs}
+            notes={notes} setNotes={setNotes}
+            onSave={handleSave} saving={saving} error={error}
+          />
         </div>
       )}
 
@@ -189,31 +162,7 @@ function SectionLabel({ children }) {
   )
 }
 
-function ThumbButton({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
-        border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
-        background: active ? 'var(--tomato)' : 'var(--card)',
-        color: active ? 'var(--card)' : 'var(--charcoal)',
-        fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
-      }}
-    >{children}</button>
-  )
-}
-
-const labelTextStyle = { fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)' }
-const inputStyle = {
-  padding: '9px 11px', borderRadius: 8, border: '1px solid var(--line)',
-  background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, width: '100%', boxSizing: 'border-box',
-}
 const addBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)',
   fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-}
-const saveBtnStyle = {
-  width: '100%', padding: '10px 0', borderRadius: 9, border: 'none',
-  background: 'var(--tomato)', color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
 }

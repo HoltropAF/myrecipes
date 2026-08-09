@@ -3,6 +3,9 @@
 // PDF cookbook: builds an HTML document and triggers the browser's native print-to-PDF,
 // avoiding a heavy PDF library bundle and giving full control over print typography.
 
+import { todayLocalISO } from './dateUtils'
+import { formatAmount } from './ingredientParser'
+
 export function downloadJSON(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -15,28 +18,46 @@ export function downloadJSON(filename, data) {
   URL.revokeObjectURL(url)
 }
 
+/**
+ * Full data dump for re-import/disaster recovery.
+ *
+ * Throws rather than exporting partial data. Swallowing errors here produced a
+ * valid-looking backup file containing `"recipes": []` whenever the session had
+ * expired — the worst possible failure for a backup feature.
+ */
 export async function exportFullBackup(supabase, userId) {
-  const [recipes, cookLog, shoppingList, mealGroups, preferences] = await Promise.all([
-    supabase.from('recipes').select('*').then(r => r.data || []),
-    supabase.from('cook_log').select('*').then(r => r.data || []),
-    supabase.from('shopping_list').select('*').then(r => r.data || []),
-    supabase.from('meal_groups').select('*').then(r => r.data || []),
-    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle().then(r => r.data || null),
+  const [
+    recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, preferences,
+  ] = await Promise.all([
+    supabase.from('recipes').select('*'),
+    supabase.from('cook_log').select('*'),
+    supabase.from('shopping_list').select('*'),
+    supabase.from('meal_groups').select('*'),
+    supabase.from('collections').select('*'),
+    supabase.from('collection_recipes').select('*'),
+    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ])
+
+  const failed = [recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, preferences]
+    .find(result => result.error)
+  if (failed) {
+    throw new Error(`Backup aborted — could not read all data: ${failed.error.message}`)
+  }
 
   const backup = {
     exported_at: new Date().toISOString(),
     app: 'myrecipes',
-    version: 1,
-    recipes,
-    cook_log: cookLog,
-    shopping_list: shoppingList,
-    meal_groups: mealGroups,
-    preferences,
+    version: 2,
+    recipes: recipes.data || [],
+    cook_log: cookLog.data || [],
+    shopping_list: shoppingList.data || [],
+    meal_groups: mealGroups.data || [],
+    collections: collections.data || [],
+    collection_recipes: collectionRecipes.data || [],
+    preferences: preferences.data || null,
   }
 
-  const dateStr = new Date().toISOString().slice(0, 10)
-  downloadJSON(`myrecipes-backup-${dateStr}.json`, backup)
+  downloadJSON(`myrecipes-backup-${todayLocalISO()}.json`, backup)
   return backup
 }
 
@@ -49,7 +70,7 @@ function escapeHtml(str) {
 }
 
 function formatIngredientLine(item) {
-  const amount = item.amount !== null && item.amount !== undefined ? item.amount : ''
+  const amount = formatAmount(item.amount)
   const unit = item.unit || ''
   const parts = [amount, unit].filter(Boolean).join(' ')
   return parts ? `${escapeHtml(parts)} ${escapeHtml(item.name)}` : escapeHtml(item.name)
@@ -201,9 +222,18 @@ export function exportCookbookPDF(recipes) {
     alert('Please allow pop-ups to export the cookbook PDF.')
     return
   }
+  // Attach the handler *before* writing. For a document created by document.write
+  // into about:blank, the load event has usually already fired by the time
+  // close() returns, so assigning onload afterwards means print() never runs and
+  // the user is left staring at an apparently blank tab.
+  printWindow.onload = () => {
+    printWindow.focus()
+    printWindow.print()
+  }
   printWindow.document.write(html)
   printWindow.document.close()
-  printWindow.onload = () => {
+  // Belt and braces: if the load event had already fired, trigger it directly.
+  if (printWindow.document.readyState === 'complete') {
     printWindow.focus()
     printWindow.print()
   }

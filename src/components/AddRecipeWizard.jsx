@@ -9,6 +9,8 @@ import VariantStep from './wizard/VariantStep'
 
 const STEPS = ['title', 'ingredients', 'steps', 'extras', 'variant']
 
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024 // 8 MB
+
 const emptyGroup = () => ({ group: null, items: [] })
 
 export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingSubcategories = {}, existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
@@ -33,7 +35,8 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [stepGroups, setStepGroups] = useState(
     existingRecipe?.steps?.length ? existingRecipe.steps : [{ group: t('stepsStep.commonSections')[0], items: [] }]
   )
-  const [stepPaste, setStepPaste] = useState('')
+  // Keyed by group index — StepsStep renders one paste box per section.
+  const [stepPaste, setStepPaste] = useState({})
 
   const [servings, setServings] = useState(existingRecipe?.servings ? String(existingRecipe.servings) : '')
   const [totalMinutes, setTotalMinutes] = useState(existingRecipe?.total_minutes ? String(existingRecipe.total_minutes) : '')
@@ -46,7 +49,6 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
   // Variants — support multiple (existing recipes like Gyoza/Tiramisu have several)
   const [variants, setVariants] = useState(existingRecipe?.variants || [])
-  const [wantsVariant, setWantsVariant] = useState(existingRecipe?.variants?.length ? true : null)
   const [variantLabel, setVariantLabel] = useState('')
   const [variantIngredientGroups, setVariantIngredientGroups] = useState([emptyGroup()])
   const [variantIngredientPaste, setVariantIngredientPaste] = useState('')
@@ -97,9 +99,18 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
       let photo_url = existingRecipe?.photo_url || null
       if (photoFile) {
-        const ext = photoFile.name.split('.').pop()
+        // The bucket is public and served from our own domain, so only accept
+        // real raster images. An unchecked extension also let junk (or an SVG
+        // carrying script) through under a trusted-looking URL.
+        const ALLOWED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }
+        const ext = ALLOWED[photoFile.type]
+        if (!ext) throw new Error(t('wizard.photoTypeError'))
+        if (photoFile.size > MAX_PHOTO_BYTES) throw new Error(t('wizard.photoSizeError'))
+
         const path = `${user_id}/${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase.storage.from('recipe-photos').upload(path, photoFile)
+        const { error: uploadError } = await supabase.storage
+          .from('recipe-photos')
+          .upload(path, photoFile, { contentType: photoFile.type, upsert: false })
         if (uploadError) throw uploadError
         const { data: urlData } = supabase.storage.from('recipe-photos').getPublicUrl(path)
         photo_url = urlData.publicUrl
@@ -131,7 +142,9 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       if (isEditing) {
         ;({ data, error: saveError } = await supabase
           .from('recipes')
-          .update(payload)
+          // updated_at only defaults on insert, so without this an edited recipe
+          // keeps its original timestamp forever.
+          .update({ ...payload, updated_at: new Date().toISOString() })
           .eq('id', existingRecipe.id)
           .select()
           .single())
@@ -182,7 +195,6 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         )}
         {step === 'variant' && (
           <VariantStep
-            wantsVariant={wantsVariant} setWantsVariant={setWantsVariant}
             variantLabel={variantLabel} setVariantLabel={setVariantLabel}
             groups={variantIngredientGroups} setGroups={setVariantIngredientGroups}
             paste={variantIngredientPaste} setPaste={setVariantIngredientPaste}
@@ -205,7 +217,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       <WizardFooter
         stepIndex={stepIndex}
         total={STEPS.length}
-        canGoNext={canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, variantLabel })}
+        canGoNext={canProceed(step, { title, ingredientGroups, stepGroups })}
         onNext={stepIndex === STEPS.length - 1 ? handleSave : goNext}
         saving={saving}
         isLast={stepIndex === STEPS.length - 1}
@@ -215,7 +227,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   )
 }
 
-function canProceed(step, { title, ingredientGroups, stepGroups, wantsVariant, variantLabel }) {
+function canProceed(step, { title, ingredientGroups, stepGroups }) {
   if (step === 'title') return title.trim().length > 0
   if (step === 'ingredients') return ingredientGroups.some(g => g.items.some(item => item.name.trim().length > 0))
   if (step === 'steps') return stepGroups.some(g => g.items.some(item => item.content.trim().length > 0))

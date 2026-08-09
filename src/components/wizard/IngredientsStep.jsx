@@ -1,19 +1,24 @@
-import { useState, useRef } from 'react'
-import { parseIngredientBlock, formatIngredientRow } from '../../lib/ingredientParser'
+import { useState, useRef, useEffect } from 'react'
+import { parseIngredientBlock } from '../../lib/ingredientParser'
 import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
-import { supabase } from '../../lib/supabase'
+import { supabase, escapeLike } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 
 export default function IngredientsStep({ groups, setGroups, paste, setPaste, showGrouping, setShowGrouping, existingGroups }) {
   const { t } = useT()
+  // Which group a pasted block lands in. Previously hardcoded to group 0, so
+  // with grouping enabled everything was dumped into the first section.
+  const [pasteTarget, setPasteTarget] = useState(0)
+
   const handleParse = () => {
     const parsed = parseIngredientBlock(paste)
     if (parsed.length === 0) return
+    const groupIdx = Math.min(pasteTarget, groups.length - 1)
     setGroups(prev => {
-      const next = [...prev]
-      next[0] = { ...next[0], items: [...next[0].items, ...parsed] }
+      const next = prev.map(g => ({ ...g, items: [...g.items] }))
+      next[groupIdx] = { ...next[groupIdx], items: [...next[groupIdx].items, ...parsed] }
       return next
     })
     setPaste('')
@@ -69,15 +74,30 @@ export default function IngredientsStep({ groups, setGroups, paste, setPaste, sh
           rows={4}
           style={{ ...inputStyle, width: '100%', marginTop: 6, resize: 'vertical', fontFamily: 'var(--font-mono)', fontSize: 14 }}
         />
-        <button
-          onClick={handleParse} disabled={!paste.trim()}
-          style={{
-            marginTop: 8, padding: '9px 14px', borderRadius: 8, border: '1px solid var(--tomato)',
-            background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
-            fontWeight: 600, fontSize: 13, cursor: paste.trim() ? 'pointer' : 'default',
-            opacity: paste.trim() ? 1 : 0.5,
-          }}
-        >{t('ingredientsStep.parseBtn')}</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleParse} disabled={!paste.trim()}
+            style={{
+              padding: '9px 14px', borderRadius: 8, border: '1px solid var(--tomato)',
+              background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
+              fontWeight: 600, fontSize: 13, cursor: paste.trim() ? 'pointer' : 'default',
+              opacity: paste.trim() ? 1 : 0.5,
+            }}
+          >{t('ingredientsStep.parseBtn')}</button>
+          {showGrouping && groups.length > 1 && (
+            <select
+              value={Math.min(pasteTarget, groups.length - 1)}
+              onChange={e => setPasteTarget(Number(e.target.value))}
+              style={{ ...inputStyle, padding: '9px 8px', fontSize: 13, width: 'auto' }}
+            >
+              {groups.map((g, i) => (
+                <option key={i} value={i}>
+                  {t('ingredientsStep.parseInto')} {g.group?.trim() || `${t('ingredientsStep.groupFallback')} ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {totalItems > 0 && (
@@ -145,6 +165,27 @@ function IngredientRow({ item, onChange, onRemove }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = useRef(null)
 
+  // The amount box keeps its own text so half-typed values survive ("1." used to
+  // collapse to "1" mid-keystroke). Only a finite number is ever committed to the
+  // item — `amount` is numeric in the DB, and storing a string here used to crash
+  // the Ingredients tab on render.
+  const [amountText, setAmountText] = useState(item.amount == null ? '' : String(item.amount))
+
+  const handleAmountChange = (raw) => {
+    setAmountText(raw)
+    const trimmed = raw.trim().replace(',', '.')
+    if (trimmed === '') {
+      onChange({ amount: null })
+      return
+    }
+    const parsed = Number(trimmed)
+    onChange({ amount: Number.isFinite(parsed) ? parsed : null })
+  }
+
+  // Drop any in-flight suggestion query when the row unmounts, so it can't call
+  // setSuggestions on an unmounted component.
+  useEffect(() => () => clearTimeout(debounceRef.current), [])
+
   const [showTagEditor, setShowTagEditor] = useState(false)
   const [tagRow, setTagRow] = useState(null) // { id, canonical_name, tags } or null if not found yet
   const [tagBusy, setTagBusy] = useState(false)
@@ -157,7 +198,7 @@ function IngredientRow({ item, onChange, onRemove }) {
     const { data } = await supabase
       .from('ingredient_tags')
       .select('id, canonical_name, tags, reviewed')
-      .ilike('canonical_name', name)
+      .ilike('canonical_name', escapeLike(name))
       .maybeSingle()
     setTagRow(data || { id: null, canonical_name: name, tags: [], reviewed: false })
     setTagBusy(false)
@@ -211,7 +252,7 @@ function IngredientRow({ item, onChange, onRemove }) {
       const { data } = await supabase
         .from('ingredient_tags')
         .select('canonical_name, tags')
-        .ilike('canonical_name', `%${value.trim()}%`)
+        .ilike('canonical_name', `%${escapeLike(value.trim())}%`)
         .limit(5)
       if (data?.length > 0) {
         setSuggestions(data)
@@ -233,8 +274,8 @@ function IngredientRow({ item, onChange, onRemove }) {
     <div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         <input
-          type="text" value={item.amount ?? ''} placeholder="—"
-          onChange={e => onChange({ amount: e.target.value === '' ? null : parseFloat(e.target.value) || e.target.value })}
+          type="text" inputMode="decimal" value={amountText} placeholder="—"
+          onChange={e => handleAmountChange(e.target.value)}
           style={{ ...inputStyle, width: 48, padding: '8px 6px', fontSize: 14, textAlign: 'center' }}
         />
         <input
@@ -335,7 +376,7 @@ function IngredientRow({ item, onChange, onRemove }) {
                         color: active ? '#fffdf9' : 'var(--charcoal-soft)',
                         cursor: 'pointer',
                       }}
-                    >{t(`allergens.${key}`) || ALLERGEN_LABELS[key]}</button>
+                    >{t(`allergens.${key}`, ALLERGEN_LABELS[key])}</button>
                   )
                 })}
               </div>

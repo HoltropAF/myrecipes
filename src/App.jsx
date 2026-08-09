@@ -1,7 +1,38 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 
-const RECIPE_CACHE_KEY = 'mr_recipes_v1'
+const RECIPE_CACHE_PREFIX = 'mr_recipes_v1'
+
+// The offline recipe cache is scoped per user. An unscoped key meant that on a
+// shared device the next person to sign in saw the previous user's cookbook
+// until their own fetch resolved.
+const recipeCacheKey = (userId) => `${RECIPE_CACHE_PREFIX}_${userId}`
+
+function readCachedRecipes(userId) {
+  if (!userId) return []
+  try {
+    const raw = localStorage.getItem(recipeCacheKey(userId))
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function writeCachedRecipes(userId, recipes) {
+  if (!userId) return
+  try { localStorage.setItem(recipeCacheKey(userId), JSON.stringify(recipes)) } catch {}
+}
+
+// Drop every user's cache (on sign-out), plus the legacy unscoped key.
+function clearRecipeCaches() {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(RECIPE_CACHE_PREFIX)) localStorage.removeItem(key)
+    }
+    // Per-recipe ingredient check state, which also grew without bound.
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('recipe_check_')) localStorage.removeItem(key)
+    }
+  } catch {}
+}
 
 // Read the Supabase session synchronously from localStorage so returning
 // users skip the splash entirely. Returns null if not logged in, undefined
@@ -37,18 +68,25 @@ const ShoppingListView = lazy(() => import('./components/views/ShoppingListView'
 const StatsView        = lazy(() => import('./components/views/StatsView'))
 const MealPrepView     = lazy(() => import('./components/views/MealPrepView'))
 const SettingsView     = lazy(() => import('./components/views/SettingsView'))
+import ErrorBoundary from './components/ErrorBoundary'
 import './App.css'
+
+// Every lazily-loaded screen gets an error boundary as well as a Suspense
+// boundary. Without one, a render error (or a chunk 404 after a deploy) leaves
+// the user staring at a blank page with no way back.
+const LazyScreen = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={null}>{children}</Suspense>
+  </ErrorBoundary>
+)
 
 function AppInner({ setLanguage }) {
   const { t, lang } = useT()
-  const [session, setSession] = useState(() => readStoredSession())
+  const [session, setSession] = useState(readStoredSession)
   const [isGuest, setIsGuest] = useState(false)
-  const [recipes, setRecipes] = useState(() => {
-    try {
-      const raw = localStorage.getItem(RECIPE_CACHE_KEY)
-      return raw ? JSON.parse(raw) : []
-    } catch { return [] }
-  })
+  // `session` is already assigned by the time this initializer runs, so the
+  // cache is read for the right user on the very first paint.
+  const [recipes, setRecipes] = useState(() => readCachedRecipes(session?.user?.id))
   const [cookCounts, setCookCounts] = useState({})
   const [showWizard, setShowWizard] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState(null)
@@ -76,25 +114,49 @@ function AppInner({ setLanguage }) {
   const [updateReady, setUpdateReady] = useState(false)
   const [showFirstRun, setShowFirstRun] = useState(false)
 
-  // Detect when a new service worker has taken over → show update banner
+  // A new service worker installs but waits (skipWaiting is off in vite.config,
+  // so it can't purge the running tab's chunks out from under it). We show the
+  // banner, and only activate it when the user says so.
+  const waitingWorkerRef = useRef(null)
+  const updatingRef = useRef(false)
+
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // Only reload for an update the user actually asked for; otherwise this
+      // fires on first install and would reload the app out from under them.
+      if (updatingRef.current) window.location.reload()
+    })
     navigator.serviceWorker.ready.then(reg => {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const markWaiting = (worker) => {
+        waitingWorkerRef.current = worker
         setUpdateReady(true)
-      })
-      if (reg.waiting) setUpdateReady(true)
+      }
+      if (reg.waiting) markWaiting(reg.waiting)
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing
         if (!newWorker) return
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            setUpdateReady(true)
+            markWaiting(newWorker)
           }
         })
       })
     })
   }, [])
+
+  const applyUpdate = () => {
+    const waiting = waitingWorkerRef.current
+    if (waiting) {
+      updatingRef.current = true
+      waiting.postMessage({ type: 'SKIP_WAITING' })
+      // If the worker never takes over, don't leave the user stuck on a dead
+      // banner — reload anyway.
+      setTimeout(() => window.location.reload(), 2000)
+    } else {
+      window.location.reload()
+    }
+  }
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
@@ -155,7 +217,8 @@ function AppInner({ setLanguage }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') clearRecipeCaches()
       setSession(session)
     })
     return () => listener.subscription.unsubscribe()
@@ -170,14 +233,21 @@ function AppInner({ setLanguage }) {
       return
     }
     setLoadingRecipes(true)
-    const [{ data }, { data: logData }, { data: tagData }] = await Promise.all([
+    const [{ data, error }, { data: logData }, { data: tagData }] = await Promise.all([
       supabase.from('recipes').select('*').order('created_at', { ascending: false }),
       supabase.from('cook_log').select('recipe_id'),
       supabase.from('recipe_computed_tags').select('recipe_id, allergen_tags, is_vegan, is_vegetarian, is_pescatarian_or_better'),
     ])
+    // A failed fetch (offline, expired refresh token, 5xx) yields data === null.
+    // Keep whatever is already on screen and in the cache rather than replacing
+    // the cookbook with an empty list and destroying the offline copy.
+    if (error || !Array.isArray(data)) {
+      setLoadingRecipes(false)
+      return
+    }
     const tagMap = {}
     for (const row of (tagData || [])) tagMap[row.recipe_id] = row
-    const freshRecipes = (data || []).map(r => ({
+    const freshRecipes = data.map(r => ({
       ...r,
       allergen_tags: tagMap[r.id]?.allergen_tags || [],
       is_vegan: tagMap[r.id]?.is_vegan ?? false,
@@ -185,11 +255,14 @@ function AppInner({ setLanguage }) {
       is_pescatarian_or_better: tagMap[r.id]?.is_pescatarian_or_better ?? false,
     }))
     setRecipes(freshRecipes)
-    try { localStorage.setItem(RECIPE_CACHE_KEY, JSON.stringify(freshRecipes)) } catch {}
-    const counts = {}
-    for (const entry of (logData || [])) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
-    setCookCounts(counts)
+    writeCachedRecipes(session?.user?.id, freshRecipes)
+    if (Array.isArray(logData)) {
+      const counts = {}
+      for (const entry of logData) counts[entry.recipe_id] = (counts[entry.recipe_id] || 0) + 1
+      setCookCounts(counts)
+    }
     setLoadingRecipes(false)
+    return freshRecipes
   }
 
   const loadCollections = async () => {
@@ -218,12 +291,17 @@ function AppInner({ setLanguage }) {
     setActiveTab('recipes')
   }
 
+  // Keyed on the user id, not the session object. Supabase hands us a brand new
+  // session object every time the access token rotates (hourly), which would
+  // otherwise re-run these and clobber unsaved Settings edits.
   useEffect(() => {
     if (session) { loadRecipes(); loadCollections() }
-  }, [session])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (isGuest) loadRecipes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest])
 
   useEffect(() => {
@@ -242,7 +320,8 @@ function AppInner({ setLanguage }) {
         if (data.compact_mode !== null && data.compact_mode !== undefined) setCompactMode(data.compact_mode)
         if (data.language) setLanguage(data.language)
       })
-  }, [session])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, isGuest])
 
   const savePreferences = async (patch) => {
     if (!session || isGuest) return
@@ -302,6 +381,16 @@ function AppInner({ setLanguage }) {
     setPendingDelete(null)
   }
 
+  const dismissPendingDelete = useCallback(() => setPendingDelete(null), [])
+
+  // Guest mode is read-only for recipe creation/editing. The FAB and Add buttons
+  // are hidden for guests as the first line of defence; this closes the wizard if
+  // anything still manages to call openWizard. Done in an effect, not during
+  // render, so it doesn't fire history.back() twice under StrictMode.
+  useEffect(() => {
+    if (showWizard && isGuest) closeWizard()
+  }, [showWizard, isGuest])
+
   if (session === undefined) {
     return (
       <div style={{
@@ -325,16 +414,11 @@ function AppInner({ setLanguage }) {
     return <AuthScreen onGuest={enterGuestMode} />
   }
 
+  if (showWizard && isGuest) return null
+
   if (showWizard) {
-    if (isGuest) {
-      // Guest mode is read-only for recipe creation/editing — close immediately,
-      // FloatingActionButton and Add buttons are hidden in guest mode anyway as a first line of defense,
-      // but this is a safety net in case anything still calls openWizard.
-      closeWizard()
-      return null
-    }
     return (
-      <Suspense fallback={null}>
+      <LazyScreen>
         <AddRecipeWizard
           existingCategories={[...new Set(recipes.map(r => r.category).filter(Boolean))]}
           existingSubcategories={recipes.reduce((map, r) => {
@@ -350,15 +434,25 @@ function AppInner({ setLanguage }) {
           initialStep={editingRecipe ? editInitialStep : 0}
           prefillCategory={prefillCategory}
           onClose={closeWizard}
-          onSaved={(updated) => { closeWizard(); loadRecipes(); if (selectedRecipe) setSelectedRecipe(updated) }}
+          onSaved={async (updated) => {
+            closeWizard()
+            // The row returned by .select().single() has no allergen_tags/diet
+            // flags — those are merged in from recipe_computed_tags during
+            // loadRecipes. Re-select from the refreshed list so the Info tab
+            // doesn't lose its badges after an edit.
+            const fresh = await loadRecipes()
+            if (selectedRecipe) {
+              setSelectedRecipe(fresh?.find(r => r.id === updated?.id) || updated)
+            }
+          }}
         />
-      </Suspense>
+      </LazyScreen>
     )
   }
 
   if (selectedRecipe) {
     return (
-      <Suspense fallback={null}>
+      <LazyScreen>
         <RecipeDetail
           recipe={selectedRecipe}
           onClose={closeRecipe}
@@ -370,8 +464,9 @@ function AppInner({ setLanguage }) {
           collections={isGuest ? [] : collections}
           collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
           onCollectionsChanged={loadCollections}
+          onCookLogged={isGuest ? null : loadRecipes}
         />
-      </Suspense>
+      </LazyScreen>
     )
   }
 
@@ -442,7 +537,7 @@ function AppInner({ setLanguage }) {
             style={{ background: 'none', border: 'none', color: 'var(--charcoal-soft)', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}
           >×</button>
           <button
-            onClick={() => window.location.reload()}
+            onClick={applyUpdate}
             style={{ background: 'var(--tomato)', border: 'none', borderRadius: 8, color: '#fffdf9', fontSize: 12, fontWeight: 700, padding: '7px 14px', cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}
           >{t('app.updateBtn')}</button>
         </div>
@@ -490,19 +585,19 @@ function AppInner({ setLanguage }) {
           />
         )}
         {activeTab === 'shopping' && (
-          <Suspense fallback={null}>
+          <LazyScreen>
             <ShoppingListView userId={session?.user?.id} isGuest={isGuest} />
-          </Suspense>
+          </LazyScreen>
         )}
         {activeTab === 'stats' && (
-          <Suspense fallback={null}>
+          <LazyScreen>
             <StatsView recipes={recipes} isGuest={isGuest} demoCookLog={isGuest ? DEMO_COOK_LOG : null} />
-          </Suspense>
+          </LazyScreen>
         )}
         {activeTab === 'mealprep' && (
-          <Suspense fallback={null}>
+          <LazyScreen>
             <MealPrepView recipes={recipes} onSelectRecipe={openRecipe} isGuest={isGuest} demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null} />
-          </Suspense>
+          </LazyScreen>
         )}
         {activeTab === 'settings' && (
           isGuest ? (
@@ -522,7 +617,7 @@ function AppInner({ setLanguage }) {
               >{t('app.exitGuestBtn')}</button>
             </div>
           ) : (
-            <Suspense fallback={null}>
+            <LazyScreen>
               <SettingsView
                 userEmail={session.user.email}
                 recipes={recipes}
@@ -536,7 +631,7 @@ function AppInner({ setLanguage }) {
                 language={lang}
                 onSavePreferences={handleSaveSettings}
               />
-            </Suspense>
+            </LazyScreen>
           )
         )}
       </PullToRefresh>
@@ -544,20 +639,20 @@ function AppInner({ setLanguage }) {
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
       {showQuickLog && !isGuest && (
-        <Suspense fallback={null}>
+        <LazyScreen>
           <QuickLogCook
             recipes={recipes}
             onClose={() => setShowQuickLog(false)}
-            onLogged={() => setShowQuickLog(false)}
+            onLogged={() => { setShowQuickLog(false); loadRecipes() }}
           />
-        </Suspense>
+        </LazyScreen>
       )}
 
       {pendingDelete && (
         <UndoToast
           message={t('app.deleted')(pendingDelete.recipe.title)}
           onUndo={undoDelete}
-          onDismiss={() => setPendingDelete(null)}
+          onDismiss={dismissPendingDelete}
         />
       )}
     </div>

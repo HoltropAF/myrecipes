@@ -7,8 +7,11 @@ export default function WhatCanIMake({ recipes, onSelect }) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
 
+  // Filter *after* normalising, not before. normalizeName strips descriptor words
+  // outright, so "fresh" or "verse" normalises to "" — and an empty needle makes
+  // name.includes(have) true for every recipe.
   const haveIngredients = useMemo(
-    () => input.split(',').map(s => s.trim()).filter(Boolean).map(normalizeName),
+    () => input.split(',').map(s => normalizeName(s.trim())).filter(s => s.length > 0),
     [input]
   )
 
@@ -17,7 +20,8 @@ export default function WhatCanIMake({ recipes, onSelect }) {
     const scored = recipes.map(r => {
       const recipeIngredientNames = (r.ingredients || [])
         .flatMap(g => g.items || [])
-        .map(item => normalizeName(item.name))
+        .map(item => normalizeName(item.name || ''))
+        .filter(name => name.length > 0)
       const matchCount = haveIngredients.filter(have =>
         recipeIngredientNames.some(name => name.includes(have) || have.includes(name))
       ).length

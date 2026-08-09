@@ -6,20 +6,57 @@ export function useT() {
   const lang = useContext(LanguageContext)
   const translations = lang === 'nl' ? nl : en
 
-  function t(path) {
+  // `fallback` is what you get when the key is missing. Without it, t() returns
+  // the key path itself — which is always truthy, so the common idiom
+  // `t('some.key') || 'Default'` silently rendered the literal key instead.
+  function t(path, fallback) {
     const keys = path.split('.')
     let val = translations
     for (const key of keys) {
-      if (val == null) return path
+      if (val == null) break
       val = val[key]
     }
-    return val !== undefined ? val : path
+    if (val !== undefined && val !== null) return val
+    return fallback !== undefined ? fallback : path
   }
 
   return { t, lang }
 }
 
 const en = {
+  collections: {
+    title: 'Collections',
+    empty: 'No collections yet.',
+    namePlaceholder: 'Collection name',
+    create: 'Create',
+    newCollection: '+ New collection',
+    dopamineMenu: 'Dopamine Menu',
+    addToPlan: 'Add to meal plan',
+    switchUnits: 'Switch units',
+  },
+  stats: {
+    title: 'Stats',
+    loading: 'loading stats…',
+    tileRecipes: 'recipes',
+    tileCooks: 'cooks logged',
+    tileTried: 'recipes tried',
+    tileNever: 'never made',
+    emptyHint: 'Once you start logging cooks (tap the + button, then "Log a cook"), this page fills up with your most-made and top-rated recipes.',
+    byCategory: 'Recipes by category',
+    mostCooked: 'Most cooked',
+    topRated: 'Top rated',
+    uncategorized: 'Uncategorized',
+  },
+  fab: {
+    logCook: 'Log a cook',
+    addRecipe: 'Add recipe',
+  },
+  common: {
+    delete: 'Delete',
+  },
+  tagPicker: {
+    placeholder: 'Type a tag and press Enter…',
+  },
   nav: {
     recipes: 'Recipes',
     shopping: 'List',
@@ -39,9 +76,8 @@ const en = {
     linkSent: (email) => `Link sent to ${email}. Check your inbox and tap it on this device.`,
   },
   app: {
+    undo: 'Undo',
     warmingUp: 'warming up the kitchen…',
-    guestBanner: 'Guest mode — nothing is saved',
-    guestExit: 'exit',
     setupPrompt: 'Exploring as guest —',
     setupLink: 'want your own copy? →',
     guestSettingsMsg: "You're browsing in guest mode. Settings and preferences aren't available until you sign in with a real account.",
@@ -56,6 +92,8 @@ const en = {
     updateBtn: 'Update',
   },
   wizard: {
+    photoTypeError: 'Photos must be JPG, PNG, WebP or GIF.',
+    photoSizeError: 'That photo is too large (max 8 MB).',
     steps: ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants'],
     editing: 'Editing — ',
     back: '‹ Back',
@@ -71,6 +109,8 @@ const en = {
     taglineLabel: 'tagline (optional)',
   },
   ingredientsStep: {
+    parseInto: 'into',
+    groupFallback: 'Section',
     heading: 'What goes in it?',
     pasteLabel: 'paste ingredients (one per line)',
     parseBtn: 'Parse & add',
@@ -92,6 +132,9 @@ const en = {
     commonSections: ['Preparation', 'Storage', 'Freezing', 'Ideas for leftovers'],
   },
   extrasStep: {
+    categoryPlaceholder: 'e.g. Main dishes',
+    subcategoryPlaceholder: 'e.g. Pasta',
+    subcategoryHint: 'Pick a category first',
     heading: 'A few extras (all optional)',
     servingsLabel: 'servings',
     minutesLabel: 'total minutes',
@@ -347,6 +390,7 @@ const en = {
     savingBtn: 'Saving…',
     saveChanges: 'Save changes',
     pdfFilter: {
+      uncategorized: 'Uncategorized',
       title: 'Filter PDF export',
       hint: (n) => `${n} recipes selected`,
       all: 'Select all',
@@ -392,6 +436,39 @@ const en = {
 }
 
 const nl = {
+  collections: {
+    title: 'Collecties',
+    empty: 'Nog geen collecties.',
+    namePlaceholder: 'Naam van collectie',
+    create: 'Aanmaken',
+    newCollection: '+ Nieuwe collectie',
+    dopamineMenu: 'Dopamine Menu',
+    addToPlan: 'Aan maaltijdplan toevoegen',
+    switchUnits: 'Eenheden wisselen',
+  },
+  stats: {
+    title: 'Statistieken',
+    loading: 'statistieken laden…',
+    tileRecipes: 'recepten',
+    tileCooks: 'keer gekookt',
+    tileTried: 'recepten geprobeerd',
+    tileNever: 'nooit gemaakt',
+    emptyHint: 'Zodra je kookbeurten gaat noteren (tik op de +-knop en dan "Kookbeurt loggen") vult deze pagina zich met je meestgemaakte en best beoordeelde recepten.',
+    byCategory: 'Recepten per categorie',
+    mostCooked: 'Meest gekookt',
+    topRated: 'Best beoordeeld',
+    uncategorized: 'Zonder categorie',
+  },
+  fab: {
+    logCook: 'Kookbeurt loggen',
+    addRecipe: 'Recept toevoegen',
+  },
+  common: {
+    delete: 'Verwijderen',
+  },
+  tagPicker: {
+    placeholder: 'Typ een label en druk op Enter…',
+  },
   nav: {
     recipes: 'Recepten',
     shopping: 'Lijst',
@@ -411,9 +488,8 @@ const nl = {
     linkSent: (email) => `Link verstuurd naar ${email}. Controleer je inbox en tik erop op dit apparaat.`,
   },
   app: {
+    undo: 'Ongedaan maken',
     warmingUp: 'de keuken warmt op…',
-    guestBanner: 'Gastmodus — niets wordt opgeslagen',
-    guestExit: 'afsluiten',
     setupPrompt: 'Aan het verkennen als gast —',
     setupLink: 'eigen exemplaar? →',
     guestSettingsMsg: "Je bladert in gastmodus. Instellingen en voorkeuren zijn niet beschikbaar totdat je inlogt met een account.",
@@ -428,6 +504,8 @@ const nl = {
     updateBtn: 'Bijwerken',
   },
   wizard: {
+    photoTypeError: "Foto's moeten JPG, PNG, WebP of GIF zijn.",
+    photoSizeError: 'Die foto is te groot (max 8 MB).',
     steps: ['Titel', 'Ingrediënten', 'Stappen', 'Extra', 'Varianten'],
     editing: 'Bewerken — ',
     back: '‹ Terug',
@@ -443,6 +521,8 @@ const nl = {
     taglineLabel: 'tagline (optioneel)',
   },
   ingredientsStep: {
+    parseInto: 'naar',
+    groupFallback: 'Onderdeel',
     heading: 'Wat gaat erin?',
     pasteLabel: 'plak ingrediënten (één per regel)',
     parseBtn: 'Verwerken & toevoegen',
@@ -464,6 +544,9 @@ const nl = {
     commonSections: ['Bereiding', 'Bewaren', 'Invriezen', 'Ideeën voor restjes'],
   },
   extrasStep: {
+    categoryPlaceholder: 'bijv. Hoofdgerechten',
+    subcategoryPlaceholder: 'bijv. Pasta',
+    subcategoryHint: 'Kies eerst een categorie',
     heading: "Nog een paar extra's (allemaal optioneel)",
     servingsLabel: 'porties',
     minutesLabel: 'totaal minuten',
@@ -719,6 +802,7 @@ const nl = {
     savingBtn: 'Opslaan…',
     saveChanges: 'Wijzigingen opslaan',
     pdfFilter: {
+      uncategorized: 'Zonder categorie',
       title: 'PDF-export filteren',
       hint: (n) => `${n} recepten geselecteerd`,
       all: 'Alles selecteren',

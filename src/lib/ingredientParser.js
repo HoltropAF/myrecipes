@@ -25,30 +25,33 @@ export function parseIngredientLine(line) {
   const trimmed = line.trim()
   if (!trimmed) return null
 
-  // Match a leading number (supports "1", "1.5", "1,5", "1/2", "2-3")
-  const numMatch = trimmed.match(/^(\d+(?:[.,]\d+)?(?:\/\d+)?(?:\s*-\s*\d+)?)\s*(.*)$/)
+  // A quantity is a mixed number ("1 1/2"), a fraction ("1/2"), or a decimal
+  // ("1", "1.5", "1,5"). Optionally followed by a range end ("2-3", "1/2-1").
+  const QUANTITY = String.raw`\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?`
+  const numMatch = trimmed.match(
+    new RegExp(String.raw`^(${QUANTITY})(?:\s*[-–—]\s*(${QUANTITY}))?\s*(.*)$`)
+  )
 
   if (!numMatch) {
     // No leading number at all — freeform line, e.g. "zout naar smaak", "peper"
     return { id: nextId(), amount: null, unit: null, name: trimmed }
   }
 
-  const rawAmount = numMatch[1]
-  let rest = numMatch[2].trim()
+  const [, rawLow, rawHigh, remainder] = numMatch
+  let rest = remainder.trim()
 
-  // Normalize amount: handle fractions and comma decimals
-  let amount = rawAmount.replace(',', '.')
-  if (amount.includes('/')) {
-    const [num, den] = amount.split('/').map(Number)
-    amount = den ? num / den : num
-  } else if (amount.includes('-')) {
-    // range like "2-3" -> take the average for scaling purposes, keep original as note
-    const [a, b] = amount.split('-').map(s => parseFloat(s.trim()))
-    amount = (a + b) / 2
-  } else {
-    amount = parseFloat(amount)
+  const low = parseQuantity(rawLow)
+  const high = rawHigh ? parseQuantity(rawHigh) : null
+
+  let amount = low
+  let note = null
+  if (high !== null && low !== null) {
+    // Scaling needs a single number, so store the midpoint — but keep the range
+    // the user actually wrote as a note instead of silently discarding it.
+    amount = (low + high) / 2
+    note = `${rawLow}–${rawHigh}`
   }
-  if (Number.isNaN(amount)) amount = null
+  if (!Number.isFinite(amount)) amount = null
 
   // Try to detect a unit word at the start of the rest
   const unitMatch = rest.match(unitPattern)
@@ -58,7 +61,27 @@ export function parseIngredientLine(line) {
     rest = rest.slice(unitMatch[0].length).trim()
   }
 
-  return { id: nextId(), amount, unit, name: rest || trimmed }
+  const row = { id: nextId(), amount, unit, name: rest || trimmed }
+  if (note) row.note = note
+  return row
+}
+
+// "1 1/2" -> 1.5, "3/4" -> 0.75, "1,5" -> 1.5. Returns null if unparseable.
+function parseQuantity(raw) {
+  if (!raw) return null
+  const text = raw.trim().replace(',', '.')
+  const mixed = text.match(/^(\d+)\s+(\d+)\/(\d+)$/)
+  if (mixed) {
+    const [, whole, num, den] = mixed.map(Number)
+    return den ? whole + num / den : whole
+  }
+  const fraction = text.match(/^(\d+)\/(\d+)$/)
+  if (fraction) {
+    const [, num, den] = fraction.map(Number)
+    return den ? num / den : null
+  }
+  const value = Number(text)
+  return Number.isFinite(value) ? value : null
 }
 
 function normalizeUnit(raw) {
@@ -69,6 +92,7 @@ function normalizeUnit(raw) {
     liter: 'l',
     eetlepel: 'el', theelepel: 'tl',
     kopjes: 'kop',
+    cups: 'cup', tsps: 'tsp', tbsps: 'tbsp',
     blikje: 'blik', pakje: 'pak', zakje: 'zak', bakje: 'bak', potje: 'pot',
     teentje: 'teen', teentjes: 'teen', tenen: 'teen',
     stuks: 'stuk', stengels: 'stengel',
@@ -88,12 +112,23 @@ export function parseIngredientBlock(text) {
 /** Format a row back to a display string, e.g. for editing/preview */
 export function formatIngredientRow({ amount, unit, name }) {
   const parts = []
-  if (amount !== null && amount !== undefined) {
-    parts.push(Number.isInteger(amount) ? String(amount) : amount.toFixed(1).replace(/\.0$/, ''))
-  }
+  const formatted = formatAmount(amount)
+  if (formatted) parts.push(formatted)
   if (unit) parts.push(unit)
   parts.push(name)
   return parts.join(' ')
+}
+
+/**
+ * Render an amount for display. Single source of truth so the same 0.75 doesn't
+ * appear as "0.8" on one screen and "0.75" on another.
+ */
+export function formatAmount(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const amount = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(amount)) return String(value)
+  if (Number.isInteger(amount)) return String(amount)
+  return String(Math.round(amount * 100) / 100)
 }
 
 /** Scale an amount by a servings ratio, used for the adjustable-servings feature */

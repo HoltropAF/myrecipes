@@ -26,10 +26,16 @@ function getIngredientSet(recipe) {
 const MIN_GROUP_SIZE = 3
 
 function buildSuggestions(recipes) {
+  // getMainIngredientKeys re-parses a recipe's whole ingredient list, and groups
+  // 1 and 4 below both need it for every recipe × every main ingredient. Scan
+  // once up front instead of twice inside two nested loops.
+  const mainKeysByRecipe = new Map(recipes.map(r => [r.id, getMainIngredientKeys(r)]))
+  const hasMain = (recipe, key) => (mainKeysByRecipe.get(recipe.id) || []).includes(key)
+
   // 1. By shared main ingredient/protein (3+ recipes)
   const byMain = []
   for (const main of MAIN_INGREDIENTS) {
-    const matches = recipes.filter(r => getMainIngredientKeys(r).includes(main.key))
+    const matches = recipes.filter(r => hasMain(r, main.key))
     if (matches.length >= MIN_GROUP_SIZE) {
       byMain.push({ type: 'ingredient', key: main.key, label: main.label, recipes: matches })
     }
@@ -65,7 +71,7 @@ function buildSuggestions(recipes) {
   // 4. Freezer batch-cook combos: freezer-friendly AND share a main ingredient (3+ recipes)
   const byFreezerBatch = []
   for (const main of MAIN_INGREDIENTS) {
-    const matches = recipes.filter(r => r.freezer_friendly === true && getMainIngredientKeys(r).includes(main.key))
+    const matches = recipes.filter(r => r.freezer_friendly === true && hasMain(r, main.key))
     if (matches.length >= MIN_GROUP_SIZE) {
       byFreezerBatch.push({ type: 'freezer', key: main.key, label: main.label, recipes: matches })
     }

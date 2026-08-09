@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react'
+import { useT } from '../lib/i18n'
 
 /**
  * Wraps a row in swipe-to-delete behavior. Swipe left to reveal a delete action,
  * tap the revealed button or swipe far enough to trigger onDelete.
  */
-export default function SwipeToDelete({ children, onDelete, deleteLabel = 'Delete' }) {
+export default function SwipeToDelete({ children, onDelete, deleteLabel }) {
+  const { t } = useT()
+  const label = deleteLabel || t('common.delete')
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const startX = useRef(0)
@@ -42,7 +45,7 @@ export default function SwipeToDelete({ children, onDelete, deleteLabel = 'Delet
         <button
           onClick={onDelete}
           style={{ background: 'none', border: 'none', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-        >{deleteLabel}</button>
+        >{label}</button>
       </div>
       <div
         onTouchStart={e => handleStart(e.touches[0].clientX)}

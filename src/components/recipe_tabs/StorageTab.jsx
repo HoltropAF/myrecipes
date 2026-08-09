@@ -2,7 +2,11 @@ import { useT } from '../../lib/i18n'
 
 export default function StorageTab({ recipe }) {
   const { t } = useT()
-  const hasContent = recipe.freezer_friendly !== null || recipe.notes || recipe.source
+  // Must match the render guard below, which treats undefined as "no value" too.
+  // Checking only against null made this true for every recipe that has never
+  // had the freezer flag set, so the tab rendered completely empty.
+  const hasFreezerInfo = recipe.freezer_friendly !== null && recipe.freezer_friendly !== undefined
+  const hasContent = hasFreezerInfo || recipe.notes || recipe.source
 
   return (
     <div>

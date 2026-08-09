@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { convertStepTemperatures } from '../lib/unitConverter'
 import { useT } from '../lib/i18n'
 import { supabase } from '../lib/supabase'
+import { todayLocalISO } from '../lib/dateUtils'
 
-export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
+export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogged }) {
   const { t } = useT()
 
   const flatSteps = useMemo(() => {
@@ -25,6 +26,7 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
   const [showEndScreen, setShowEndScreen] = useState(false)
   const [endNotes, setEndNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   const current = flatSteps[index]
   const isLast = index === flatSteps.length - 1
@@ -69,25 +71,42 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
 
   const handleLogCook = async () => {
     setSaving(true)
+    setError(null)
     const userId = await getUserId()
-    if (userId) {
-      await supabase.from('cook_log').insert({
-        recipe_id: recipe.id,
-        user_id: userId,
-        notes: endNotes.trim() || null,
-        cooked_at: new Date().toISOString(),
-      })
+    if (!userId) {
+      setError(t('cookLog.notSignedIn'))
+      setSaving(false)
+      return
     }
+    const { error: insertError } = await supabase.from('cook_log').insert({
+      recipe_id: recipe.id,
+      user_id: userId,
+      notes: endNotes.trim() || null,
+      cooked_date: todayLocalISO(),
+    })
     setSaving(false)
+    if (insertError) {
+      setError(t('cookLog.saveError'))
+      return
+    }
+    onLogged?.()
     onClose()
   }
 
   const handleSaveToNotes = async () => {
     setSaving(true)
+    setError(null)
     const existing = recipe.notes || ''
     const separator = existing ? '\n\n—\n' : ''
-    await supabase.from('recipes').update({ notes: existing + separator + endNotes.trim() }).eq('id', recipe.id)
+    const { error: updateError } = await supabase
+      .from('recipes')
+      .update({ notes: existing + separator + endNotes.trim(), updated_at: new Date().toISOString() })
+      .eq('id', recipe.id)
     setSaving(false)
+    if (updateError) {
+      setError(t('cookLog.saveError'))
+      return
+    }
     onClose()
   }
 
@@ -126,6 +145,13 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
             resize: 'none', outline: 'none', lineHeight: 1.5,
           }}
         />
+        {error && (
+          <div style={{
+            width: '100%', maxWidth: 440, padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(217,79,58,0.15)', border: '1px solid var(--tomato)',
+            color: 'var(--parchment)', fontFamily: 'var(--font-body)', fontSize: 13, textAlign: 'center',
+          }}>{error}</div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 440 }}>
           <button
             onClick={handleLogCook} disabled={saving}
@@ -197,7 +223,12 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose }) {
               {formatTime(timeLeft ?? current.timer_seconds)}
             </div>
             <button
-              onClick={() => setTimerRunning(r => !r)}
+              onClick={() => {
+                // At 0 the button reads "Restart", so put the clock back before
+                // starting — otherwise the interval immediately re-freezes at 0.
+                if (!timerRunning && timeLeft === 0) setTimeLeft(current.timer_seconds)
+                setTimerRunning(r => !r)
+              }}
               style={{
                 padding: '10px 22px', borderRadius: 99, border: 'none', cursor: 'pointer',
                 background: timerRunning ? 'rgba(253,248,240,0.15)' : 'var(--tomato)',

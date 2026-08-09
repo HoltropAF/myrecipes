@@ -4,7 +4,7 @@ import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
 import { useT } from '../../lib/i18n'
 
 export default function VariantStep({
-  wantsVariant, setWantsVariant, variantLabel, setVariantLabel,
+  variantLabel, setVariantLabel,
   groups, setGroups, paste, setPaste,
   stepGroups, setStepGroups, stepPaste, setStepPaste,
   savedVariants = [], onAddVariant, onRemoveVariant,

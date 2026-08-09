@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 
 export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
 
   return (
@@ -18,8 +20,8 @@ export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
       }}>
         {open && (
           <>
-            <MenuItem label="Log a cook" icon="📝" onClick={() => { setOpen(false); onLogCook() }} />
-            <MenuItem label="Add recipe" icon="🍳" onClick={() => { setOpen(false); onAddRecipe() }} />
+            <MenuItem label={t('fab.logCook')} icon="📝" onClick={() => { setOpen(false); onLogCook() }} />
+            <MenuItem label={t('fab.addRecipe')} icon="🍳" onClick={() => { setOpen(false); onAddRecipe() }} />
           </>
         )}
 

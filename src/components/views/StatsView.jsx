@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import LoadingGyoza from '../LoadingGyoza'
+import { useT } from '../../lib/i18n'
 
 export default function StatsView({ recipes, isGuest = false, demoCookLog = null }) {
+  const { t, lang } = useT()
   const [cookLog, setCookLog] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -44,7 +46,7 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
 
     const byCategory = {}
     for (const r of recipes) {
-      const cat = r.category || 'Uncategorized'
+      const cat = r.category || t('stats.uncategorized')
       byCategory[cat] = (byCategory[cat] || 0) + 1
     }
     const categoryList = Object.entries(byCategory).sort((a, b) => b[1] - a[1])
@@ -55,23 +57,24 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
     const neverCooked = recipes.filter(r => !countByRecipe[r.id]).length
 
     return { mostCooked, topRated, categoryList, totalCooks, totalRecipes, triedCount, neverCooked }
-  }, [recipes, cookLog])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipes, cookLog, lang])
 
   if (loading) {
-    return <div style={{ padding: '0 20px 100px' }}><LoadingGyoza label="loading stats…" /></div>
+    return <div style={{ padding: '0 20px 100px' }}><LoadingGyoza label={t('stats.loading')} /></div>
   }
 
   const maxCategoryCount = Math.max(...stats.categoryList.map(([, c]) => c), 1)
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>Stats</h1>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }}>{t('stats.title')}</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
-        <Tile value={stats.totalRecipes} label="recipes" />
-        <Tile value={stats.totalCooks} label="cooks logged" />
-        <Tile value={stats.triedCount} label="recipes tried" />
-        <Tile value={stats.neverCooked} label="never made" />
+        <Tile value={stats.totalRecipes} label={t('stats.tileRecipes')} />
+        <Tile value={stats.totalCooks} label={t('stats.tileCooks')} />
+        <Tile value={stats.triedCount} label={t('stats.tileTried')} />
+        <Tile value={stats.neverCooked} label={t('stats.tileNever')} />
       </div>
 
       {stats.totalCooks === 0 && !isGuest && (
@@ -79,11 +82,11 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
           background: 'var(--sage-light)', borderRadius: 12, padding: '14px 16px', marginBottom: 20,
           fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', lineHeight: 1.5,
         }}>
-          🥟 Once you start logging cooks (tap the <strong>+</strong> button → "Log a cook"), this page fills up with your most-made and top-rated recipes.
+          🥟 {t('stats.emptyHint')}
         </div>
       )}
 
-      <SectionLabel>Recipes by category</SectionLabel>
+      <SectionLabel>{t('stats.byCategory')}</SectionLabel>
       <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 14px', marginBottom: 22 }}>
         {stats.categoryList.map(([cat, count]) => (
           <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
@@ -98,7 +101,7 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
 
       {stats.mostCooked.length > 0 && (
         <>
-          <SectionLabel>Most cooked</SectionLabel>
+          <SectionLabel>{t('stats.mostCooked')}</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
             {stats.mostCooked.map(({ recipe, count }, i) => (
               <RankRow key={recipe.id} rank={i + 1} title={recipe.title} value={`${count}×`} />
@@ -109,7 +112,7 @@ export default function StatsView({ recipes, isGuest = false, demoCookLog = null
 
       {stats.topRated.length > 0 && (
         <>
-          <SectionLabel>Top rated</SectionLabel>
+          <SectionLabel>{t('stats.topRated')}</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
             {stats.topRated.map(({ recipe, up, down }, i) => (
               <RankRow key={recipe.id} rank={i + 1} title={recipe.title} value={`👍 ${up}${down > 0 ? ` · 👎 ${down}` : ''}`} />

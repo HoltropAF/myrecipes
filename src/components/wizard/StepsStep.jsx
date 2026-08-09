@@ -1,20 +1,25 @@
 import { parseStepBlock } from '../../lib/stepParser'
 import ComboInput from '../ComboInput'
-import { titleStyle, labelTextStyle, inputStyle } from './TitleStep'
+import { titleStyle, inputStyle } from './TitleStep'
 import { useT } from '../../lib/i18n'
 
 export default function StepsStep({ groups, setGroups, paste, setPaste }) {
   const { t } = useT()
   const COMMON_SECTIONS = t('stepsStep.commonSections')
+  // `paste` is keyed by group index. It used to be one shared string, so typing
+  // into section 2's box mirrored the text into section 1's box at the same time.
+  const pasteFor = (groupIdx) => paste?.[groupIdx] || ''
+  const setPasteFor = (groupIdx, value) => setPaste(prev => ({ ...prev, [groupIdx]: value }))
+
   const handleParse = (groupIdx) => {
-    const parsed = parseStepBlock(paste)
+    const parsed = parseStepBlock(pasteFor(groupIdx))
     if (parsed.length === 0) return
     setGroups(prev => {
       const next = prev.map(g => ({ ...g, items: [...g.items] }))
       next[groupIdx].items.push(...parsed)
       return next
     })
-    setPaste('')
+    setPasteFor(groupIdx, '')
   }
 
   const updateItem = (gIdx, iIdx, content) => {
@@ -93,19 +98,19 @@ export default function StepsStep({ groups, setGroups, paste, setPaste }) {
 
           {/* paste box per group */}
           <textarea
-            value={paste} onChange={e => setPaste(e.target.value)}
+            value={pasteFor(gIdx)} onChange={e => setPasteFor(gIdx, e.target.value)}
             placeholder={'1. Snijd de kip\n2. Kook de pasta\n3. Bak de kip bruin'}
             rows={3}
             style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: 'var(--font-mono)', fontSize: 13, marginBottom: 6 }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => handleParse(gIdx)} disabled={!paste.trim()}
+              onClick={() => handleParse(gIdx)} disabled={!pasteFor(gIdx).trim()}
               style={{
                 padding: '8px 12px', borderRadius: 8, border: '1px solid var(--tomato)',
                 background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
-                fontWeight: 600, fontSize: 13, cursor: paste.trim() ? 'pointer' : 'default',
-                opacity: paste.trim() ? 1 : 0.5,
+                fontWeight: 600, fontSize: 13, cursor: pasteFor(gIdx).trim() ? 'pointer' : 'default',
+                opacity: pasteFor(gIdx).trim() ? 1 : 0.5,
               }}
             >{t('stepsStep.parseBtn')}</button>
             <button

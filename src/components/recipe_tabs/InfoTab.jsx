@@ -1,4 +1,4 @@
-import { ALLERGEN_LABELS, DIET_TAGS } from '../../lib/recipeTags'
+import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
 
 export default function InfoTab({ recipe, variants, activeVariant, onVariantChange }) {
@@ -31,7 +31,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
             {!recipe.is_vegan && recipe.is_vegetarian && <ComputedBadge diet>{t('diet.vegetarian')}</ComputedBadge>}
             {!recipe.is_vegan && !recipe.is_vegetarian && recipe.is_pescatarian_or_better && <ComputedBadge diet>{t('diet.pescatarian')}</ComputedBadge>}
             {(recipe.allergen_tags || []).map(tag => (
-              <ComputedBadge key={tag}>{t(`allergens.${tag}`) || ALLERGEN_LABELS[tag] || tag}</ComputedBadge>
+              <ComputedBadge key={tag}>{t(`allergens.${tag}`, ALLERGEN_LABELS[tag] || tag)}</ComputedBadge>
             ))}
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', lineHeight: 1.4 }}>

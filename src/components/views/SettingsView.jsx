@@ -3,9 +3,12 @@ import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
+import BinderTabs, { getTabShades, tabBackground } from '../BinderTabs'
+import { useCompact } from '../../lib/useCompact'
 
-const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
-const TAB_SHADES_DARK  = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
+// Sentinel key for recipes with no category, so they can be selected in the
+// PDF filter alongside real category names.
+const UNCATEGORIZED = '__uncategorized__'
 
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
@@ -29,14 +32,7 @@ export default function SettingsView({
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [compact, setCompact] = useState(false)
-
-  useEffect(() => {
-    const check = () => setCompact(window.innerWidth <= 360)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  const compact = useCompact()
 
   const [draft, setDraft] = useState({
     theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language,
@@ -84,8 +80,7 @@ export default function SettingsView({
     [recipes]
   )
 
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
-  const TAB_SHADES = isDark ? TAB_SHADES_DARK : TAB_SHADES_LIGHT
+  const tabShades = getTabShades()
   const activeSectionIndex = SECTIONS.findIndex(s => s.id === activeSection)
 
   return (
@@ -103,47 +98,19 @@ export default function SettingsView({
           {t('settings.title')}
         </h1>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, overflowX: 'auto' }}>
-          {SECTIONS.map((s, i) => {
-            const isActive = activeSection === s.id
-            return (
-              <button
-                key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                style={{
-                  flexShrink: 0,
-                  position: 'relative',
-                  zIndex: isActive ? SECTIONS.length + 1 : SECTIONS.length - i,
-                  marginLeft: i === 0 ? 0 : (compact ? -6 : -10),
-                  padding: isActive
-                    ? (compact ? '8px 12px 9px' : '10px 18px 11px')
-                    : (compact ? '7px 10px 8px' : '8px 16px 9px'),
-                  borderRadius: '10px 10px 0 0',
-                  border: '1px solid var(--line)',
-                  borderBottom: isActive
-                    ? `1px solid ${TAB_SHADES[i % TAB_SHADES.length]}`
-                    : '1px solid var(--line)',
-                  background: TAB_SHADES[i % TAB_SHADES.length],
-                  color: isActive ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
-                  fontFamily: 'var(--font-display)', fontWeight: 600,
-                  fontSize: compact ? (isActive ? 12.5 : 11.5) : (isActive ? 14 : 13),
-                  cursor: 'pointer',
-                  transform: isActive ? 'translateY(0)' : 'translateY(4px)',
-                  boxShadow: isActive ? '0 -2px 8px rgba(42,36,32,0.08)' : 'none',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >{s.label}</button>
-            )
-          })}
-        </div>
+        <BinderTabs
+          tabs={SECTIONS}
+          activeId={activeSection}
+          onSelect={setActiveSection}
+          compact={compact}
+        />
       </div>
 
       {/* Content — background shade matches active tab */}
       <div style={{
         padding: '20px 20px',
         paddingBottom: isDirty ? 90 : 100,
-        background: TAB_SHADES[activeSectionIndex % TAB_SHADES.length],
+        background: tabBackground(tabShades, activeSectionIndex),
         minHeight: 'calc(100dvh - 160px)',
       }}>
         {activeSection === 'general' && (
@@ -320,10 +287,16 @@ export default function SettingsView({
 
 function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
   const { t } = useT()
-  const allCategories = useMemo(
-    () => [...new Set(recipes.map(r => r.category).filter(Boolean))].sort(),
-    [recipes]
-  )
+  // Recipes with no category used to be silently unselectable — dropped by
+  // filter(Boolean) here and by `selected.has(r.category)` below — so "Select
+  // all" never actually meant all. UNCATEGORIZED stands in for null so they can
+  // be included, matching the "Uncategorized" bucket generateCookbookHtml
+  // already renders.
+  const hasUncategorized = useMemo(() => recipes.some(r => !r.category), [recipes])
+  const allCategories = useMemo(() => {
+    const named = [...new Set(recipes.map(r => r.category).filter(Boolean))].sort()
+    return hasUncategorized ? [...named, UNCATEGORIZED] : named
+  }, [recipes, hasUncategorized])
   const [selected, setSelected] = useState(new Set(allCategories))
 
   const toggle = (cat) => setSelected(prev => {
@@ -333,7 +306,7 @@ function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
     return next
   })
 
-  const filtered = recipes.filter(r => selected.has(r.category))
+  const filtered = recipes.filter(r => selected.has(r.category || UNCATEGORIZED))
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
@@ -354,7 +327,9 @@ function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
           {allCategories.map(cat => (
             <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', cursor: 'pointer', borderBottom: '1px solid var(--line)' }}>
               <input type="checkbox" checked={selected.has(cat)} onChange={() => toggle(cat)} style={{ width: 18, height: 18, accentColor: 'var(--tomato)', flexShrink: 0 }} />
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', flex: 1 }}>{cat}</span>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', flex: 1 }}>
+                {cat === UNCATEGORIZED ? t('settings.pdfFilter.uncategorized') : cat}
+              </span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
                 {recipes.filter(r => r.category === cat).length}
               </span>
@@ -758,7 +733,7 @@ function IngredientAllergenSection() {
                           color: active ? '#fffdf9' : 'var(--charcoal-soft)',
                           cursor: 'pointer',
                         }}
-                      >{t(`allergens.${key}`) || ALLERGEN_LABELS[key]}</button>
+                      >{t(`allergens.${key}`, ALLERGEN_LABELS[key])}</button>
                     )
                   })}
                 </div>

@@ -31,7 +31,11 @@ export default function PullToRefresh({ onRefresh, children, style }) {
     if (pullDistance > THRESHOLD && !refreshing) {
       setRefreshing(true)
       setPullDistance(50)
-      await onRefresh()
+      // A rejected refresh used to leave the spinner stuck on screen forever
+      // and surface as an unhandled promise rejection.
+      try {
+        await onRefresh()
+      } catch { /* the caller reports its own errors; just stop spinning */ }
       setRefreshing(false)
     }
     setPullDistance(0)

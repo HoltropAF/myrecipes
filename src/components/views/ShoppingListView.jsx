@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { normalizeName } from '../../lib/ingredientParser'
+import { normalizeName, formatAmount } from '../../lib/ingredientParser'
 import LoadingGyoza from '../LoadingGyoza'
 import SwipeToDelete from '../SwipeToDelete'
 import { useT } from '../../lib/i18n'
@@ -23,13 +23,8 @@ export default function ShoppingListView({ userId, isGuest = false }) {
     setLoading(false)
   }
 
-  useEffect(() => { loadItems() }, [])
-
-  const toggleChecked = async (item) => {
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, checked: !i.checked } : i))
-    if (isGuest) return
-    await supabase.from('shopping_list').update({ checked: !item.checked }).eq('id', item.id)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadItems() }, [isGuest])
 
   const addManualItem = async () => {
     if (!manualInput.trim()) return
@@ -55,30 +50,44 @@ export default function ShoppingListView({ userId, isGuest = false }) {
     await supabase.from('shopping_list').delete().in('id', checkedIds)
   }
 
-  const removeItem = async (item) => {
-    setItems(prev => prev.filter(i => i.id !== item.id))
+  // Delete a whole merged row in one request rather than one per underlying id.
+  const removeGroup = async (ids) => {
+    setItems(prev => prev.filter(i => !ids.includes(i.id)))
     if (isGuest) return
-    await supabase.from('shopping_list').delete().eq('id', item.id)
+    await supabase.from('shopping_list').delete().in('id', ids)
   }
 
-  // Group + merge by normalized name
+  // Tick or untick every underlying item, driving them all to the same state.
+  // Toggling each one independently left mixed rows permanently unticked.
+  const setGroupChecked = async (ids, checked) => {
+    const affected = items.filter(i => ids.includes(i.id) && !!i.checked !== checked)
+    if (affected.length === 0) return
+    setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, checked } : i))
+    if (isGuest) return
+    await supabase.from('shopping_list').update({ checked }).in('id', affected.map(i => i.id))
+  }
+
+  // Group + merge by normalized name. Amounts are totalled *per unit* — mixing
+  // "200 g ui" with "2 ui" used to drop the second one entirely.
   const grouped = {}
   for (const item of items) {
     const key = normalizeName(item.name)
-    if (!grouped[key]) grouped[key] = { displayName: item.name, amount: 0, unit: item.unit, hasAmount: false, ids: [], checked: true }
+    if (!grouped[key]) grouped[key] = { displayName: item.name, byUnit: new Map(), ids: [], checked: true }
     const g = grouped[key]
     g.ids.push(item.id)
     if (!item.checked) g.checked = false
-    if (item.amount !== null && item.unit === g.unit) {
-      g.amount += item.amount
-      g.hasAmount = true
-    } else if (item.amount !== null && !g.hasAmount) {
-      g.amount = item.amount
-      g.unit = item.unit
-      g.hasAmount = true
+    const amount = Number(item.amount)
+    if (item.amount !== null && Number.isFinite(amount)) {
+      const unitKey = item.unit || ''
+      g.byUnit.set(unitKey, (g.byUnit.get(unitKey) || 0) + amount)
     }
   }
-  const mergedList = Object.values(grouped)
+  const mergedList = Object.values(grouped).map(g => ({
+    ...g,
+    amountLabel: [...g.byUnit.entries()]
+      .map(([unit, total]) => `${formatAmount(total)}${unit ? ` ${unit}` : ''}`)
+      .join(' + '),
+  }))
 
   const checkedCount = items.filter(i => i.checked).length
 
@@ -112,13 +121,13 @@ export default function ShoppingListView({ userId, isGuest = false }) {
         <>
           <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
             {mergedList.map((g, i) => (
-              <SwipeToDelete key={i} onDelete={() => g.ids.forEach(id => removeItem({ id }))}>
+              <SwipeToDelete key={g.ids.join('-')} onDelete={() => removeGroup(g.ids)}>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
                   borderBottom: i < mergedList.length - 1 ? '1px solid var(--line)' : 'none',
                 }}>
                   <button
-                    onClick={() => g.ids.forEach(id => toggleChecked(items.find(it => it.id === id)))}
+                    onClick={() => setGroupChecked(g.ids, !g.checked)}
                     style={{
                       width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
                       border: `2px solid ${g.checked ? 'var(--sage)' : 'var(--line)'}`,
@@ -132,7 +141,7 @@ export default function ShoppingListView({ userId, isGuest = false }) {
                     textDecoration: g.checked ? 'line-through' : 'none',
                   }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)', fontWeight: 600, minWidth: 44, flexShrink: 0, display: 'inline-block' }}>
-                      {g.hasAmount ? `${Number.isInteger(g.amount) ? g.amount : g.amount.toFixed(1)}${g.unit ? ` ${g.unit}` : ''}` : '\u00A0'}
+                      {g.amountLabel || '\u00A0'}
                     </span>
                     <span>{g.displayName}</span>
                   </div>

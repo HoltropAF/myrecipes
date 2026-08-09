@@ -26,9 +26,15 @@ export default defineConfig({
         ],
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // skipWaiting is deliberately OFF. With it on, a new service worker took
+        // over an already-open tab and purged the old precache, so the lazily
+        // loaded views in App.jsx 404'd with "Failed to fetch dynamically
+        // imported module" — a blank screen, while the update banner was still
+        // politely asking the user to click Update. The new worker now waits
+        // until the user reloads via that banner.
+        skipWaiting: false,
+        clientsClaim: false,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

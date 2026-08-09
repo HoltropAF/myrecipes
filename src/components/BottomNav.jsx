@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useT } from '../lib/i18n'
+import { useCompact } from '../lib/useCompact'
 
 const TAB_IDS = [
   { id: 'recipes',  icon: '📖' },
@@ -21,14 +21,7 @@ export default function BottomNav({ active, onChange }) {
 
   // Narrow phones (≤360px, e.g. older/small Android) get a tighter layout so 5 tabs
   // never wrap or overflow — smaller icon, smaller label, tighter padding.
-  const [compact, setCompact] = useState(false)
-
-  useEffect(() => {
-    const check = () => setCompact(window.innerWidth <= 360)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  const compact = useCompact()
 
   return (
     <div style={{

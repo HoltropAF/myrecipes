@@ -9,13 +9,11 @@ import InfoTab from './recipe_tabs/InfoTab'
 import IngredientsTab from './recipe_tabs/IngredientsTab'
 import StepsTab from './recipe_tabs/StepsTab'
 import StorageTab from './recipe_tabs/StorageTab'
+import BinderTabs, { getTabShades, tabBackground } from './BinderTabs'
+import { useCompact } from '../lib/useCompact'
+import CollectionForm, { DEFAULT_COLLECTION_EMOJI } from './CollectionForm'
 
-// A palette of subtly differing card shades, like colored index dividers in a real binder.
-// Defined per-theme since the light parchment shades would clash against a dark background.
-const TAB_SHADES_LIGHT = ['#fffdf9', '#fdf6ec', '#fbf1e4', '#f8ecdb', '#f5e7d2']
-const TAB_SHADES_DARK = ['#2a221c', '#2e2620', '#322a23', '#362e26', '#3a3229']
-
-export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
+export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
   const { t } = useT()
 
   const TABS = [
@@ -40,14 +38,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     } catch { return new Set() }
   })
   const [showCookingMode, setShowCookingMode] = useState(false)
-  const [compact, setCompact] = useState(false)
-
-  useEffect(() => {
-    const check = () => setCompact(window.innerWidth <= 360)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  const compact = useCompact()
 
   useEffect(() => {
     try {
@@ -104,13 +95,13 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         steps={active.steps}
         unitSystem={unitSystem}
         onClose={() => setShowCookingMode(false)}
+        onLogged={onCookLogged}
       />
     )
   }
 
   const activeTabIndex = TABS.findIndex(t => t.id === activeTab)
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
-  const TAB_SHADES = isDark ? TAB_SHADES_DARK : TAB_SHADES_LIGHT
+  const tabShades = getTabShades()
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
@@ -122,7 +113,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
             {onToggleUnitSystem && (
               <button
                 onClick={onToggleUnitSystem}
-                title="Switch units"
+                title={t('collections.switchUnits')}
                 style={{
                   background: 'var(--parchment-dim)', border: '1px solid var(--line)', borderRadius: 99,
                   cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
@@ -131,12 +122,12 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
               >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
             )}
             {!isGuest && (
-              <button onClick={() => setShowCollectionPicker(true)} title="Collections" style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>
+              <button onClick={() => setShowCollectionPicker(true)} title={t('collections.title')} style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>
                 {collections.some(c => (collectionRecipeMap[c.id] || new Set()).has(recipe.id)) ? '📚' : '🔖'}
               </button>
             )}
             {!isGuest && (
-              <button onClick={() => setShowPlanPicker(true)} title="Add to meal plan" style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>📅</button>
+              <button onClick={() => setShowPlanPicker(true)} title={t('collections.addToPlan')} style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>📅</button>
             )}
             {onEdit && <button onClick={() => onEdit(recipe, activeTab)} style={navBtnStyle}>{t('recipeDetail.edit')}</button>}
             {onDelete && <button onClick={() => onDelete(recipe)} style={{ ...navBtnStyle, color: 'var(--tomato)' }}>{t('recipeDetail.delete')}</button>}
@@ -154,42 +145,18 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         </div>
 
         {/* Cookbook-divider style tab bar */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, overflowX: 'auto', paddingBottom: 0 }}>
-          {TABS.map((tab, i) => {
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flexShrink: 0,
-                  position: 'relative',
-                  zIndex: isActive ? TABS.length + 1 : TABS.length - i,
-                  marginLeft: i === 0 ? 0 : (compact ? -6 : -10),
-                  padding: isActive
-                    ? (compact ? '8px 12px 9px' : '10px 18px 11px')
-                    : (compact ? '7px 10px 8px' : '8px 16px 9px'),
-                  borderRadius: '10px 10px 0 0',
-                  border: '1px solid var(--line)',
-                  borderBottom: isActive ? `1px solid ${TAB_SHADES[i % TAB_SHADES.length]}` : '1px solid var(--line)',
-                  background: TAB_SHADES[i % TAB_SHADES.length],
-                  color: isActive ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
-                  fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: compact ? (isActive ? 12.5 : 11.5) : (isActive ? 14 : 13),
-                  cursor: 'pointer',
-                  transform: isActive ? 'translateY(0)' : 'translateY(4px)',
-                  boxShadow: isActive ? '0 -2px 8px rgba(42,36,32,0.08)' : 'none',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >{tab.label}</button>
-            )
-          })}
-        </div>
+        <BinderTabs
+          tabs={TABS}
+          activeId={activeTab}
+          onSelect={setActiveTab}
+          compact={compact}
+          style={{ paddingBottom: 0 }}
+        />
       </div>
 
       <div style={{
         flex: 1, overflowY: 'auto', padding: '20px 20px 100px',
-        background: TAB_SHADES[activeTabIndex % TAB_SHADES.length],
+        background: tabBackground(tabShades, activeTabIndex),
       }}>
         {activeTab === 'info' && (
           <InfoTab
@@ -212,6 +179,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
           <CookLogSection
             recipeId={recipe.id} variants={variants} isGuest={isGuest}
             demoEntries={isGuest ? DEMO_COOK_LOG.filter(e => e.recipe_id === recipe.id) : null}
+            onLogged={onCookLogged}
           />
         )}
         {activeTab === 'storage' && (
@@ -239,10 +207,11 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
 }
 
 function CollectionPicker({ recipeId, collections, collectionRecipeMap, onChanged, onClose }) {
+  const { t } = useT()
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newEmoji, setNewEmoji] = useState('📚')
+  const [newEmoji, setNewEmoji] = useState(DEFAULT_COLLECTION_EMOJI)
 
   const toggle = async (col) => {
     if (busy) return
@@ -276,18 +245,16 @@ function CollectionPicker({ recipeId, collections, collectionRecipeMap, onChange
     setBusy(false)
   }
 
-  const EMOJIS = ['📚','✨','❤️','🌟','🍝','🔥','🌿','🎉','🧁','☕','🥗','🍜']
-
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
       <div style={{ background: 'var(--card)', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 20px 40px', maxHeight: '70dvh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>Collections</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>{t('collections.title')}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--charcoal-soft)' }}>✕</button>
         </div>
 
         {collections.length === 0 && !creating && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', marginBottom: 14 }}>No collections yet.</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', marginBottom: 14 }}>{t('collections.empty')}</div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -305,28 +272,17 @@ function CollectionPicker({ recipeId, collections, collectionRecipeMap, onChange
 
         {creating ? (
           <div style={{ marginTop: 14 }}>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
-              {EMOJIS.map(e => (
-                <button key={e} onClick={() => setNewEmoji(e)} style={{
-                  fontSize: 18, border: newEmoji === e ? '2px solid var(--tomato)' : '2px solid transparent',
-                  background: 'none', borderRadius: 6, cursor: 'pointer', padding: '2px 4px',
-                }}>{e}</button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
-                placeholder="Collection name"
-                style={{ flex: 1, padding: '9px 10px', borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'var(--font-body)', fontSize: 13, background: 'var(--parchment)', color: 'var(--charcoal)', outline: 'none' }}
-              />
-              <button onClick={handleCreate} disabled={busy || !newName.trim()} style={{ padding: '9px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                Create
-              </button>
-            </div>
+            <CollectionForm
+              name={newName} setName={setNewName}
+              emoji={newEmoji} setEmoji={setNewEmoji}
+              onCreate={handleCreate}
+              onCancel={() => setCreating(false)}
+              busy={busy}
+            />
           </div>
         ) : (
           <button onClick={() => setCreating(true)} style={{ marginTop: 14, padding: '10px 0', borderRadius: 9, border: '1px dashed var(--line)', background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer', width: '100%' }}>
-            + New collection
+            {t('collections.newCollection')}
           </button>
         )}
       </div>
@@ -335,6 +291,7 @@ function CollectionPicker({ recipeId, collections, collectionRecipeMap, onChange
 }
 
 function PlanPicker({ recipeId, onClose }) {
+  const { t } = useT()
   const [groups, setGroups] = useState([])
   const [adding, setAdding] = useState(null)
   const [added, setAdded] = useState(null)
@@ -352,9 +309,16 @@ function PlanPicker({ recipeId, onClose }) {
   const addToGroup = async (group) => {
     if (adding) return
     setAdding(group.id)
-    const current = group.recipe_ids || []
+    // Re-read immediately before writing. The list in state can be seconds old,
+    // and writing the whole array back from stale state silently drops recipes
+    // another device added to the same week in the meantime.
+    const { data: fresh } = await supabase
+      .from('meal_groups').select('recipe_ids').eq('id', group.id).maybeSingle()
+    const current = fresh?.recipe_ids || group.recipe_ids || []
     if (!current.includes(recipeId)) {
-      await supabase.from('meal_groups').update({ recipe_ids: [...current, recipeId] }).eq('id', group.id)
+      const next = [...current, recipeId]
+      await supabase.from('meal_groups').update({ recipe_ids: next }).eq('id', group.id)
+      setGroups(prev => prev.map(g => g.id === group.id ? { ...g, recipe_ids: next } : g))
     }
     setAdded(group.id)
     setAdding(null)
@@ -365,7 +329,7 @@ function PlanPicker({ recipeId, onClose }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(42,36,32,0.6)', display: 'flex', alignItems: 'flex-end' }}>
       <div style={{ background: 'var(--card)', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 20px 40px', maxHeight: '60dvh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>Add to meal plan</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'var(--charcoal)' }}>{t('collections.addToPlan')}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--charcoal-soft)' }}>✕</button>
         </div>
 

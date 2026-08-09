@@ -46,7 +46,7 @@ export default function ExtrasStep({
           value={category}
           onChange={setCategory}
           options={existingCategories}
-          placeholder={t('extrasStep.categoryPlaceholder') || 'e.g. Main dishes'}
+          placeholder={t('extrasStep.categoryPlaceholder', 'e.g. Main dishes')}
         />
       </div>
 
@@ -56,9 +56,9 @@ export default function ExtrasStep({
           value={subcategory}
           onChange={setSubcategory}
           options={subcategoryOptions}
-          placeholder={t('extrasStep.subcategoryPlaceholder') || 'e.g. Pasta'}
+          placeholder={t('extrasStep.subcategoryPlaceholder', 'e.g. Pasta')}
           disabled={!category}
-          disabledHint={t('extrasStep.subcategoryHint') || 'Pick a category first'}
+          disabledHint={t('extrasStep.subcategoryHint', 'Pick a category first')}
         />
       </div>
 
