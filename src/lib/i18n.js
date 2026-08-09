@@ -86,6 +86,8 @@ const en = {
     linkSent: (email) => `Link sent to ${email}. Check your inbox and tap it on this device.`,
   },
   app: {
+    offline: 'Offline — changes won’t save until you’re back.',
+    offlineWithCache: (n) => `Offline — showing ${n} cached recipe${n === 1 ? '' : 's'}. Changes won’t save yet.`,
     undo: 'Undo',
     warmingUp: 'warming up the kitchen…',
     setupPrompt: 'Exploring as guest —',
@@ -584,6 +586,8 @@ const nl = {
     linkSent: (email) => `Link verstuurd naar ${email}. Controleer je inbox en tik erop op dit apparaat.`,
   },
   app: {
+    offline: 'Offline — wijzigingen worden nog niet opgeslagen.',
+    offlineWithCache: (n) => `Offline — ${n} recept${n === 1 ? '' : 'en'} uit cache. Wijzigingen worden nog niet opgeslagen.`,
     undo: 'Ongedaan maken',
     warmingUp: 'de keuken warmt op…',
     setupPrompt: 'Aan het verkennen als gast —',

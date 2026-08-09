@@ -94,6 +94,7 @@ const StatsView        = lazy(() => import('./components/views/StatsView'))
 const MealPrepView     = lazy(() => import('./components/views/MealPrepView'))
 const SettingsView     = lazy(() => import('./components/views/SettingsView'))
 import ErrorBoundary from './components/ErrorBoundary'
+import { useOnline } from './lib/useOnline'
 import './App.css'
 
 // Every lazily-loaded screen gets an error boundary as well as a Suspense
@@ -138,6 +139,7 @@ function AppInner({ setLanguage }) {
   }
   const [updateReady, setUpdateReady] = useState(false)
   const [showFirstRun, setShowFirstRun] = useState(false)
+  const online = useOnline()
 
   // A new service worker installs but waits (skipWaiting is off in vite.config,
   // so it can't purge the running tab's chunks out from under it). We show the
@@ -531,6 +533,23 @@ function AppInner({ setLanguage }) {
           </div>
         </div>
       )}
+      {/* Reading the cookbook still works offline — it is served from the
+          cache. Saving does not. Say which, rather than letting a write fail
+          silently and look like the app is broken. */}
+      {!online && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          padding: '8px 16px', background: 'var(--parchment-dim)',
+          borderBottom: '1px solid var(--tomato)',
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)',
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: 99, background: 'var(--tomato)', flexShrink: 0,
+          }} />
+          <span>{recipes.length > 0 ? t('app.offlineWithCache')(recipes.length) : t('app.offline')}</span>
+        </div>
+      )}
+
       {updateReady && (
         <div style={{
           position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)',
