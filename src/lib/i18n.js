@@ -24,6 +24,23 @@ export function useT() {
 }
 
 const en = {
+  decide: {
+    heading: 'Tonight',
+    headingShuffle: 'How about this',
+    shuffle: 'Shuffle',
+    shuffling: 'Shuffling…',
+    shuffled: 'picked at random',
+    using: '+ using…',
+    usingCount: (n) => `using ${n}`,
+    usingPlaceholder: 'kip, prei',
+    usingHint: 'One or two things you want to use up.',
+    noMatch: 'Nothing uses all of those. Try one ingredient.',
+    reasonQuick: (m) => `${m} min, so it fits a weeknight`,
+    reasonLiked: (n) => `you liked this ${n}×`,
+    reasonUntried: 'never made this one',
+    reasonAges: 'it has been months',
+    lastMade: (when) => `last made ${when}`,
+  },
   relative: {
     today: 'today',
     yesterday: 'yesterday',
@@ -532,6 +549,23 @@ const en = {
 }
 
 const nl = {
+  decide: {
+    heading: 'Vanavond',
+    headingShuffle: 'Wat dacht je hiervan',
+    shuffle: 'Verras me',
+    shuffling: 'Kiezen…',
+    shuffled: 'willekeurig gekozen',
+    using: '+ met…',
+    usingCount: (n) => `met ${n}`,
+    usingPlaceholder: 'kip, prei',
+    usingHint: 'Eén of twee dingen die je wilt opmaken.',
+    noMatch: 'Niets gebruikt dat allemaal. Probeer één ingrediënt.',
+    reasonQuick: (m) => `${m} min, past op een doordeweekse avond`,
+    reasonLiked: (n) => `dit vond je ${n}× lekker`,
+    reasonUntried: 'nog nooit gemaakt',
+    reasonAges: 'het is maanden geleden',
+    lastMade: (when) => `laatst gemaakt ${when}`,
+  },
   relative: {
     today: 'vandaag',
     yesterday: 'gisteren',

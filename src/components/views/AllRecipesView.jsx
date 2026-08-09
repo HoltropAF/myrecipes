@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import WhatCanIMake from '../WhatCanIMake'
+import DecideCard from '../DecideCard'
 import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
 import { relativeDayLabel } from '../../lib/dateUtils'
@@ -124,6 +125,8 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, defa
         onSelect={setActiveCollection}
         onChanged={onCollectionsChanged}
       />
+
+      <DecideCard recipes={recipes} cookStats={cookCounts} onSelect={onSelect} />
 
       <WhatCanIMake recipes={recipes} onSelect={onSelect} />
 

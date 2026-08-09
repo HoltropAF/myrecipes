@@ -39,7 +39,7 @@ export function significantIngredients(recipe) {
  * Short terms (under three characters) must match exactly, since a two-letter
  * prefix matches far too much.
  */
-function covers(have, ingredientKey) {
+export function covers(have, ingredientKey) {
   if (have === ingredientKey) return true
   for (const token of ingredientKey.split(/\s+/)) {
     if (token === have) return true
