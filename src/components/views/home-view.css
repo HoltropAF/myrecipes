@@ -8,8 +8,9 @@
 .recipe-home__mark { width: 39px; height: 39px; flex: 0 0 39px; display: grid; place-items: center; border-radius: 50%; color: #fff8f1; background: #8d3540; box-shadow: 0 7px 18px rgba(88, 29, 38, .18); }
 .recipe-home__title h1 { margin: 0; color: #7c2e38; font: 600 25px/1 var(--font-display); }
 .recipe-home__title p { margin: 5px 0 0; color: #765f5b; font: 10.5px/1.35 var(--font-mono); }
-.recipe-home__index { position: relative; z-index: 1; margin-top: clamp(32px, 8dvh, 68px); padding: 17px 16px 13px 27px; border: 1px solid rgba(110, 50, 56, .14); border-radius: 8px 21px 21px 9px; background: rgba(255, 249, 242, .92); box-shadow: inset 10px 0 #8d3540, 0 13px 32px rgba(66, 25, 29, .2); backdrop-filter: blur(6px); transform: rotate(-.25deg); }
-.recipe-home__index::after { content: ''; position: absolute; top: 10px; right: -5px; bottom: 10px; width: 8px; border-radius: 0 8px 8px 0; background: #d7b7ae; box-shadow: 2px 2px 7px rgba(67, 28, 30, .15); }
+.recipe-home__index { position: relative; z-index: 1; margin-top: clamp(32px, 8dvh, 68px); padding: 29px 17px 16px 39px; border: 0; border-radius: 0 17px 19px 5px; background: linear-gradient(90deg, transparent 0 30px, rgba(141,53,64,.24) 30px 31px, transparent 31px), repeating-linear-gradient(180deg, rgba(255,250,243,.96) 0 27px, rgba(150,170,177,.18) 27px 28px); box-shadow: 0 14px 33px rgba(66, 25, 29, .23); clip-path: polygon(0 12px,4% 8px,8% 14px,13% 6px,18% 11px,23% 5px,28% 13px,33% 7px,38% 12px,43% 4px,48% 11px,53% 7px,58% 13px,63% 5px,68% 10px,73% 6px,78% 12px,83% 5px,88% 10px,93% 7px,100% 13px,100% 100%,0 100%); backdrop-filter: blur(6px); transform: rotate(-.35deg); }
+.recipe-home__index::before { content: ''; position: absolute; left: 9px; top: 28px; bottom: 17px; width: 13px; background: radial-gradient(circle at center, #a96b70 0 3.5px, rgba(111,43,52,.18) 3.8px 4.8px, transparent 5px) center top / 13px 32px repeat-y; opacity: .9; }
+.recipe-home__index::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, rgba(117,54,58,.06), transparent 17%, transparent 82%, rgba(117,54,58,.045)); mix-blend-mode: multiply; }
 .recipe-home__index h2 { margin: 0 0 10px; color: #7c2e38; font: 600 18px/1.2 var(--font-display); }
 .recipe-home__bell > div { margin: 0 0 5px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
 .recipe-home__bell > div > div:first-child { padding-left: 0 !important; }
@@ -24,7 +25,8 @@
 [data-theme="dark"] .recipe-home__landscape i:nth-child(1) { background: linear-gradient(169deg, transparent 0 38%, #4f3033 38.3% 100%); }
 [data-theme="dark"] .recipe-home__landscape i:nth-child(2) { background: linear-gradient(176deg, transparent 0 53%, #64333a 53.3% 100%); }
 [data-theme="dark"] .recipe-home__landscape i:nth-child(3) { background: linear-gradient(165deg, transparent 0 68%, #391c22 68.3% 100%); }
-[data-theme="dark"] .recipe-home__index { background: rgba(49, 35, 34, .94); border-color: #5d3d3d; }
+[data-theme="dark"] .recipe-home__index { background: linear-gradient(90deg, transparent 0 30px, rgba(218,134,139,.24) 30px 31px, transparent 31px), repeating-linear-gradient(180deg, rgba(55,39,39,.97) 0 27px, rgba(196,157,151,.13) 27px 28px); }
+[data-theme="dark"] .recipe-home__index::before { background: radial-gradient(circle at center, #c27b80 0 3.5px, rgba(20,12,13,.5) 3.8px 4.8px, transparent 5px) center top / 13px 32px repeat-y; }
 [data-theme="dark"] .recipe-home__title h1, [data-theme="dark"] .recipe-home__index h2 { color: #e5aaa8; }
 [data-theme="dark"] .recipe-home__title p, [data-theme="dark"] .recipe-home__row small { color: #c0aaa2; }
 [data-theme="dark"] .recipe-home__row { color: var(--charcoal); }
