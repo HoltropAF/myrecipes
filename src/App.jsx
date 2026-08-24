@@ -643,6 +643,7 @@ function AppInner({ setLanguage }) {
             viewMode={recipeViewMode}
             searchMode={recipeSearchMode}
             compactMode={compactMode}
+            onCompactModeChange={value => { setCompactMode(value); savePreferences({ compact_mode: value }) }}
             cookCounts={cookCounts}
             collections={isGuest ? [] : collections}
             collectionRecipeMap={isGuest ? {} : collectionRecipeMap}

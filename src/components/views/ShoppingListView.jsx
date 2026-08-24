@@ -17,7 +17,10 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
   // per-visit choice — but kept local rather than in user_preferences, which is
   // a draft+Save screen and would make this a two-step toggle.
   const [grouping, setGrouping] = useState(() => {
-    try { return localStorage.getItem(GROUPING_KEY) || 'aisle' } catch { return 'aisle' }
+    try {
+      const saved = localStorage.getItem(GROUPING_KEY)
+      return saved === 'flat' ? 'alpha' : (saved || 'aisle')
+    } catch { return 'aisle' }
   })
 
   const changeGrouping = (next) => {
@@ -98,11 +101,20 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
           checked: true,
           aisle: classifyAisle(item.name),
           staple: isAlwaysStocked(key),
+          optional: false,
         }
       }
       const g = grouped[key]
       g.ids.push(item.id)
       if (item.recipe_id) g.recipeIds.add(item.recipe_id)
+      if (item.recipe_id) {
+        const sourceRecipe = recipes.find(recipe => recipe.id === item.recipe_id)
+        const sourceIngredient = (sourceRecipe?.ingredients || [])
+          .flatMap(group => (group.items || []).map(ingredient => ({ ingredient, groupName: group.name || group.title || '' })))
+          .find(({ ingredient }) => normalizeName(ingredient.name) === key)
+        const optionalText = `${sourceIngredient?.ingredient?.note || ''} ${sourceIngredient?.groupName || ''}`
+        if (sourceIngredient?.ingredient?.optional || /\b(optional|optioneel|facultatief)\b/i.test(optionalText)) g.optional = true
+      }
       if (!item.checked) g.checked = false
       const amount = Number(item.amount)
       if (item.amount !== null && Number.isFinite(amount)) {
@@ -116,14 +128,26 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
         .map(([unit, total]) => `${formatAmount(total)}${unit ? ` ${unit}` : ''}`)
         .join(' + '),
     }))
-  }, [items])
+  }, [items, recipes])
 
   // Sections in the order you walk the shop. Pantry staples are pulled out of
   // their aisle into a dimmed group at the end — "zout" sitting between two
   // things you actually need to buy is noise.
   const sections = useMemo(() => {
-    if (grouping === 'flat') {
-      return [{ key: 'all', label: null, rows: mergedList, dimmed: false }]
+    if (grouping === 'alpha') {
+      return [{ key: 'all', label: null, rows: [...mergedList].sort((a, b) => a.displayName.localeCompare(b.displayName)), dimmed: false }]
+    }
+    if (grouping === 'recipe') {
+      const byRecipe = new Map()
+      for (const row of mergedList) {
+        const names = [...row.recipeIds].map(id => recipes.find(recipe => recipe.id === id)?.title).filter(Boolean)
+        const label = names.length === 0 ? t('shopping.manualItems') : names.length === 1 ? names[0] : t('shopping.multipleRecipes')
+        if (!byRecipe.has(label)) byRecipe.set(label, [])
+        byRecipe.get(label).push(row)
+      }
+      return [...byRecipe.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([label, rows]) => ({ key: label, label, rows: rows.sort((a, b) => a.displayName.localeCompare(b.displayName)), dimmed: false }))
     }
     const staples = mergedList.filter(row => row.staple)
     const rest = mergedList.filter(row => !row.staple)
@@ -134,12 +158,12 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
     }
     const out = AISLE_ORDER
       .filter(key => byAisle.has(key))
-      .map(key => ({ key, label: t(`shopping.aisle.${key}`, key), rows: byAisle.get(key), dimmed: false }))
+      .map(key => ({ key, label: t(`shopping.aisle.${key}`, key), rows: byAisle.get(key).sort((a, b) => a.displayName.localeCompare(b.displayName)), dimmed: false }))
     if (staples.length > 0) {
-      out.push({ key: 'staples', label: t('shopping.aisle.staples'), rows: staples, dimmed: true })
+      out.push({ key: 'staples', label: t('shopping.aisle.staples'), rows: staples.sort((a, b) => a.displayName.localeCompare(b.displayName)), dimmed: true })
     }
     return out
-  }, [mergedList, grouping, t])
+  }, [mergedList, grouping, recipes, t])
 
   const recipeTitle = (id) => recipes.find(r => r.id === id)?.title || null
 
@@ -169,7 +193,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
 
       {!loading && mergedList.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-          {['aisle', 'flat'].map(mode => (
+          {['aisle', 'recipe', 'alpha'].map(mode => (
             <button
               key={mode}
               onClick={() => changeGrouping(mode)}
@@ -236,6 +260,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
                               {g.amountLabel || ' '}
                             </span>
                             <span>{g.displayName}</span>
+                            {g.optional && <span style={optionalBadgeStyle}>{t('shopping.optional')}</span>}
                           </div>
                           {/* Which recipe put this on the list. recipe_id has
                               been stored since the beginning and never shown. */}
@@ -275,4 +300,11 @@ function Empty({ children }) {
       {children}
     </div>
   )
+}
+
+const optionalBadgeStyle = {
+  flexShrink: 0, padding: '2px 7px', borderRadius: 99,
+  border: '1px solid color-mix(in srgb, var(--tomato) 40%, var(--line))',
+  background: 'color-mix(in srgb, var(--tomato) 8%, var(--card))',
+  color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 600,
 }
