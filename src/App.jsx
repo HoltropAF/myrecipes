@@ -83,6 +83,7 @@ import AuthScreen from './components/AuthScreen'
 import BottomNav from './components/BottomNav'
 import FloatingActionButton from './components/FloatingActionButton'
 import AllRecipesView from './components/views/AllRecipesView'
+import HomeView from './components/views/HomeView'
 import UndoToast from './components/UndoToast'
 import PullToRefresh from './components/PullToRefresh'
 import FirstRunWizard from './components/FirstRunWizard'
@@ -123,7 +124,7 @@ function AppInner({ setLanguage }) {
   // to read immediately, so the spinner is only for a genuinely empty screen.
   const [recipesLoaded, setRecipesLoaded] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
-  const [activeTab, setActiveTab] = useState('recipes')
+  const [activeTab, setActiveTab] = useState('home')
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
@@ -629,6 +630,9 @@ function AppInner({ setLanguage }) {
         </div>
       )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
+        {activeTab === 'home' && (
+          <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => setActiveTab('stats')} isGuest={isGuest} />
+        )}
         {activeTab === 'recipes' && (
           <AllRecipesView
             recipes={recipes}
@@ -708,7 +712,7 @@ function AppInner({ setLanguage }) {
           )
         )}
       </PullToRefresh>
-      {!isGuest && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
+      {!isGuest && activeTab !== 'home' && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
       {showQuickLog && !isGuest && (

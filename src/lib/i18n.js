@@ -24,6 +24,12 @@ export function useT() {
 }
 
 const en = {
+  home: {
+    eyebrow: 'What shall we cook?', title: 'Dinner bell',
+    addTitle: 'Add to your kitchen', addHint: 'Keep it close',
+    addRecipeHint: 'Save a new recipe', logHint: 'Remember what you made',
+    stats: 'Kitchen stats', statsHint: 'Favourites, repeats and forgotten gems',
+  },
   decide: {
     heading: 'Tonight',
     headingShuffle: 'How about this',
@@ -85,6 +91,7 @@ const en = {
     placeholder: 'Type a tag and press Enter…',
   },
   nav: {
+    home: 'Home',
     recipes: 'Recipes',
     shopping: 'List',
     stats: 'Stats',
@@ -556,6 +563,12 @@ const en = {
 }
 
 const nl = {
+  home: {
+    eyebrow: 'Wat zullen we koken?', title: 'Eetbel',
+    addTitle: 'Toevoegen aan je keuken', addHint: 'Altijd dichtbij',
+    addRecipeHint: 'Bewaar een nieuw recept', logHint: 'Onthoud wat je hebt gemaakt',
+    stats: 'Keukenstatistieken', statsHint: 'Favorieten, herhalingen en vergeten parels',
+  },
   decide: {
     heading: 'Vanavond',
     headingShuffle: 'Wat dacht je hiervan',
@@ -617,6 +630,7 @@ const nl = {
     placeholder: 'Typ een label en druk op Enter…',
   },
   nav: {
+    home: 'Home',
     recipes: 'Recepten',
     shopping: 'Lijst',
     stats: 'Statistieken',
