@@ -1,0 +1,13 @@
+.settings-view { min-height: 100%; color: var(--charcoal); }
+.settings-view__head { position: sticky; top: 0; z-index: 5; height: 140px; padding: 16px 18px 0; border-bottom: 1px solid color-mix(in srgb,var(--tomato) 18%,transparent); background: color-mix(in srgb,var(--card) 97%,transparent); }
+.settings-view__head h1 { display: flex; align-items: center; gap: 10px; margin: 0 0 11px; color: var(--tomato-deep); font: 600 25px/1 var(--font-display); }
+.settings-view__head h1 svg { width: 24px; height: 24px; flex: none; }
+.settings-view__tabs { height: 34px; display: flex; align-items: end; gap: 4px; margin-top: 7px; overflow: hidden; }
+.settings-view__tabs button { height: 25px; min-width: 0; flex: 1 1 0; padding: 0 3px; border: 0; border-radius: 7px 7px 0 0; background: color-mix(in srgb,var(--tomato) 16%,var(--card)); color: var(--charcoal-soft); font: 8px var(--font-mono); white-space: nowrap; cursor: pointer; }
+.settings-view__tabs button[aria-selected="true"] { height: 29px; background: color-mix(in srgb,var(--tomato) 34%,var(--card)); color: var(--tomato-deep); font-weight: 700; }
+.settings-view__body { min-height: calc(100dvh - 140px); padding: 18px 20px 100px; background: linear-gradient(165deg,color-mix(in srgb,var(--tomato) 16%,var(--parchment)) 0 25%,color-mix(in srgb,var(--tomato) 5%,var(--parchment)) 25.3% 100%); }
+.settings-palette { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin-top: 9px; }
+.settings-palette button { height: 43px; display: grid; place-items: center; align-content: center; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--parchment-dim); color: var(--charcoal-soft); font: 7.5px var(--font-mono); cursor: pointer; }
+.settings-palette button[aria-pressed="true"] { border-color: var(--tomato); color: var(--tomato-deep); box-shadow: 0 0 0 1px var(--tomato); }
+.settings-palette i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 4px rgba(255,255,255,.25); }
+@media (max-height: 720px) { .settings-view__body { padding-top: 14px; } }

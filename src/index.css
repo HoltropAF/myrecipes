@@ -33,6 +33,15 @@
   --line: #3a2f27;
 }
 
+[data-palette="forest"] { --tomato: #477a5e; --tomato-deep: #315c47; --mustard: #c29b4b; }
+[data-palette="sunset"] { --tomato: #dc704c; --tomato-deep: #b95034; --mustard: #e2a345; }
+[data-palette="ocean"] { --tomato: #4f8995; --tomato-deep: #356b78; --mustard: #d3a94c; }
+[data-palette="midnight"] { --tomato: #8876b7; --tomato-deep: #6654a0; --mustard: #d2a752; }
+[data-theme="dark"][data-palette="forest"] { --tomato: #72a589; --tomato-deep: #9ac5aa; }
+[data-theme="dark"][data-palette="sunset"] { --tomato: #e48667; --tomato-deep: #ffad91; }
+[data-theme="dark"][data-palette="ocean"] { --tomato: #70aab5; --tomato-deep: #9dcbd2; }
+[data-theme="dark"][data-palette="midnight"] { --tomato: #9b8bc7; --tomato-deep: #c2b5e3; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body, #root {

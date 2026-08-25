@@ -129,6 +129,9 @@ function AppInner({ setLanguage }) {
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
+  const [palette, setPalette] = useState(() => {
+    try { return localStorage.getItem('mr_palette_v1') || 'blush' } catch { return 'blush' }
+  })
   const [defaultCategory, setDefaultCategory] = useState(null)
   const [recipeViewMode, setRecipeViewMode] = useState('folders') // 'folders' | 'list'
   const [recipeSearchMode, setRecipeSearchMode] = useState('title') // 'title' | 'ingredient'
@@ -229,6 +232,10 @@ function AppInner({ setLanguage }) {
       return () => mq.removeEventListener('change', apply)
     }
   }, [theme])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-palette', palette)
+  }, [palette])
 
   // Wrap setters so opening a "screen" (recipe detail, wizard) pushes browser history,
   // and the phone's back button/gesture closes that screen instead of exiting the app.
@@ -410,10 +417,12 @@ function AppInner({ setLanguage }) {
     savePreferences({ unit_system: next })
   }
 
-  // Batched save from the Settings screen's Save bar — applies every changed
-  // setting at once and persists in a single upsert.
+  // Settings apply immediately; each control sends the complete current
+  // preference snapshot so local state and Supabase stay in step.
   const handleSaveSettings = async (draft) => {
     setTheme(draft.theme)
+    setPalette(draft.palette || 'blush')
+    try { localStorage.setItem('mr_palette_v1', draft.palette || 'blush') } catch { /* storage disabled */ }
     setDefaultCategory(draft.defaultCategory)
     setUnitSystem(draft.unitSystem)
     setRecipeViewMode(draft.recipeViewMode)
@@ -722,6 +731,7 @@ function AppInner({ setLanguage }) {
                 recipes={recipes}
                 onRecipesChanged={loadRecipes}
                 theme={theme}
+                palette={palette}
                 defaultCategory={defaultCategory}
                 unitSystem={unitSystem}
                 recipeViewMode={recipeViewMode}

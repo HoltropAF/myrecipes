@@ -8,9 +8,7 @@ import {
 } from '../../lib/storageInfo'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
-import BinderTabs from '../BinderTabs'
-import { getTabShades, tabBackground } from '../../lib/tabShades'
-import { useCompact } from '../../lib/useCompact'
+import './settings-view.css'
 
 // Sentinel key for recipes with no category, so they can be selected in the
 // PDF filter alongside real category names.
@@ -23,10 +21,9 @@ const UNCATEGORIZED = '__uncategorized__'
 // `extra` holds those alternative words in both languages; it is never shown.
 const SEARCH_INDEX = [
   { section: 'general',    key: 'settings.aboutLabel',           extra: 'about account email sign out uitloggen account' },
-  { section: 'general',    key: 'settings.languageLabel',        extra: 'language taal english nederlands dutch' },
   { section: 'general',    key: 'settings.linksLabel',           extra: 'github wiki issues instagram links' },
   { section: 'appearance', key: 'settings.themeLabel',           extra: 'theme dark light auto donker licht thema night mode' },
-  { section: 'appearance', key: 'settings.measurementsLabel',    extra: 'units metric us cups grams eenheden maten gram' },
+  { section: 'recipes',    key: 'settings.measurementsLabel',    extra: 'units metric us cups grams eenheden maten gram' },
   { section: 'appearance', key: 'settings.homeIconLabel',        extra: 'home button icon compass cookbook startknop icoon kompas kookboek' },
   { section: 'recipes',    key: 'settings.defaultViewLabel',     extra: 'view list folders cookbook weergave lijst mappen' },
   { section: 'recipes',    key: 'settings.searchBy',             extra: 'search ingredient title zoeken ingredient titel' },
@@ -43,7 +40,7 @@ const SEARCH_INDEX = [
 
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
-  theme, defaultCategory, unitSystem,
+  theme, palette, defaultCategory, unitSystem,
   recipeViewMode, recipeSearchMode, compactMode, homeIcon,
   language,
   onSavePreferences,
@@ -65,18 +62,16 @@ export default function SettingsView({
   const [tagsSubTab, setTagsSubTab] = useState('recipe')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const compact = useCompact()
 
-  const saved = { theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, homeIcon, language }
+  const saved = { theme, palette, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, homeIcon, language }
   const savedKey = JSON.stringify(saved)
 
   const [draft, setDraft] = useState(saved)
   const [draftBase, setDraftBase] = useState(savedKey)
 
-  // Settings is draft + Save (a831fea), so the draft must restart whenever the
-  // saved values change underneath it — which happens when preferences finish
-  // loading, and again after a save. Adjusted during render rather than in an
+  // The local mirror must restart whenever saved preferences change underneath
+  // it — which happens after preferences finish loading and after an immediate
+  // save resolves. Adjusted during render rather than in an
   // effect: an effect would let one frame paint with a stale draft first, and
   // React handles a set-state-during-render by re-running this component
   // immediately, before anything reaches the screen.
@@ -85,23 +80,10 @@ export default function SettingsView({
     setDraft(saved)
   }
 
-  const isDirty = (
-    draft.theme !== theme ||
-    draft.defaultCategory !== defaultCategory ||
-    draft.unitSystem !== unitSystem ||
-    draft.recipeViewMode !== recipeViewMode ||
-    draft.recipeSearchMode !== recipeSearchMode ||
-    draft.compactMode !== compactMode ||
-    draft.homeIcon !== homeIcon ||
-    draft.language !== language
-  )
-
-  const patch = (key, value) => setDraft(d => ({ ...d, [key]: value }))
-
-  const handleSave = async () => {
-    setSaving(true)
-    await onSavePreferences(draft)
-    setSaving(false)
+  const patch = (key, value) => {
+    const next = { ...draft, [key]: value }
+    setDraft(next)
+    void onSavePreferences(next)
   }
 
   const handleExportBackup = async () => {
@@ -125,49 +107,25 @@ export default function SettingsView({
     [recipes]
   )
 
-  const tabShades = getTabShades()
-  const activeSectionIndex = SECTIONS.findIndex(s => s.id === activeSection)
-
   return (
-    <div>
+    <div className="settings-view">
       {/* Sticky header — title + binder-divider tabs, same pattern as RecipeDetail */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'var(--card)', borderBottom: '1px solid var(--line)',
-        padding: '14px 16px 0',
-      }}>
-        <h1 style={{
-          fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600,
-          color: 'var(--tomato-deep)', marginBottom: 10,
-        }}>
-          {t('settings.title')}
-        </h1>
+      <div className="settings-view__head">
+        <h1><SettingsGear />{t('settings.title')}</h1>
 
         <SettingsSearch
           sections={SECTIONS}
           onJump={(sectionId) => setActiveSection(sectionId)}
         />
 
-        <BinderTabs
-          tabs={SECTIONS}
-          activeId={activeSection}
-          onSelect={setActiveSection}
-          compact={compact}
-        />
+        <nav className="settings-view__tabs">{SECTIONS.map(section => <button key={section.id} aria-selected={activeSection === section.id} onClick={() => setActiveSection(section.id)}>{section.label}</button>)}</nav>
       </div>
 
       {/* Content — background shade matches active tab */}
-      <div style={{
-        padding: '20px 20px',
-        paddingBottom: isDirty ? 90 : 100,
-        background: tabBackground(tabShades, activeSectionIndex),
-        minHeight: 'calc(100dvh - 160px)',
-      }}>
+      <div className="settings-view__body">
         {activeSection === 'general' && (
           <GeneralSection
             userEmail={userEmail}
-            language={draft.language}
-            onLanguageChange={v => patch('language', v)}
             updateReady={updateReady}
             onApplyUpdate={onApplyUpdate}
             onCheckUpdate={onCheckUpdate}
@@ -176,7 +134,7 @@ export default function SettingsView({
 
         {activeSection === 'appearance' && (
           <>
-            <SectionLabel>{t('settings.themeLabel')}</SectionLabel>
+            <SectionLabel>Theme</SectionLabel>
             <div style={cardStyle}>
               <SegmentedControl
                 value={draft.theme}
@@ -188,23 +146,11 @@ export default function SettingsView({
                 ]}
               />
               <div style={hintStyle}>{t('settings.themeHint')}</div>
+              <RowLabel>Background palette</RowLabel>
+              <PaletteControl value={draft.palette || 'blush'} onChange={v => patch('palette', v)} />
             </div>
 
-            <SectionLabel>{t('settings.measurementsLabel')}</SectionLabel>
-            <div style={cardStyle}>
-              <RowLabel>{t('settings.defaultUnits')}</RowLabel>
-              <SegmentedControl
-                value={draft.unitSystem}
-                onChange={v => patch('unitSystem', v)}
-                options={[
-                  { value: 'metric', label: 'g / ml' },
-                  { value: 'us',     label: 'cup / oz' },
-                ]}
-              />
-              <div style={hintStyle}>{t('settings.unitsHint')}</div>
-            </div>
-
-            <SectionLabel>{t('settings.homeIconLabel')}</SectionLabel>
+            <SectionLabel>Navigation</SectionLabel>
             <div style={cardStyle}>
               <RowLabel>{t('settings.homeIconChoice')}</RowLabel>
               <SegmentedControl
@@ -246,6 +192,17 @@ export default function SettingsView({
                 ]}
               />
               <div style={{ ...hintStyle, marginBottom: 16 }}>{t('settings.searchHint')}</div>
+
+              <RowLabel>{t('settings.defaultUnits')}</RowLabel>
+              <SegmentedControl
+                value={draft.unitSystem}
+                onChange={v => patch('unitSystem', v)}
+                options={[
+                  { value: 'metric', label: 'g / ml' },
+                  { value: 'us',     label: 'cup / oz' },
+                ]}
+              />
+              <div style={{ ...hintStyle, marginBottom: 16 }}>{t('settings.unitsHint')}</div>
 
               <ToggleRow
                 label={t('settings.compactMode')}
@@ -327,28 +284,6 @@ export default function SettingsView({
           </>
         )}
       </div>
-
-      {isDirty && (
-        <div style={{
-          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20,
-          padding: '14px 20px', paddingBottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
-          background: 'var(--card)', borderTop: '1px solid var(--line)',
-          display: 'flex', gap: 10, boxShadow: '0 -4px 16px rgba(42,36,32,0.1)',
-        }}>
-          <button
-            onClick={() => setDraft({ theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language })}
-            style={{ ...secondaryBtnStyle, flex: 1 }}
-          >{t('settings.discard')}</button>
-          <button
-            onClick={handleSave} disabled={saving}
-            style={{
-              flex: 2, padding: '12px 0', borderRadius: 9, border: 'none',
-              background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)',
-              fontWeight: 700, fontSize: 14, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1,
-            }}
-          >{saving ? t('settings.savingBtn') : t('settings.saveChanges')}</button>
-        </div>
-      )}
 
       {showPdfFilter && (
         <PdfFilterSheet
@@ -912,7 +847,7 @@ function PdfFilterSheet({ recipes, onConfirm, onCancel }) {
   )
 }
 
-function GeneralSection({ userEmail, language, onLanguageChange, updateReady, onApplyUpdate, onCheckUpdate }) {
+function GeneralSection({ userEmail, updateReady, onApplyUpdate, onCheckUpdate }) {
   const { t } = useT()
   return (
     <>
@@ -927,18 +862,6 @@ function GeneralSection({ userEmail, language, onLanguageChange, updateReady, on
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>{userEmail}</span>
           </div>
         )}
-      </div>
-
-      <SectionLabel>{t('settings.languageLabel')}</SectionLabel>
-      <div style={cardStyle}>
-        <SegmentedControl
-          value={language || 'en'}
-          onChange={onLanguageChange}
-          options={[
-            { value: 'en', label: t('settings.langEn') },
-            { value: 'nl', label: t('settings.langNl') },
-          ]}
-        />
       </div>
 
       <SectionLabel>{t('settings.instanceSectionLabel')}</SectionLabel>
@@ -1427,16 +1350,31 @@ function SegmentedControl({ value, onChange, options }) {
           key={opt.value}
           onClick={() => onChange(opt.value)}
           style={{
-            flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+            flex: 1, height: 29, padding: '2px 0', borderRadius: 7, cursor: 'pointer',
             border: `1px solid ${value === opt.value ? 'var(--tomato)' : 'var(--line)'}`,
             background: value === opt.value ? 'var(--tomato)' : 'var(--card)',
             color: value === opt.value ? '#fffdf9' : 'var(--charcoal)',
-            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
+            fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 9,
           }}
         >{opt.label}</button>
       ))}
     </div>
   )
+}
+
+function PaletteControl({ value, onChange }) {
+  const palettes = [
+    ['blush', 'Blush', '#b96f72'],
+    ['forest', 'Forest', '#477a5e'],
+    ['sunset', 'Sunset', '#dc704c'],
+    ['ocean', 'Ocean', '#4f8995'],
+    ['midnight', 'Midnight', '#7665a5'],
+  ]
+  return <div className="settings-palette">{palettes.map(([id, label, color]) => <button key={id} aria-pressed={value === id} onClick={() => onChange(id)}><i style={{ background: color }} />{label}</button>)}</div>
+}
+
+function SettingsGear() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
 }
 
 function ToggleRow({ label, sub, checked, onChange }) {
@@ -1463,7 +1401,7 @@ function ToggleRow({ label, sub, checked, onChange }) {
 }
 
 const cardStyle = {
-  background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 4,
+  background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', marginBottom: 12,
 }
 const hintStyle = {
   fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 8,
@@ -1477,7 +1415,7 @@ const inputLikeStyle = {
   background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14,
 }
 const secondaryBtnStyle = {
-  padding: '10px 14px', borderRadius: 9, border: '1px solid var(--tomato)',
+  minHeight: 29, padding: '5px 12px', borderRadius: 7, border: '1px solid var(--tomato)',
   background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
   fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'center',
 }
