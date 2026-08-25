@@ -9,7 +9,7 @@ import { relativeDayLabel } from '../lib/dateUtils'
 //
 // Sits above the cookbook rather than replacing it: browsing stays exactly where
 // it was, this is just a faster way in.
-export default function DecideCard({ recipes, cookStats = {}, onSelect }) {
+export default function DecideCard({ recipes, cookStats = {}, onSelect, homeCompact = false }) {
   const { t } = useT()
   const [shuffled, setShuffled] = useState(null)
   const [ingredients, setIngredients] = useState('')
@@ -51,6 +51,24 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect }) {
       if (missed) { setNoMatch(true); return }
       if (recipe) setShuffled(recipe)
     }, 420)
+  }
+
+  const handleCompactChoice = () => {
+    const { recipe } = shufflePick(recipes, { exclude: shown?.id })
+    onSelect(recipe || shown)
+  }
+
+  if (homeCompact) {
+    return (
+      <button className="decide-home-row" onClick={handleCompactChoice}>
+        <span className="decide-home-row__icon" aria-hidden="true"><DinnerBellIcon /></span>
+        <span className="decide-home-row__copy">
+          <b>{t('decide.compactTitle', "Can't decide?")}</b>
+          <small>{t('decide.compactHint', 'Let the cookbook choose for you')}</small>
+        </span>
+        <span className="decide-home-row__arrow" aria-hidden="true">&gt;</span>
+      </button>
+    )
   }
 
   // Why this one — a suggestion you can't account for feels random.
@@ -154,4 +172,8 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect }) {
       )}
     </div>
   )
+}
+
+function DinnerBellIcon() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 15h18M5 15a7 7 0 0 1 14 0M12 6V4M2 15h20v2H2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }

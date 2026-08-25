@@ -31,6 +31,8 @@ const en = {
     stats: 'Kitchen stats', statsHint: 'Favourites, repeats and forgotten gems',
   },
   decide: {
+    compactTitle: "Can't decide?",
+    compactHint: 'Let the cookbook choose for you',
     heading: 'Tonight',
     headingShuffle: 'How about this',
     shuffle: 'Shuffle',
@@ -602,6 +604,8 @@ const nl = {
     stats: 'Keukenstatistieken', statsHint: 'Favorieten, herhalingen en vergeten parels',
   },
   decide: {
+    compactTitle: 'Kun je niet kiezen?',
+    compactHint: 'Laat het kookboek voor je kiezen',
     heading: 'Vanavond',
     headingShuffle: 'Wat dacht je hiervan',
     shuffle: 'Verras me',
