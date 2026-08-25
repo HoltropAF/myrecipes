@@ -14,7 +14,7 @@ export default function BinderTabs({ tabs, activeId, onSelect, compact = false, 
   const shades = getTabShades()
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, overflowX: 'auto', ...style }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, overflow: 'hidden', ...style }}>
       {tabs.map((tab, i) => {
         const isActive = activeId === tab.id
         const shade = shades[i % shades.length]
@@ -23,22 +23,22 @@ export default function BinderTabs({ tabs, activeId, onSelect, compact = false, 
             key={tab.id}
             onClick={() => onSelect(tab.id)}
             style={{
-              flexShrink: 0,
+              flex: '1 1 0', minWidth: 0,
               position: 'relative',
               zIndex: isActive ? tabs.length + 1 : tabs.length - i,
-              marginLeft: i === 0 ? 0 : (compact ? -6 : -10),
+              marginLeft: 0,
               padding: isActive
-                ? (compact ? '8px 12px 9px' : '10px 18px 11px')
-                : (compact ? '7px 10px 8px' : '8px 16px 9px'),
-              borderRadius: '10px 10px 0 0',
+                ? (compact ? '5px 3px 6px' : '6px 8px 7px')
+                : (compact ? '4px 3px 5px' : '5px 7px 6px'),
+              borderRadius: '7px 7px 0 0',
               border: '1px solid var(--line)',
               borderBottom: isActive ? `1px solid ${shade}` : '1px solid var(--line)',
               background: shade,
               color: isActive ? 'var(--tomato-deep)' : 'var(--charcoal-soft)',
               fontFamily: 'var(--font-display)', fontWeight: 600,
-              fontSize: compact ? (isActive ? 12.5 : 11.5) : (isActive ? 14 : 13),
+              fontSize: compact ? (isActive ? 10 : 9) : (isActive ? 12 : 11),
               cursor: 'pointer',
-              transform: isActive ? 'translateY(0)' : 'translateY(4px)',
+              transform: isActive ? 'translateY(0)' : 'translateY(2px)',
               boxShadow: isActive ? '0 -2px 8px rgba(42,36,32,0.08)' : 'none',
               transition: 'all 0.15s ease',
               whiteSpace: 'nowrap',

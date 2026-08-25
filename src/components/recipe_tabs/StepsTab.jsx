@@ -14,16 +14,16 @@ export default function StepsTab({ steps, unitSystem, onStartCooking }) {
           }}>{t('stepsTab.startCooking')}</button>
         )}
       </div>
-      <div>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '4px 13px' }}>
         {steps.length === 0 && <EmptyRow>{t('stepsTab.noSteps')}</EmptyRow>}
         {steps.map((group, gi) => (
-          <div key={gi} style={{ marginBottom: 16 }}>
+          <div key={gi} style={{ marginBottom: gi < steps.length - 1 ? 12 : 0 }}>
             {group.group && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{group.group}</div>
+              <div style={{ minHeight: 34, display: 'flex', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--sage)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{group.group}</div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {group.items.map((step, si) => (
-                <div key={step.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div key={step.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: '1px solid var(--line)' }}>
                   <div style={{
                     width: 24, height: 24, borderRadius: 99, background: 'var(--tomato)', color: 'var(--card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,

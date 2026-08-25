@@ -9,37 +9,37 @@ export default function StorageTab({ recipe }) {
   const hasContent = hasFreezerInfo || recipe.notes || recipe.source
 
   return (
-    <div>
+    <div style={{ display: 'grid', gap: 14 }}>
       {recipe.freezer_friendly !== null && recipe.freezer_friendly !== undefined && (
-        <div style={{ marginBottom: 18 }}>
+        <section style={cardStyle}>
           <SectionLabel>{t('storageTab.freezerLabel')}</SectionLabel>
           <div style={{
             background: recipe.freezer_friendly ? 'var(--sage-light)' : 'var(--parchment-dim)',
-            borderRadius: 10, padding: '12px 14px',
+            borderRadius: 9, padding: '11px 13px',
             fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)',
           }}>
             {recipe.freezer_friendly ? t('storageTab.freezesWell') : t('storageTab.notFreezer')}
           </div>
-        </div>
+        </section>
       )}
 
       {recipe.notes && (
-        <div style={{ marginBottom: 18 }}>
+        <section style={cardStyle}>
           <SectionLabel>{t('storageTab.notesLabel')}</SectionLabel>
           <div style={{
             background: 'var(--sage-light)', borderRadius: 10, padding: '12px 14px',
             fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.5,
           }}>{recipe.notes}</div>
-        </div>
+        </section>
       )}
 
       {recipe.source && (
-        <div>
+        <section style={cardStyle}>
           <SectionLabel>{t('storageTab.sourceLabel')}</SectionLabel>
           <a href={recipe.source} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--tomato-deep)' }}>
             {recipe.source} ↗
           </a>
-        </div>
+        </section>
       )}
 
       {!hasContent && (
@@ -50,6 +50,8 @@ export default function StorageTab({ recipe }) {
     </div>
   )
 }
+
+const cardStyle = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: 13 }
 
 function SectionLabel({ children }) {
   return (

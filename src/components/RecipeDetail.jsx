@@ -31,6 +31,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const [activeVariant, setActiveVariant] = useState('main')
   const [servings, setServings] = useState(recipe.servings || null)
   const [addedToList, setAddedToList] = useState(false)
+  const [swappedIngredients, setSwappedIngredients] = useState(new Set())
   const [showCollectionPicker, setShowCollectionPicker] = useState(false)
   const [showPlanPicker, setShowPlanPicker] = useState(false)
   // Read once on mount. App keys this component on the recipe id, so opening a
@@ -66,8 +67,11 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const handleAddToShoppingList = async () => {
     const rows = active.ingredients.flatMap(group =>
       group.items
-        .filter(item => item.name.trim())
+        .filter(item => item.name.trim() && !checkedIngredients.has(item.id))
         .map(item => {
+          if (swappedIngredients.has(item.id) && /serrano/i.test(item.name)) {
+            return { name: 'halloumi', amount: 200, unit: 'g', checked: false }
+          }
           const scaled = baseServings && servings ? scaleAmount(item.amount, baseServings, servings) : item.amount
           return { name: item.name, amount: scaled, unit: item.unit, checked: false }
         })
@@ -104,10 +108,10 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   const tabShades = getTabShades()
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', maxHeight: '100dvh', overflow: 'hidden', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '14px 16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ flexShrink: 0, zIndex: 5, background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '10px 14px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <button onClick={onClose} style={navBtnStyle}>{t('recipeDetail.back')}</button>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             {onToggleUnitSystem && (
@@ -135,12 +139,12 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         </div>
 
         {/* Title — always visible, independent of active tab */}
-        <div style={{ marginBottom: 14 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 22, color: 'var(--tomato-deep)', lineHeight: 1.2 }}>
+        <div style={{ marginBottom: 9 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 23, color: 'var(--tomato-deep)', lineHeight: 1.15 }}>
             {recipe.title}
           </h1>
           {recipe.tagline && (
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal-soft)', marginTop: 2 }}>{recipe.tagline}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', marginTop: 3 }}>{recipe.tagline}</div>
           )}
         </div>
 
@@ -155,12 +159,13 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
       </div>
 
       <div style={{
-        flex: 1, overflowY: 'auto', padding: '20px 20px 100px',
+        flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 14px 28px',
         background: tabBackground(tabShades, activeTabIndex),
       }}>
         {activeTab === 'info' && (
           <InfoTab
             recipe={recipe} variants={variants} activeVariant={activeVariant} onVariantChange={setActiveVariant}
+            isGuest={isGuest}
           />
         )}
         {activeTab === 'ingredients' && (
@@ -170,6 +175,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
             variants={variants} activeVariant={activeVariant} onVariantChange={setActiveVariant}
             checkedIngredients={checkedIngredients} onToggleChecked={toggleIngredientChecked}
             onAddToShoppingList={handleAddToShoppingList} addedToList={addedToList}
+            recipeNotes={recipe.notes} swappedIngredients={swappedIngredients} onSwappedIngredientsChange={setSwappedIngredients}
           />
         )}
         {activeTab === 'steps' && (

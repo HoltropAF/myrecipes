@@ -216,7 +216,7 @@ const en = {
     ingredients: 'Ingredients',
     steps: 'Steps',
     log: 'Log',
-    storage: 'Notes',
+    storage: 'Storage',
   },
   recipeDetail: {
     back: '‹ Back',
