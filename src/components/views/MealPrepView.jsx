@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
 import DopamineShelf from '../DopamineShelf'
+import { useBackLayer } from '../../lib/useBackLayer'
 
 const WEEK_PREFIX = 'myrecipes-week-v1:'
 const dateKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -22,6 +23,7 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const [pickerRecipe, setPickerRecipe] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  useBackLayer(!!pickerRecipe, () => setPickerRecipe(null), 'day-picker')
 
   useEffect(() => {
     if (isGuest) { setGroups(demoMealGroups || []); return }

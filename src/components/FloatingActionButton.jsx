@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
+import { useBackLayer } from '../lib/useBackLayer'
 
 export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
+  useBackLayer(open, () => setOpen(false), 'quick-actions')
 
   return (
     <>

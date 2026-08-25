@@ -14,6 +14,7 @@ import { getTabShades, tabBackground } from '../lib/tabShades'
 import { useCompact } from '../lib/useCompact'
 import CollectionForm from './CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
+import { useBackLayer } from '../lib/useBackLayer'
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
   const { t } = useT()
@@ -45,6 +46,25 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   })
   const [showCookingMode, setShowCookingMode] = useState(false)
   const compact = useCompact()
+
+  useBackLayer(showCollectionPicker, () => setShowCollectionPicker(false), 'collection-picker')
+  useBackLayer(showPlanPicker, () => setShowPlanPicker(false), 'plan-picker')
+  useBackLayer(showCookingMode, () => setShowCookingMode(false), 'cooking-mode')
+
+  useEffect(() => {
+    history.replaceState({ ...history.state, mrRecipeTab: 'info' }, '')
+    const handlePopState = event => {
+      if (event.state?.mrRecipeTab) setActiveTab(event.state.mrRecipeTab)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [recipe.id])
+
+  const selectRecipeTab = tab => {
+    if (tab === activeTab) return
+    history.pushState({ ...history.state, mrRecipeTab: tab }, '')
+    setActiveTab(tab)
+  }
 
   const toggleIngredientChecked = (id) => {
     setCheckedIngredients(prev => {
@@ -152,7 +172,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         <BinderTabs
           tabs={TABS}
           activeId={activeTab}
-          onSelect={setActiveTab}
+          onSelect={selectRecipeTab}
           compact={compact}
           style={{ paddingBottom: 0 }}
         />

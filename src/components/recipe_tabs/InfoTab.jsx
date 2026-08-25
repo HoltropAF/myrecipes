@@ -3,12 +3,14 @@ import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
 import { DEMO_COOK_LOG } from '../../lib/demoData'
+import { useBackLayer } from '../../lib/useBackLayer'
 
 export default function InfoTab({ recipe, variants, activeVariant, onVariantChange, isGuest = false }) {
   const { t } = useT()
   const [record, setRecord] = useState(null)
   const [isLogged, setIsLogged] = useState(() => isGuest && DEMO_COOK_LOG.some(entry => entry.recipe_id === recipe.id))
   const allergens = recipe.allergen_tags || []
+  useBackLayer(!!record, () => setRecord(null), 'recipe-record')
 
   useEffect(() => {
     if (isGuest) return

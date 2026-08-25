@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { useBackLayer } from './lib/useBackLayer'
 
 const RECIPE_CACHE_PREFIX = 'mr_recipes_v1'
 const ENGLISH_LANGUAGE_RESET_PREFIX = 'mr_language_reset_en_20260825'
@@ -237,49 +238,60 @@ function AppInner({ setLanguage }) {
     document.documentElement.setAttribute('data-palette', palette)
   }, [palette])
 
-  // Wrap setters so opening a "screen" (recipe detail, wizard) pushes browser history,
-  // and the phone's back button/gesture closes that screen instead of exiting the app.
   const openRecipe = (recipe) => {
-    window.history.pushState({ screen: 'recipe' }, '')
     setSelectedRecipe(recipe)
   }
   const openWizard = (prefill) => {
     // Guest mode is read-only for creating and editing. Refused here rather
     // than closed again afterwards, so no history entry is ever pushed.
     if (isGuest) return
-    window.history.pushState({ screen: 'wizard' }, '')
     setEditingRecipe(null)
     setPrefillCategory(prefill || null)
     setShowWizard(true)
   }
   const TAB_TO_STEP = { info: 3, ingredients: 1, steps: 2, cooklog: 0, storage: 3 }
   const openEdit = (recipe, tab = 'info') => {
-    window.history.pushState({ screen: 'wizard' }, '')
     setEditingRecipe(recipe)
     setEditInitialStep(TAB_TO_STEP[tab] ?? 0)
     setShowWizard(true)
   }
   const closeRecipe = () => {
     setSelectedRecipe(null)
-    if (window.history.state?.screen === 'recipe') window.history.back()
   }
   const closeWizard = () => {
     setShowWizard(false)
     setEditingRecipe(null)
     setPrefillCategory(null)
-    if (window.history.state?.screen === 'wizard') window.history.back()
   }
 
+  useBackLayer(!!selectedRecipe, closeRecipe, 'recipe')
+  useBackLayer(showWizard, closeWizard, 'wizard')
+  useBackLayer(showQuickLog, () => setShowQuickLog(false), 'quick-log')
+  useBackLayer(showFirstRun, () => setShowFirstRun(false), 'first-run')
+  useBackLayer(showAllergenDisclaimer, () => setShowAllergenDisclaimer(false), 'allergen-note')
+
   useEffect(() => {
-    const handlePopState = () => {
-      // Back button pressed: close whichever overlay screen is open.
-      setSelectedRecipe(null)
-      setShowWizard(false)
-      setShowQuickLog(false)
+    if (!history.state?.mrAppRoot) {
+      history.replaceState({ ...history.state, mrAppRoot: true, mrTab: 'home' }, '')
+      history.pushState({ ...history.state, mrAppRoot: true, mrTab: 'home' }, '')
+    }
+    const handlePopState = event => {
+      if (event.state?.mrTab) setActiveTab(event.state.mrTab)
+      // Keep one same-page entry above the app root. On an installed PWA this
+      // stops an accidental back gesture on Home from immediately closing it.
+      if (event.state?.mrAppRoot && event.state?.mrTab === 'home' && !(event.state?.mrLayers || []).length) {
+        history.pushState({ ...event.state }, '')
+      }
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  const navigateTab = (tab) => {
+    if (tab === activeTab) return
+    history.pushState({ ...history.state, mrTab: tab }, '')
+    setActiveTab(tab)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -350,7 +362,7 @@ function AppInner({ setLanguage }) {
   const exitGuestMode = () => {
     setIsGuest(false)
     setRecipes([])
-    setActiveTab('recipes')
+    navigateTab('recipes')
   }
 
   // Keyed on the user id, not the session object. Supabase hands us a brand new
@@ -664,7 +676,7 @@ function AppInner({ setLanguage }) {
       )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, minHeight: 0, overflowY: activeTab === 'home' ? 'hidden' : 'auto', paddingTop: 20 }}>
         {activeTab === 'home' && (
-          <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => setActiveTab('stats')} isGuest={isGuest} />
+          <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => navigateTab('stats')} isGuest={isGuest} />
         )}
         {activeTab === 'recipes' && (
           <AllRecipesView
@@ -749,7 +761,7 @@ function AppInner({ setLanguage }) {
         )}
       </PullToRefresh>
       {!isGuest && activeTab !== 'home' && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
-      <BottomNav active={activeTab} onChange={setActiveTab} homeIcon={homeIcon} />
+      <BottomNav active={activeTab} onChange={navigateTab} homeIcon={homeIcon} />
 
       {showQuickLog && !isGuest && (
         <LazyScreen>

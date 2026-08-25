@@ -3,6 +3,7 @@ import { useT } from '../lib/i18n'
 import { suggestForNow, shufflePick } from '../lib/suggest'
 import { parseHaveList } from '../lib/fridgeMatch'
 import { relativeDayLabel } from '../lib/dateUtils'
+import { useBackLayer } from '../lib/useBackLayer'
 
 // "What am I making tonight" — one suggestion from the clock and the cook log,
 // and a shuffle for when you don't like the answer.
@@ -18,6 +19,8 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
   const [spinning, setSpinning] = useState(false)
   const [showMealTypes, setShowMealTypes] = useState(false)
   const [emptyMealType, setEmptyMealType] = useState('')
+  useBackLayer(showIngredients, () => setShowIngredients(false), 'ingredient-match')
+  useBackLayer(showMealTypes, () => setShowMealTypes(false), 'meal-types')
 
   const haveList = useMemo(() => parseHaveList(ingredients), [ingredients])
 

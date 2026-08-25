@@ -9,6 +9,7 @@ import {
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import './settings-view.css'
+import { useBackLayer } from '../../lib/useBackLayer'
 
 // Sentinel key for recipes with no category, so they can be selected in the
 // PDF filter alongside real category names.
@@ -100,6 +101,7 @@ export default function SettingsView({
   }
 
   const [showPdfFilter, setShowPdfFilter] = useState(false)
+  useBackLayer(showPdfFilter, () => setShowPdfFilter(false), 'pdf-filter')
   const handleExportPDF = () => setShowPdfFilter(true)
 
   const categories = useMemo(
@@ -971,6 +973,7 @@ function IngredientAllergenSection() {
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
   const [tagError, setTagError] = useState(null)
   const [reviewing, setReviewing] = useState(false)
+  useBackLayer(reviewing, () => setReviewing(false), 'allergen-review')
   // Skipping is per-session and deliberately not persisted: "not now" should
   // not become "never ask again".
   const [skipped, setSkipped] = useState(() => new Set())

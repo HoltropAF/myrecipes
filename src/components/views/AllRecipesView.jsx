@@ -7,6 +7,7 @@ import { relativeDayLabel } from '../../lib/dateUtils'
 import { supabase } from '../../lib/supabase'
 import CollectionForm from '../CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../../lib/collectionEmojis'
+import { useBackLayer } from '../../lib/useBackLayer'
 
 
 
@@ -31,6 +32,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const [showFilters, setShowFilters] = useState(false)
   const [wishlistOnly, setWishlistOnly] = useState(false)
   const [activeCollection, setActiveCollection] = useState(null)
+  useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
 
   const allTags = useMemo(
     () => [...new Set(recipes.flatMap(r => r.tags || []))].sort(),
