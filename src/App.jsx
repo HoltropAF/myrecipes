@@ -132,6 +132,9 @@ function AppInner({ setLanguage }) {
   const [recipeViewMode, setRecipeViewMode] = useState('folders') // 'folders' | 'list'
   const [recipeSearchMode, setRecipeSearchMode] = useState('title') // 'title' | 'ingredient'
   const [compactMode, setCompactMode] = useState(false)
+  const [homeIcon, setHomeIcon] = useState(() => {
+    try { return localStorage.getItem('mr_home_icon_v1') === 'cookbook' ? 'cookbook' : 'compass' } catch { return 'compass' }
+  })
   const [prefillCategory, setPrefillCategory] = useState(null)
   const [collections, setCollections] = useState([])
   const [collectionRecipeMap, setCollectionRecipeMap] = useState({})
@@ -397,6 +400,8 @@ function AppInner({ setLanguage }) {
     setRecipeViewMode(draft.recipeViewMode)
     setRecipeSearchMode(draft.recipeSearchMode)
     setCompactMode(draft.compactMode)
+    setHomeIcon(draft.homeIcon)
+    try { localStorage.setItem('mr_home_icon_v1', draft.homeIcon) } catch { /* storage disabled */ }
     if (draft.language) setLanguage(draft.language)
     await savePreferences({
       theme: draft.theme,
@@ -703,6 +708,7 @@ function AppInner({ setLanguage }) {
                 recipeViewMode={recipeViewMode}
                 recipeSearchMode={recipeSearchMode}
                 compactMode={compactMode}
+                homeIcon={homeIcon}
                 language={lang}
                 onSavePreferences={handleSaveSettings}
                 updateReady={updateReady}
@@ -714,7 +720,7 @@ function AppInner({ setLanguage }) {
         )}
       </PullToRefresh>
       {!isGuest && activeTab !== 'home' && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav active={activeTab} onChange={setActiveTab} homeIcon={homeIcon} />
 
       {showQuickLog && !isGuest && (
         <LazyScreen>

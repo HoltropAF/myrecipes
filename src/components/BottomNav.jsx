@@ -3,26 +3,33 @@ import { useCompact } from '../lib/useCompact'
 
 const TAB_IDS = ['recipes', 'shopping', 'home', 'mealprep', 'settings']
 
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, homeIcon = 'compass' }) {
   const { t } = useT()
   const compact = useCompact()
   const labels = { recipes: t('nav.recipes'), shopping: t('nav.shopping'), home: t('nav.home', 'Home'), mealprep: t('nav.mealprep'), settings: t('nav.settings') }
   return <div style={{ position: 'sticky', bottom: 0, display: 'flex', background: 'var(--card)', borderTop: '1px solid var(--line)', paddingBottom: 'env(safe-area-inset-bottom, 0px)', zIndex: 60 }}>
     {TAB_IDS.map(id => <button key={id} onClick={() => onChange(id)} aria-label={labels[id]} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: compact ? '8px 0 6px' : '10px 0 8px', border: 'none', background: 'none', cursor: 'pointer', minWidth: 0 }}>
       <span style={id === 'home' ? { width: compact ? 52 : 58, height: compact ? 52 : 58, marginTop: compact ? -28 : -33, display: 'grid', placeItems: 'center', borderRadius: '50%', background: 'var(--tomato)', color: '#fffdf9', border: '4px solid var(--card)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--tomato) 38%, transparent), 0 7px 18px rgba(138,52,49,.3)' } : { opacity: active === id ? 1 : .55, color: active === id ? 'var(--tomato-deep)' : 'var(--charcoal-soft)' }}>
-        {id === 'home' ? <KitchenCompassIcon size={compact ? 29 : 33} /> : <TabIcon id={id} size={compact ? 17 : 20} />}
+        {id === 'home' ? <HomeButtonIcon variant={homeIcon} size={compact ? 32 : 36} /> : <TabIcon id={id} size={compact ? 17 : 20} />}
       </span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: compact ? 9 : 10, color: active === id ? 'var(--tomato-deep)' : 'var(--charcoal-soft)', fontWeight: active === id ? 700 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{labels[id]}</span>
     </button>)}
   </div>
 }
 
-function KitchenCompassIcon({ size }) {
-  return <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="16" cy="16" r="11" opacity=".72" />
-    <path d="m21.5 9.5-3.2 8.8-8.8 4.2 4.2-8.8 7.8-4.2Z" fill="currentColor" fillOpacity=".16" />
-    <circle cx="16" cy="16" r="2" fill="currentColor" stroke="none" />
-    <path d="M16 3.5v2M28.5 16h-2M16 28.5v-2M3.5 16h2" />
+function HomeButtonIcon({ variant, size }) {
+  if (variant === 'cookbook') {
+    return <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="16" cy="16" r="13" opacity=".82" />
+      <path d="M9 9.5h6.5c1.5 0 2.5 1 2.5 2.5v11c0-1.5-1-2.5-2.5-2.5H9v-11Zm14 0h-3c-1.2 0-2 .8-2 2.2V23c0-1.5 1-2.5 2.5-2.5H23v-11Z" />
+      <path d="m16 5 1.2 2.4L20 8.5l-2.8 1.1L16 12l-1.2-2.4L12 8.5l2.8-1.1L16 5Z" fill="var(--mustard)" stroke="none" />
+    </svg>
+  }
+  return <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" strokeWidth="2.1" />
+    <path d="m16 4 3.5 8.5L28 16l-8.5 3.5L16 28l-3.5-8.5L4 16l8.5-3.5L16 4Z" fill="currentColor" />
+    <circle cx="16" cy="16" r="4.3" fill="var(--mustard)" />
+    <path d="m16 12.8 1.2 3.2-1.2 3.2-1.2-3.2 1.2-3.2Z" fill="#fff8f1" />
   </svg>
 }
 

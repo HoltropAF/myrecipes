@@ -27,6 +27,7 @@ const SEARCH_INDEX = [
   { section: 'general',    key: 'settings.linksLabel',           extra: 'github wiki issues instagram links' },
   { section: 'appearance', key: 'settings.themeLabel',           extra: 'theme dark light auto donker licht thema night mode' },
   { section: 'appearance', key: 'settings.measurementsLabel',    extra: 'units metric us cups grams eenheden maten gram' },
+  { section: 'appearance', key: 'settings.homeIconLabel',        extra: 'home button icon compass cookbook startknop icoon kompas kookboek' },
   { section: 'recipes',    key: 'settings.defaultViewLabel',     extra: 'view list folders cookbook weergave lijst mappen' },
   { section: 'recipes',    key: 'settings.searchBy',             extra: 'search ingredient title zoeken ingredient titel' },
   { section: 'recipes',    key: 'settings.cookbookLabel',        extra: 'category default open categorie standaard' },
@@ -43,7 +44,7 @@ const SEARCH_INDEX = [
 export default function SettingsView({
   userEmail, recipes = [], onRecipesChanged,
   theme, defaultCategory, unitSystem,
-  recipeViewMode, recipeSearchMode, compactMode,
+  recipeViewMode, recipeSearchMode, compactMode, homeIcon,
   language,
   onSavePreferences,
   updateReady = false,
@@ -67,7 +68,7 @@ export default function SettingsView({
   const [saving, setSaving] = useState(false)
   const compact = useCompact()
 
-  const saved = { theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, language }
+  const saved = { theme, defaultCategory, unitSystem, recipeViewMode, recipeSearchMode, compactMode, homeIcon, language }
   const savedKey = JSON.stringify(saved)
 
   const [draft, setDraft] = useState(saved)
@@ -91,6 +92,7 @@ export default function SettingsView({
     draft.recipeViewMode !== recipeViewMode ||
     draft.recipeSearchMode !== recipeSearchMode ||
     draft.compactMode !== compactMode ||
+    draft.homeIcon !== homeIcon ||
     draft.language !== language
   )
 
@@ -200,6 +202,20 @@ export default function SettingsView({
                 ]}
               />
               <div style={hintStyle}>{t('settings.unitsHint')}</div>
+            </div>
+
+            <SectionLabel>{t('settings.homeIconLabel')}</SectionLabel>
+            <div style={cardStyle}>
+              <RowLabel>{t('settings.homeIconChoice')}</RowLabel>
+              <SegmentedControl
+                value={draft.homeIcon}
+                onChange={v => patch('homeIcon', v)}
+                options={[
+                  { value: 'compass',  label: t('settings.homeIconCompass') },
+                  { value: 'cookbook', label: t('settings.homeIconCookbook') },
+                ]}
+              />
+              <div style={hintStyle}>{t('settings.homeIconHint')}</div>
             </div>
           </>
         )}
