@@ -16,6 +16,8 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
   const [showIngredients, setShowIngredients] = useState(false)
   const [noMatch, setNoMatch] = useState(false)
   const [spinning, setSpinning] = useState(false)
+  const [showMealTypes, setShowMealTypes] = useState(false)
+  const [emptyMealType, setEmptyMealType] = useState('')
 
   const haveList = useMemo(() => parseHaveList(ingredients), [ingredients])
 
@@ -53,21 +55,54 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
     }, 420)
   }
 
-  const handleCompactChoice = () => {
-    const { recipe } = shufflePick(recipes, { exclude: shown?.id })
-    onSelect(recipe || shown)
+  const handleCompactChoice = (mealType) => {
+    const categoryMatches = {
+      dinner: ['dinner', 'main dish', 'main dishes'],
+      breakfastLunch: ['breakfast', 'brunch', 'lunch', 'breakfast & brunch', 'breakfast/lunch'],
+      drink: ['drink', 'drinks', 'beverage', 'beverages'],
+    }
+    const allowed = categoryMatches[mealType]
+    const candidates = recipes.filter(recipe => {
+      const category = (recipe.category || '').trim().toLowerCase()
+      return allowed.some(name => category === name || category.includes(name))
+    })
+    const { recipe } = shufflePick(candidates)
+    if (!recipe) {
+      setEmptyMealType(mealType)
+      return
+    }
+    setShowMealTypes(false)
+    setEmptyMealType('')
+    onSelect(recipe)
   }
 
   if (homeCompact) {
     return (
-      <button className="decide-home-row" onClick={handleCompactChoice}>
-        <span className="decide-home-row__icon" aria-hidden="true"><DinnerBellIcon /></span>
-        <span className="decide-home-row__copy">
-          <b>{t('decide.compactTitle', "Can't decide?")}</b>
-          <small>{t('decide.compactHint', 'Let the cookbook choose for you')}</small>
-        </span>
-        <span className="decide-home-row__arrow" aria-hidden="true">&gt;</span>
-      </button>
+      <>
+        <button className="decide-home-row" onClick={() => setShowMealTypes(true)}>
+          <span className="decide-home-row__icon" aria-hidden="true"><DinnerBellIcon /></span>
+          <span className="decide-home-row__copy">
+            <b>{t('decide.compactTitle', "Can't decide?")}</b>
+            <small>{t('decide.compactHint', 'Let the cookbook choose for you')}</small>
+          </span>
+          <span className="decide-home-row__arrow" aria-hidden="true">&gt;</span>
+        </button>
+        {showMealTypes && (
+          <div className="decide-meal-picker" role="presentation" onClick={() => setShowMealTypes(false)}>
+            <section role="dialog" aria-modal="true" aria-labelledby="meal-picker-title" onClick={event => event.stopPropagation()}>
+              <button className="decide-meal-picker__close" onClick={() => setShowMealTypes(false)} aria-label={t('decide.closePicker', 'Close')}>×</button>
+              <h3 id="meal-picker-title">{t('decide.pickMealType', 'What kind of recipe?')}</h3>
+              <p>{t('decide.pickMealHint', 'Choose one and the cookbook will surprise you.')}</p>
+              <div className="decide-meal-picker__choices">
+                <button onClick={() => handleCompactChoice('dinner')}>{t('decide.dinner', 'Dinner')}<span>&gt;</span></button>
+                <button onClick={() => handleCompactChoice('breakfastLunch')}>{t('decide.breakfastLunch', 'Breakfast / lunch')}<span>&gt;</span></button>
+                <button onClick={() => handleCompactChoice('drink')}>{t('decide.drink', 'Drink')}<span>&gt;</span></button>
+              </div>
+              {emptyMealType && <small className="decide-meal-picker__empty">{t('decide.noCategoryRecipes', 'You do not have a recipe in that category yet.')}</small>}
+            </section>
+          </div>
+        )}
+      </>
     )
   }
 
