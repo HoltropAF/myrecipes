@@ -521,7 +521,7 @@ function AppInner({ setLanguage }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', overflow: 'hidden', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
       {showFirstRun && (
         <FirstRunWizard
           userId={session?.user?.id}
@@ -634,7 +634,7 @@ function AppInner({ setLanguage }) {
           >×</button>
         </div>
       )}
-      <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, overflowY: 'auto', paddingTop: 20 }}>
+      <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, minHeight: 0, overflowY: activeTab === 'home' ? 'hidden' : 'auto', paddingTop: 20 }}>
         {activeTab === 'home' && (
           <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => setActiveTab('stats')} isGuest={isGuest} />
         )}

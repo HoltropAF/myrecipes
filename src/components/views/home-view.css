@@ -1,4 +1,4 @@
-.recipe-home { position: relative; min-height: calc(100dvh - 142px); overflow: hidden; margin-top: -20px; padding: 25px 20px 112px; isolation: isolate; background: #f7eee7; }
+.recipe-home { position: relative; height: calc(100% + 20px); min-height: 0; overflow: hidden; margin-top: -20px; padding: 25px 20px 0; isolation: isolate; background: #f7eee7; }
 .recipe-home__landscape, .recipe-home__landscape i { position: absolute; inset: 0; pointer-events: none; }
 .recipe-home__landscape { z-index: -1; }
 .recipe-home__landscape i:nth-child(1) { background: linear-gradient(169deg, transparent 0 38%, #e2c0bd 38.3% 100%); }
@@ -20,13 +20,13 @@
 .decide-home-row__copy small { display: block; align-self: start; padding-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #76645f; font: 9.5px/1.15 var(--font-mono); }
 .decide-home-row__arrow { color: #8d3540; font-size: 22px; }
 .recipe-home__row { width: 100%; height: 64px; display: grid; grid-template-columns: 32px minmax(0,1fr) 18px; align-items: center; gap: 9px; padding: 0 2px; border: 0; color: #322522; background: transparent; text-align: left; cursor: pointer; }
-.recipe-home__row-icon { color: #8d3540; display: grid; place-items: center; }
+.recipe-home__row-icon { width: 32px; height: 32px; color: #8d3540; display: grid; place-items: center; align-self: start; }
 .recipe-home__row > span:nth-child(2) { height: 64px; display: grid; grid-template-rows: 32px 32px; min-width: 0; }
 .recipe-home__row--tall { height: 96px; }
 .recipe-home__row--tall > span:nth-child(2) { height: 96px; grid-template-rows: 32px 64px; }
 .recipe-home__row b { display: block; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 14px/1.3 var(--font-display); }
 .recipe-home__row small { display: block; align-self: start; padding-top: 5px; color: #76645f; font: 9.5px/1.15 var(--font-mono); }
-.recipe-home__arrow { color: #8d3540; font-size: 22px; }
+.recipe-home__arrow { height: 32px; display: grid; place-items: center; align-self: start; color: #8d3540; font-size: 22px; }
 [data-theme="dark"] .recipe-home { background: #211819; }
 [data-theme="dark"] .recipe-home__landscape i:nth-child(1) { background: linear-gradient(169deg, transparent 0 38%, #4f3033 38.3% 100%); }
 [data-theme="dark"] .recipe-home__landscape i:nth-child(2) { background: linear-gradient(176deg, transparent 0 53%, #64333a 53.3% 100%); }
