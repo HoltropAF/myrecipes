@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 const RECIPE_CACHE_PREFIX = 'mr_recipes_v1'
+const ENGLISH_LANGUAGE_RESET_PREFIX = 'mr_language_reset_en_20260825'
 
 // The offline recipe cache is scoped per user. An unscoped key meant that on a
 // shared device the next person to sign in saw the previous user's cookbook
@@ -362,7 +363,7 @@ function AppInner({ setLanguage }) {
   useEffect(() => {
     if (!session || isGuest) return
     supabase.from('user_preferences').select('*').eq('user_id', session.user.id).maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) {
           setShowFirstRun(true)
           return
@@ -373,7 +374,25 @@ function AppInner({ setLanguage }) {
         if (data.recipe_view_mode) setRecipeViewMode(data.recipe_view_mode)
         if (data.recipe_search_mode) setRecipeSearchMode(data.recipe_search_mode)
         if (data.compact_mode !== null && data.compact_mode !== undefined) setCompactMode(data.compact_mode)
-        if (data.language) setLanguage(data.language)
+        const languageResetKey = `${ENGLISH_LANGUAGE_RESET_PREFIX}_${session.user.id}`
+        let shouldResetLanguage = false
+        try {
+          shouldResetLanguage = localStorage.getItem(languageResetKey) !== 'true'
+        } catch { /* storage disabled — retain the saved account preference */ }
+
+        if (shouldResetLanguage) {
+          setLanguage('en')
+          const { error } = await supabase.from('user_preferences').upsert({
+            user_id: session.user.id,
+            language: 'en',
+            updated_at: new Date().toISOString(),
+          })
+          if (!error) {
+            try { localStorage.setItem(languageResetKey, 'true') } catch { /* storage disabled */ }
+          }
+        } else if (data.language) {
+          setLanguage(data.language)
+        }
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, isGuest])
