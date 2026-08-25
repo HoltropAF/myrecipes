@@ -6,14 +6,14 @@ export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddReci
   const { t } = useT()
   return (
     <div className="recipe-home">
-      <div className="recipe-home__landscape" aria-hidden="true"><i /><i /><i /><i /></div>
-      <header className="recipe-home__title">
-        <span aria-hidden="true" />
-        <span><h1>{t('home.indexTitle', 'Recipe index')}</h1><p>{t('home.indexSubtitle', 'ways into your kitchen')}</p></span>
-        <span aria-hidden="true" />
-      </header>
+      <div className="recipe-home__landscape" aria-hidden="true"><i /><i /><i /></div>
+      <header className="recipe-home__title" aria-hidden="true" />
       <section className="recipe-home__index">
-        <h2>{t('home.beginTitle', 'Where do we begin?')}</h2>
+        <h2 className="recipe-home__paper-title">
+          <i aria-hidden="true" />
+          <span><b>{t('home.indexTitle', 'Recipe index')}</b><small>{t('home.indexSubtitle', 'ways into your kitchen')}</small></span>
+          <i aria-hidden="true" />
+        </h2>
         <div className="recipe-home__bell"><DecideCard recipes={recipes} cookStats={cookStats} onSelect={onSelectRecipe} homeCompact /></div>
         {!isGuest && <>
           <HomeRow icon={<RecipeAddIcon />} label={t('fab.addRecipe')} hint={t('home.addRecipeHint', 'Save a new recipe')} onClick={onAddRecipe} />
