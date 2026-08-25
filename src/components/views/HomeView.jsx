@@ -24,7 +24,7 @@ export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddReci
           <HomeRow icon={<RecipeAddIcon />} label={t('fab.addRecipe')} hint={t('home.addRecipeHint', 'Save a new recipe')} onClick={onAddRecipe} />
           <HomeRow icon={<LogIcon />} label={t('fab.logCook')} hint={t('home.logHint', 'Remember what you made')} onClick={onLogCook} />
         </>}
-        <HomeRow icon={<StatsIcon />} label={t('home.stats', 'Kitchen stats')} hint={t('home.statsHint', 'Favourites and forgotten gems')} breakLastWord onClick={onOpenStats} />
+        <HomeRow icon={<StatsIcon />} label={t('home.stats', 'Kitchen stats')} hint={t('home.statsHint', 'Favourites and forgotten gems')} onClick={onOpenStats} />
         {!isGuest && <HomeRow className="recipe-home__row--report" icon={<ReportIcon />} label="Report something" hint="Save a bug or idea for later" onClick={() => setReportOpen(true)} />}
       </section>
       {reportOpen && <FeedbackSheet onClose={() => setReportOpen(false)} />}
