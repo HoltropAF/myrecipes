@@ -251,12 +251,11 @@ export default function SettingsView({
 
         {activeSection === 'backup' && (
           <>
-            <SectionLabel>{t('settings.backupLabel')}</SectionLabel>
-            <div style={cardStyle}>
-              <RowLabel>{t('settings.fullBackup')}</RowLabel>
-              <div style={hintStyle}>{t('settings.fullBackupDesc')}</div>
-              <button onClick={handleExportBackup} disabled={exporting} style={{ ...secondaryBtnStyle, width: '100%' }}>
-                {exporting ? t('settings.exporting') : t('settings.downloadBackup')}
+            <SectionLabel>Keep a copy</SectionLabel>
+            <div className="settings-backup-card" style={cardStyle}>
+              <div><RowLabel>{t('settings.fullBackup')}</RowLabel><div style={hintStyle}>{t('settings.fullBackupDesc')}</div></div>
+              <button onClick={handleExportBackup} disabled={exporting} style={secondaryBtnStyle}>
+                {exporting ? t('settings.exporting') : 'Download (JSON)'}
               </button>
               {exportError && (
                 <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)', marginTop: 6 }}>
@@ -264,13 +263,8 @@ export default function SettingsView({
                 </div>
               )}
 
-              <div style={{ height: 1, background: 'var(--line)', margin: '16px 0' }} />
-
-              <RowLabel>{t('settings.printableCookbook')}</RowLabel>
-              <div style={hintStyle}>{t('settings.printableDesc')(recipes.length)}</div>
-              <button onClick={handleExportPDF} style={{ ...secondaryBtnStyle, width: '100%' }}>
-                {t('settings.exportPDF')}
-              </button>
+              <div><RowLabel>{t('settings.printableCookbook')}</RowLabel><div style={hintStyle}>{t('settings.printableDesc')(recipes.length)}</div></div>
+              <button onClick={handleExportPDF} style={secondaryBtnStyle}>Export (PDF)</button>
             </div>
 
             <SectionLabel>{t('settings.restoreLabel')}</SectionLabel>
@@ -851,30 +845,17 @@ function GeneralSection({ userEmail, updateReady, onApplyUpdate, onCheckUpdate }
   const { t } = useT()
   return (
     <>
-      <SectionLabel>{t('settings.aboutLabel')}</SectionLabel>
-      <div style={cardStyle}>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--charcoal)', lineHeight: 1.6, marginBottom: 14 }}>
-          {t('settings.aboutText')}
-        </div>
-        {userEmail && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--line)', marginTop: 4 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>{t('settings.signedInAs')}</span>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>{userEmail}</span>
-          </div>
-        )}
+      <SectionLabel>Your kitchen</SectionLabel>
+      <div className="settings-account-card" style={cardStyle}>
+        <span className="settings-account-card__avatar">{userEmail?.slice(0, 1).toUpperCase() || 'A'}</span>
+        <span><b>Synced cookbook</b><small>{userEmail || 'Connected with Supabase'}</small></span>
+        <strong>Synced</strong>
       </div>
 
-      <SectionLabel>{t('settings.instanceSectionLabel')}</SectionLabel>
+      <SectionLabel>App updates</SectionLabel>
       <InstanceCard updateReady={updateReady} onApplyUpdate={onApplyUpdate} onCheckUpdate={onCheckUpdate} />
 
-      <SectionLabel>{t('settings.linksLabel')}</SectionLabel>
-      <div style={cardStyle}>
-        <LinkRow href="https://github.com/HoltropAF/myrecipes"        icon={<GitHubIcon />}    label="Repository" />
-        <LinkRow href="https://github.com/HoltropAF/myrecipes/issues" icon={<GitHubIcon />}    label="Issues"     divider />
-        <LinkRow href="https://github.com/HoltropAF/myrecipes/wiki"   icon={<WikiIcon />}      label="Wiki"       divider />
-        <LinkRow href="https://instagram.com/AnnuhFloor"              icon={<InstagramIcon />} label="@AnnuhFloor" divider />
-      </div>
-
+      <SectionLabel>Account</SectionLabel>
       <button
         onClick={() => supabase.auth.signOut()}
         style={{
@@ -883,57 +864,8 @@ function GeneralSection({ userEmail, updateReady, onApplyUpdate, onCheckUpdate }
           fontWeight: 600, fontSize: 15, cursor: 'pointer', marginTop: 4,
         }}
       >{t('settings.signOut')}</button>
+      <footer className="settings-footer-links"><div>Built by @AnnuhFloor</div><div><a href="https://github.com/HoltropAF/myrecipes">Repository</a><i>/</i><a href="https://github.com/HoltropAF/myrecipes/issues">Issues</a><i>/</i><a href="https://github.com/HoltropAF/myrecipes/wiki">Wiki</a><i>/</i><a href="https://instagram.com/AnnuhFloor">Instagram</a></div></footer>
     </>
-  )
-}
-
-function LinkRow({ href, icon, label, divider = false }) {
-  return (
-    <>
-      {divider && <div style={{ height: 1, background: 'var(--line)' }} />}
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0',
-          fontFamily: 'var(--font-body)', color: 'var(--charcoal)', textDecoration: 'none',
-        }}
-      >
-        {icon}
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)', fontWeight: 600 }}>
-          {label}
-        </span>
-        <span style={{ marginLeft: 'auto', color: 'var(--charcoal-soft)', opacity: 0.4, fontSize: 16 }}>›</span>
-      </a>
-    </>
-  )
-}
-
-function GitHubIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--charcoal)" style={{ flexShrink: 0 }}>
-      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.13-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.39.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.79 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.77.11 3.06.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.66.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
-    </svg>
-  )
-}
-
-function WikiIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="var(--charcoal)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="var(--charcoal)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function InstagramIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="var(--tomato)" strokeWidth="1.8" />
-      <circle cx="12" cy="12" r="4.3" stroke="var(--tomato)" strokeWidth="1.8" />
-      <circle cx="17.4" cy="6.6" r="1.15" fill="var(--tomato)" />
-    </svg>
   )
 }
 
