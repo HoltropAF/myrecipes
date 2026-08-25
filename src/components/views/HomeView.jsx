@@ -31,7 +31,7 @@ function HomeRow({ icon, label, hint, breakLastWord = false, onClick }) {
     const splitAt = hint.lastIndexOf(' ')
     if (splitAt > 0) renderedHint = <>{hint.slice(0, splitAt)}<br />{hint.slice(splitAt + 1)}</>
   }
-  return <button className="recipe-home__row" onClick={onClick}><span className="recipe-home__row-icon">{icon}</span><span><b>{label}</b><small>{renderedHint}</small></span><span className="recipe-home__arrow" aria-hidden="true">&gt;</span></button>
+  return <button className={`recipe-home__row${breakLastWord ? ' recipe-home__row--tall' : ''}`} onClick={onClick}><span className="recipe-home__row-icon">{icon}</span><span><b>{label}</b><small>{renderedHint}</small></span><span className="recipe-home__arrow" aria-hidden="true">&gt;</span></button>
 }
 
 export function DinnerBellIcon({ size = 24 }) { return <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 22h20M9 21c.4-6 3-9.5 7-10 4 .5 6.6 4 7 10M14 8h4M16 8V5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/><path d="M4.5 24.5h23" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg> }
