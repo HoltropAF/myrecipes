@@ -10,7 +10,6 @@ import IngredientsTab from './recipe_tabs/IngredientsTab'
 import StepsTab from './recipe_tabs/StepsTab'
 import StorageTab from './recipe_tabs/StorageTab'
 import BinderTabs from './BinderTabs'
-import { getTabShades, tabBackground } from '../lib/tabShades'
 import { useCompact } from '../lib/useCompact'
 import CollectionForm from './CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
@@ -124,11 +123,8 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     )
   }
 
-  const activeTabIndex = TABS.findIndex(t => t.id === activeTab)
-  const tabShades = getTabShades()
-
   return (
-    <div style={{ height: '100dvh', maxHeight: '100dvh', overflow: 'hidden', background: 'var(--parchment)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', maxHeight: '100dvh', overflow: 'hidden', background: 'color-mix(in srgb, var(--tomato) 7%, var(--parchment))', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ flexShrink: 0, zIndex: 5, background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '10px 14px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -174,13 +170,14 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
           activeId={activeTab}
           onSelect={selectRecipeTab}
           compact={compact}
-          style={{ paddingBottom: 0 }}
+          recipeStyle
+          style={{ height: 28, paddingBottom: 0, display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: 2 }}
         />
       </div>
 
       <div style={{
         flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 14px 28px',
-        background: tabBackground(tabShades, activeTabIndex),
+        background: 'linear-gradient(165deg, color-mix(in srgb, var(--tomato) 30%, var(--parchment)) 0 20%, color-mix(in srgb, var(--tomato) 7%, var(--parchment)) 20.3% 100%)',
       }}>
         {activeTab === 'info' && (
           <InfoTab
