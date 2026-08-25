@@ -28,7 +28,7 @@ const en = {
     eyebrow: 'What shall we cook?', title: 'Dinner bell',
     addTitle: 'Add to your kitchen', addHint: 'Keep it close',
     addRecipeHint: 'Save a new recipe', logHint: 'Remember what you made',
-    stats: 'Kitchen stats', statsHint: 'Favourites, repeats and forgotten gems',
+    stats: 'Kitchen stats', statsHint: 'Favourites and forgotten gems',
   },
   decide: {
     compactTitle: "Can't decide?",

@@ -9,6 +9,7 @@
 .recipe-home__index::before { content: ''; position: absolute; left: 9px; top: 11px; bottom: 17px; width: 13px; background: radial-gradient(circle at center, #a96b70 0 3.5px, rgba(111,43,52,.18) 3.8px 4.8px, transparent 5px) center top / 13px 32px repeat-y; opacity: .9; }
 .recipe-home__index::after { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; background: repeating-linear-gradient(180deg, transparent 0 31px, color-mix(in srgb,var(--home-accent) 14%,#ddd5d2) 31px 32px) 0 300px/100% 160px no-repeat,repeating-linear-gradient(180deg,transparent 0 31px,color-mix(in srgb,var(--home-accent) 27%,#ddd5d2) 31px 32px) 0 460px/100% 192px no-repeat; }
 .recipe-home__index > * { position: relative; z-index: 1; }
+.recipe-home__index { margin-top: 10px; }
 .recipe-home__paper-title { height: 64px; margin: 0 0 32px; display: grid; grid-template-columns: 29px auto 1fr; align-items: center; gap: 12px; color: var(--home-accent); }
 .recipe-home__paper-title > i { height: 1px; background: #ddd5d2; }
 .recipe-home__paper-title > span { text-align: left; white-space: nowrap; transform: translateY(-5px); }
@@ -64,4 +65,4 @@
 [data-theme="dark"] .decide-meal-picker section { background: #302324; }
 [data-theme="dark"] .decide-meal-picker__choices button { background: #3b2b2c; color: var(--charcoal); }
 [data-theme="dark"] .recipe-home__row { color: var(--charcoal); }
-@media (max-height: 700px) { .recipe-home__index { margin-top: 22px; } .recipe-home__row { min-height: 58px; padding-block: 9px; } }
+@media (max-height: 700px) { .recipe-home__index { margin-top: -10px; } .recipe-home__row { min-height: 58px; padding-block: 9px; } }
