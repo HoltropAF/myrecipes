@@ -66,10 +66,8 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
   return <div>
     <section style={summaryStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <div><h2 style={titleStyle}>Cooking history</h2><p style={copyStyle}>A quick count, with written memories kept below.</p></div>
-        {!isGuest && <button onClick={() => setShowForm(value => !value)} style={addBtnStyle}>{showForm ? t('cookLog.cancel') : t('cookLog.logCook')}</button>}
-      </div>
+      <h2 style={titleStyle}>Cooking history</h2>
+      <p style={copyStyle}>Only written memories are listed. Quick reactions are counted together.</p>
       <div style={factsStyle}>
         <SummaryFact value={entries.length} label="total cooks" />
         <SummaryFact value={withoutNotes} label="without notes" />
@@ -83,36 +81,37 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
     {!loading && noteEntries.length > 0 && <>
       <div style={sectionLabelStyle}>Notes &amp; memories</div>
-      <div style={{ display: 'grid', gap: 8 }}>{noteEntries.map(entry => <article key={entry.id} style={entryStyle}>
-        <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-          <span>{entry.thumbs === 'up' ? '👍' : entry.thumbs === 'down' ? '👎' : '·'}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={dateStyle}>{formatDate(entry.cooked_date)}{entry.variant_label ? ` · ${entry.variant_label}` : ''}</div>
+      <div style={{ display: 'grid', gap: 10 }}>{noteEntries.map(entry => <article key={entry.id} style={entryStyle}>
+          <DateBadge value={entry.cooked_date} />
+          <div style={{ minWidth: 0 }}>
+            <div style={entryHeadStyle}><strong style={entryTitleStyle}>{entry.variant_label || 'Dinner at home'}{entry.thumbs ? ` · Thumbs ${entry.thumbs}` : ''}</strong>{editingId !== entry.id && <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}</div>
             {editingId === entry.id ? <textarea value={editNotes} onChange={event => setEditNotes(event.target.value)} rows={3} style={textareaStyle} /> : <div style={noteStyle}>{entry.notes}</div>}
-          </div>
-        </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
-          {editingId === entry.id ? <><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={textBtnStyle}>Save</button></> : <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}
+          {editingId === entry.id && <><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={textBtnStyle}>Save</button></>}
           {!isGuest && <button onClick={() => deleteEntry(entry.id)} style={textBtnStyle}>Delete</button>}
         </div>
+          </div>
       </article>)}</div>
     </>}
     {!loading && entries.length === 0 && !showForm && <div style={{ ...copyStyle, textAlign: 'center', padding: 24 }}>{isGuest ? t('cookLog.emptyGuest') : t('cookLog.emptyUser')}</div>}
     {error && <div style={{ color: 'var(--tomato)', fontSize: 12, marginTop: 8 }}>{error}</div>}
+    {!isGuest && <button onClick={() => setShowForm(value => !value)} style={wideButtonStyle}>{showForm ? t('cookLog.cancel') : '+ Log another cook'}</button>}
   </div>
 }
 
 function SummaryFact({ value, label }) { return <div style={factStyle}><b>{value}</b><small>{label}</small></div> }
-function formatDate(value) { return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }
+function DateBadge({ value }) { const date = new Date(`${value}T00:00:00`); return <span style={dateBadgeStyle}><b style={{ fontSize: 17 }}>{date.getDate()}</b><small style={{ fontFamily: 'var(--font-mono)', fontSize: 8 }}>{date.toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</small></span> }
 const summaryStyle = { padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--card)' }
 const titleStyle = { margin: 0, fontFamily: 'var(--font-display)', color: 'var(--tomato-deep)', fontSize: 20 }
 const copyStyle = { margin: '3px 0 0', fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 10.5, lineHeight: 1.4 }
 const factsStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }
 const factStyle = { minHeight: 48, padding: '7px 4px', borderRadius: 9, background: 'var(--parchment-dim)', display: 'grid', placeItems: 'center', alignContent: 'center', color: 'var(--tomato-deep)', fontFamily: 'var(--font-display)', fontSize: 17 }
 const sectionLabelStyle = { margin: '15px 2px 7px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '.08em' }
-const entryStyle = { padding: '10px 12px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10 }
-const dateStyle = { fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }
+const entryStyle = { display: 'grid', gridTemplateColumns: '39px 1fr', gap: 9, alignItems: 'start', padding: 13, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12 }
+const dateBadgeStyle = { width: 39, height: 42, paddingTop: 5, boxSizing: 'border-box', borderRadius: 7, background: 'var(--tomato-deep)', color: '#fff', textAlign: 'center', display: 'grid', alignContent: 'center', fontFamily: 'var(--font-display)' }
+const entryHeadStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
+const entryTitleStyle = { color: 'var(--charcoal)', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600 }
 const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 4, lineHeight: 1.45 }
 const textareaStyle = { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 13 }
-const addBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
 const textBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }
+const wideButtonStyle = { width: '100%', height: 40, marginTop: 12, border: 0, borderRadius: 9, background: 'var(--tomato-deep)', color: '#fffaf3', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }
