@@ -16,7 +16,17 @@ import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
 import { useBackLayer } from '../lib/useBackLayer'
 
 const RECIPE_TABS = new Set(['info', 'ingredients', 'steps', 'cooklog', 'storage'])
-const readLastRecipeTab = () => RECIPE_TABS.has(history.state?.mrRecipeTab) ? history.state.mrRecipeTab : 'info'
+const readLastRecipeTab = () => {
+  const urlTab = new URLSearchParams(location.search).get('recipeTab')
+  if (RECIPE_TABS.has(urlTab)) return urlTab
+  return RECIPE_TABS.has(history.state?.mrRecipeTab) ? history.state.mrRecipeTab : 'info'
+}
+
+function recipeRoute(tab) {
+  const url = new URL(location.href)
+  url.searchParams.set('recipeTab', tab)
+  return `${url.pathname}${url.search}${url.hash}`
+}
 
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
   const { t } = useT()
@@ -73,7 +83,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
 
   const selectRecipeTab = tab => {
     if (tab === activeTab) return
-    history.pushState({ ...history.state, mrRecipeTab: tab }, '')
+    history.pushState({ ...history.state, mrRecipeTab: tab }, '', recipeRoute(tab))
     setActiveTab(tab)
   }
 

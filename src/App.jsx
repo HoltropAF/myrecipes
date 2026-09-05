@@ -7,6 +7,8 @@ const ENGLISH_LANGUAGE_RESET_PREFIX = 'mr_language_reset_en_20260825'
 const APP_TABS = new Set(['home', 'recipes', 'shopping', 'stats', 'mealprep', 'settings'])
 
 function readLastAppTab() {
+  const urlTab = new URLSearchParams(location.search).get('tab')
+  if (APP_TABS.has(urlTab)) return urlTab
   const historyTab = history.state?.mrTab
   if (APP_TABS.has(historyTab)) return historyTab
   try {
@@ -16,7 +18,18 @@ function readLastAppTab() {
 }
 
 function readOpenRecipeId() {
+  const urlId = new URLSearchParams(location.search).get('recipe')
+  if (urlId) return urlId
   try { return sessionStorage.getItem('mr_open_recipe_v1') } catch { return null }
+}
+
+function appRoute(patch) {
+  const url = new URL(location.href)
+  for (const [key, value] of Object.entries(patch)) {
+    if (value) url.searchParams.set(key, value)
+    else url.searchParams.delete(key)
+  }
+  return `${url.pathname}${url.search}${url.hash}`
 }
 
 // The offline recipe cache is scoped per user. An unscoped key meant that on a
@@ -286,6 +299,15 @@ function AppInner({ setLanguage }) {
   useBackLayer(showFirstRun, () => setShowFirstRun(false), 'first-run')
   useBackLayer(showAllergenDisclaimer, () => setShowAllergenDisclaimer(false), 'allergen-note')
 
+  const selectedRecipeId = selectedRecipe?.id || null
+  useEffect(() => {
+    history.replaceState(
+      { ...history.state },
+      '',
+      appRoute({ recipe: selectedRecipeId, recipeTab: selectedRecipeId ? (new URLSearchParams(location.search).get('recipeTab') || 'info') : null })
+    )
+  }, [selectedRecipeId])
+
   useEffect(() => {
     if (!history.state?.mrAppRoot) {
       const restoredTab = readLastAppTab()
@@ -307,7 +329,7 @@ function AppInner({ setLanguage }) {
   const navigateTab = (tab) => {
     if (tab === activeTab) return
     try { sessionStorage.setItem('mr_active_tab_v1', tab) } catch { /* unavailable */ }
-    history.pushState({ ...history.state, mrTab: tab }, '')
+    history.pushState({ ...history.state, mrTab: tab }, '', appRoute({ tab, recipe: null, recipeTab: null }))
     setActiveTab(tab)
   }
 

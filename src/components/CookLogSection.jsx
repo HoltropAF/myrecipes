@@ -75,7 +75,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
 
     {!loading && noteEntries.length > 0 && <>
       <div style={sectionLabelStyle}>Notes &amp; memories</div>
-      <div style={{ display: 'grid', gap: 10 }}>{noteEntries.map(entry => <article key={entry.id} style={entryStyle}>
+      <div style={historyCardStyle}>{noteEntries.map((entry, index) => <article key={entry.id} style={{ ...entryStyle, borderTop: index ? '1px solid var(--line)' : 0 }}>
           <DateBadge value={entry.cooked_date} />
           <div style={{ minWidth: 0 }}>
             <div style={entryHeadStyle}><strong style={entryTitleStyle}>{entry.variant_label || 'Dinner at home'}{entry.thumbs ? ` · Thumbs ${entry.thumbs}` : ''}</strong>{editingId !== entry.id && <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}</div>
@@ -98,8 +98,9 @@ const copyStyle = { margin: '3px 0 0', fontFamily: 'var(--font-mono)', color: 'v
 const factsStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }
 const factStyle = { minHeight: 48, padding: '7px 4px', borderRadius: 9, background: 'var(--parchment-dim)', display: 'grid', placeItems: 'center', alignContent: 'center', color: 'var(--tomato-deep)', fontFamily: 'var(--font-display)', fontSize: 17 }
 const sectionLabelStyle = { margin: '15px 2px 7px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '.08em' }
-const entryStyle = { display: 'grid', gridTemplateColumns: '39px 1fr', gap: 9, alignItems: 'start', padding: 13, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12 }
-const dateBadgeStyle = { width: 39, height: 42, paddingTop: 5, boxSizing: 'border-box', borderRadius: 7, background: 'var(--tomato-deep)', color: '#fff', textAlign: 'center', display: 'grid', alignContent: 'center', fontFamily: 'var(--font-display)' }
+const historyCardStyle = { overflow: 'hidden', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--card)', boxShadow: '0 4px 14px rgba(70,35,35,.06)' }
+const entryStyle = { display: 'grid', gridTemplateColumns: '43px 1fr', gap: 10, alignItems: 'center', padding: '12px 13px', background: 'transparent' }
+const dateBadgeStyle = { width: 43, height: 45, paddingTop: 5, boxSizing: 'border-box', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--tomato-deep)', textAlign: 'center', display: 'grid', alignContent: 'center', fontFamily: 'var(--font-display)' }
 const entryHeadStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
 const entryTitleStyle = { color: 'var(--charcoal)', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600 }
 const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 4, lineHeight: 1.45 }
