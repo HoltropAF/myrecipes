@@ -58,12 +58,6 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
     setEditingId(null); load(); onLogged?.()
   }
 
-  const deleteEntry = async id => {
-    const { error: deleteError } = await supabase.from('cook_log').delete().eq('id', id)
-    if (deleteError) { setError(t('cookLog.saveError')); return }
-    load(); onLogged?.()
-  }
-
   return <div>
     <section style={summaryStyle}>
       <h2 style={titleStyle}>Cooking history</h2>
@@ -86,10 +80,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
           <div style={{ minWidth: 0 }}>
             <div style={entryHeadStyle}><strong style={entryTitleStyle}>{entry.variant_label || 'Dinner at home'}{entry.thumbs ? ` · Thumbs ${entry.thumbs}` : ''}</strong>{editingId !== entry.id && <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}</div>
             {editingId === entry.id ? <textarea value={editNotes} onChange={event => setEditNotes(event.target.value)} rows={3} style={textareaStyle} /> : <div style={noteStyle}>{entry.notes}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
-          {editingId === entry.id && <><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={textBtnStyle}>Save</button></>}
-          {!isGuest && <button onClick={() => deleteEntry(entry.id)} style={textBtnStyle}>Delete</button>}
-        </div>
+            {editingId === entry.id && <div style={editActionsStyle}><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={saveNoteButtonStyle}>Save note</button></div>}
           </div>
       </article>)}</div>
     </>}
@@ -114,4 +105,6 @@ const entryTitleStyle = { color: 'var(--charcoal)', fontFamily: 'var(--font-disp
 const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 4, lineHeight: 1.45 }
 const textareaStyle = { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 13 }
 const textBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }
+const editActionsStyle = { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 7 }
+const saveNoteButtonStyle = { height: 30, padding: '0 11px', border: 0, borderRadius: 7, background: 'var(--tomato-deep)', color: '#fffaf3', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }
 const wideButtonStyle = { width: '100%', height: 40, marginTop: 12, border: 0, borderRadius: 9, background: 'var(--tomato-deep)', color: '#fffaf3', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }
