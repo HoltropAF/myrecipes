@@ -8,15 +8,16 @@ import { useBackLayer } from '../../lib/useBackLayer'
 export default function InfoTab({ recipe, variants, activeVariant, onVariantChange, isGuest = false }) {
   const { t } = useT()
   const [record, setRecord] = useState(null)
-  const [isLogged, setIsLogged] = useState(() => isGuest && DEMO_COOK_LOG.some(entry => entry.recipe_id === recipe.id))
+  const [logCount, setLogCount] = useState(() => isGuest ? DEMO_COOK_LOG.filter(entry => entry.recipe_id === recipe.id).length : 0)
+  const isLogged = logCount > 0
   const allergens = recipe.allergen_tags || []
   useBackLayer(!!record, () => setRecord(null), 'recipe-record')
 
   useEffect(() => {
     if (isGuest) return
     let cancelled = false
-    supabase.from('cook_log').select('id').eq('recipe_id', recipe.id).limit(1).then(({ data }) => {
-      if (!cancelled) setIsLogged((data || []).length > 0)
+    supabase.from('cook_log').select('*', { count: 'exact', head: true }).eq('recipe_id', recipe.id).then(({ count }) => {
+      if (!cancelled) setLogCount(count || 0)
     })
     return () => { cancelled = true }
   }, [recipe.id, isGuest])
@@ -38,7 +39,7 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
         <div style={factsStyle}>
           <Fact value={recipe.total_minutes || '—'} label="min total" />
           <Fact value={recipe.servings || '—'} label="servings" />
-          <Fact value={recipe.calories || '—'} label="kcal" />
+          <Fact value={logCount} label={logCount === 1 ? 'time logged' : 'times logged'} />
         </div>
         <strong style={detailsTitleStyle}>Recipe details</strong>
         <p style={detailsCopyStyle}>Allergens flag possible reactions; always verify them yourself. Variants are complete alternative versions.</p>

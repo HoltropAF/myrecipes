@@ -155,7 +155,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
         </div>
 
         {/* Title — always visible, independent of active tab */}
-        <div style={{ marginBottom: 9 }}>
+        <div style={{ paddingTop: 24, marginBottom: 9 }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 23, color: 'var(--tomato-deep)', lineHeight: 1.15 }}>
             {recipe.title}
           </h1>
@@ -206,7 +206,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
           />
         )}
         {activeTab === 'storage' && (
-          <StorageTab recipe={recipe} />
+          <StorageTab recipe={recipe} isGuest={isGuest} />
         )}
       </div>
 

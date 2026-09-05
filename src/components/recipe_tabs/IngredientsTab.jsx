@@ -17,8 +17,9 @@ export default function IngredientsTab({
   return (
     <div>
       {/* Servings adjuster — first thing on this tab so scaling happens before reading amounts */}
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 7, marginBottom: 12 }}>
       {baseServings && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '7px 11px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '7px 9px' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>{t('ingredientsTab.servings')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
             <StepperBtn onClick={() => onServingsChange(s => Math.max(1, (s || baseServings) - 1))}>−</StepperBtn>
@@ -27,23 +28,20 @@ export default function IngredientsTab({
           </div>
         </div>
       )}
-
-      {/halloumi/i.test(recipeNotes || '') && (
-        <button onClick={() => setShowSwaps(value => !value)} style={{ margin: '-4px 0 10px auto', display: 'block', border: 0, background: 'transparent', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
+        {/halloumi/i.test(recipeNotes || '') && (
+        <button onClick={() => setShowSwaps(value => !value)} style={compactControlStyle}>
           {showSwaps ? 'Hide swaps' : 'Show swaps'}
         </button>
-      )}
-
-      {/* Version picker — mirrors the one on the Info tab, shown here too since ingredients change per version */}
-      {variants.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
+        )}
+        {variants.length > 0 && (
           <select
             value={activeVariant}
             onChange={e => onVariantChange(e.target.value)}
             style={{
-              width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--line)',
-              background: 'var(--card)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)',
-              fontWeight: 600, fontSize: 15, cursor: 'pointer',
+              maxWidth: 116, padding: '0 7px', borderRadius: 8, border: '1px solid var(--line)',
+              background: 'var(--card)', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)',
+              fontWeight: 700, fontSize: 10, cursor: 'pointer',
             }}
           >
             <option value="main">{t('ingredientsTab.original')}</option>
@@ -51,8 +49,9 @@ export default function IngredientsTab({
               <option key={v.id} value={v.id}>{v.label}</option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+      </div>
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
         <SectionLabel>{t('ingredientsTab.label')}</SectionLabel>
@@ -158,3 +157,5 @@ function SectionLabel({ children }) {
 function EmptyRow({ children }) {
   return <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)', padding: '10px 0' }}>{children}</div>
 }
+
+const compactControlStyle = { padding: '0 7px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }

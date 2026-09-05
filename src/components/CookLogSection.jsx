@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
-import { todayLocalISO, relativeDayLabel } from '../lib/dateUtils'
+import { todayLocalISO } from '../lib/dateUtils'
 import CookLogForm from './CookLogForm'
 
-export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = null, onLogged }) {
+export default function CookLogSection({ recipeId, variants = [], isGuest = false, demoEntries = [], onLogged }) {
   const { t } = useT()
   const [remoteEntries, setRemoteEntries] = useState(null)
+  const [guestEntries, setGuestEntries] = useState(demoEntries)
   const [showForm, setShowForm] = useState(false)
   const [date, setDate] = useState(todayLocalISO)
   const [thumbs, setThumbs] = useState(null)
@@ -14,242 +15,104 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
   const [variantLabel, setVariantLabel] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editNotes, setEditNotes] = useState('')
 
   const load = async () => {
     if (isGuest) return
-    const { data } = await supabase
-      .from('cook_log')
-      .select('*')
-      .eq('recipe_id', recipeId)
-      .order('cooked_date', { ascending: false })
+    const { data } = await supabase.from('cook_log').select('*').eq('recipe_id', recipeId).order('cooked_date', { ascending: false })
     setRemoteEntries(data || [])
   }
-
   useEffect(() => {
     if (isGuest) return
     let cancelled = false
-    supabase
-      .from('cook_log').select('*').eq('recipe_id', recipeId)
-      .order('cooked_date', { ascending: false })
+    supabase.from('cook_log').select('*').eq('recipe_id', recipeId).order('cooked_date', { ascending: false })
       .then(({ data }) => { if (!cancelled) setRemoteEntries(data || []) })
     return () => { cancelled = true }
   }, [recipeId, isGuest])
 
-  // Guest entries come from a prop; only the fetched copy needs state.
-  const entries = isGuest ? (demoEntries || []) : (remoteEntries || [])
+  const entries = isGuest ? guestEntries : (remoteEntries || [])
   const loading = !isGuest && remoteEntries === null
+  const noteEntries = entries.filter(entry => entry.notes?.trim())
+  const withoutNotes = entries.length - noteEntries.length
+  const downCount = entries.filter(entry => entry.thumbs === 'down').length
 
   const handleSave = async () => {
-    setSaving(true)
-    setError(null)
-    const { data: userData } = await supabase.auth.getUser()
-    const user_id = userData?.user?.id
-    if (!user_id) {
-      setError(t('cookLog.notSignedIn'))
-      setSaving(false)
-      return
-    }
-
-    const { error: insertError } = await supabase.from('cook_log').insert({
-      user_id,
-      recipe_id: recipeId,
-      cooked_date: date,
-      thumbs,
-      notes: notes.trim() || null,
-      variant_label: variantLabel || null,
-    })
+    setSaving(true); setError(null)
+    const { data } = await supabase.auth.getUser()
+    const userId = data?.user?.id
+    if (!userId) { setError(t('cookLog.notSignedIn')); setSaving(false); return }
+    const { error: insertError } = await supabase.from('cook_log').insert({ user_id: userId, recipe_id: recipeId, cooked_date: date, thumbs, notes: notes.trim() || null, variant_label: variantLabel || null })
     setSaving(false)
-    if (insertError) {
-      setError(t('cookLog.saveError'))
-      return
-    }
-    setShowForm(false)
-    setThumbs(null)
-    setNotes('')
-    setVariantLabel('')
-    setDate(todayLocalISO())
-    load()
-    onLogged?.()
+    if (insertError) { setError(t('cookLog.saveError')); return }
+    setShowForm(false); setThumbs(null); setNotes(''); setVariantLabel(''); setDate(todayLocalISO()); load(); onLogged?.()
   }
 
-  const handleDeleteEntry = async (id) => {
+  const saveEditedNote = async entry => {
+    const value = editNotes.trim()
+    if (isGuest) { setGuestEntries(rows => rows.map(row => row.id === entry.id ? { ...row, notes: value || null } : row)); setEditingId(null); return }
+    setSaving(true); setError(null)
+    const { error: updateError } = await supabase.from('cook_log').update({ notes: value || null }).eq('id', entry.id)
+    setSaving(false)
+    if (updateError) { setError(t('cookLog.saveError')); return }
+    setEditingId(null); load(); onLogged?.()
+  }
+
+  const deleteEntry = async id => {
     const { error: deleteError } = await supabase.from('cook_log').delete().eq('id', id)
-    if (deleteError) {
-      setError(t('cookLog.saveError'))
-      return
-    }
-    load()
-    onLogged?.()
+    if (deleteError) { setError(t('cookLog.saveError')); return }
+    load(); onLogged?.()
   }
 
-  const upCount = entries.filter(e => e.thumbs === 'up').length
-  const downCount = entries.filter(e => e.thumbs === 'down').length
-
-  // Entries arrive newest-first; the sparkline reads left-to-right in time.
-  const chronological = [...entries].reverse()
-  const lastCookedLabel = entries[0]?.cooked_date
-    ? relativeDayLabel(entries[0].cooked_date, {
-        today: t('relative.today'),
-        yesterday: t('relative.yesterday'),
-        days: (n) => t('relative.days')(n),
-        weeks: (n) => t('relative.weeks')(n),
-        months: (n) => t('relative.months')(n),
-        years: (n) => t('relative.years')(n),
-      })
-    : null
-
-  // variant_label has been written by every cook-log form since the beginning
-  // and never read back, so "which version actually wins" was unanswerable.
-  const byVariant = (() => {
-    const map = new Map()
-    for (const entry of entries) {
-      const key = entry.variant_label || ''
-      if (!map.has(key)) map.set(key, { label: key, count: 0, up: 0, down: 0 })
-      const row = map.get(key)
-      row.count += 1
-      if (entry.thumbs === 'up') row.up += 1
-      if (entry.thumbs === 'down') row.down += 1
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count)
-  })()
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <SectionLabel>{t('cookLog.title')} {entries.length > 0 && `· ${entries.length}x`}</SectionLabel>
-        {!isGuest && (
-          <button onClick={() => setShowForm(s => !s)} style={addBtnStyle}>
-            {showForm ? t('cookLog.cancel') : t('cookLog.logCook')}
-          </button>
-        )}
+  return <div>
+    <section style={summaryStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div><h2 style={titleStyle}>Cooking history</h2><p style={copyStyle}>A quick count, with written memories kept below.</p></div>
+        {!isGuest && <button onClick={() => setShowForm(value => !value)} style={addBtnStyle}>{showForm ? t('cookLog.cancel') : t('cookLog.logCook')}</button>}
       </div>
+      <div style={factsStyle}>
+        <SummaryFact value={entries.length} label="total cooks" />
+        <SummaryFact value={withoutNotes} label="without notes" />
+        <SummaryFact value={downCount} label="thumbs down" />
+      </div>
+    </section>
 
-      {showForm && (
-        <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
-          <CookLogForm
-            date={date} setDate={setDate}
-            variants={variants}
-            variantLabel={variantLabel} setVariantLabel={setVariantLabel}
-            thumbs={thumbs} setThumbs={setThumbs}
-            notes={notes} setNotes={setNotes}
-            onSave={handleSave} saving={saving} error={error}
-          />
-        </div>
-      )}
+    {showForm && <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14, margin: '12px 0' }}>
+      <CookLogForm date={date} setDate={setDate} variants={variants} variantLabel={variantLabel} setVariantLabel={setVariantLabel} thumbs={thumbs} setThumbs={setThumbs} notes={notes} setNotes={setNotes} onSave={handleSave} saving={saving} error={error} />
+    </div>}
 
-      {!loading && entries.length > 0 && (
-        <div style={{
-          background: 'var(--parchment-dim)', borderRadius: 10, padding: '11px 13px', marginBottom: 12,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-              {t('cookLog.trend')}
-            </span>
-            {lastCookedLabel && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }}>
-                {t('cookLog.lastCookedLabel')} {lastCookedLabel}
-              </span>
-            )}
+    {!loading && noteEntries.length > 0 && <>
+      <div style={sectionLabelStyle}>Notes &amp; memories</div>
+      <div style={{ display: 'grid', gap: 8 }}>{noteEntries.map(entry => <article key={entry.id} style={entryStyle}>
+        <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+          <span>{entry.thumbs === 'up' ? '👍' : entry.thumbs === 'down' ? '👎' : '·'}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={dateStyle}>{formatDate(entry.cooked_date)}{entry.variant_label ? ` · ${entry.variant_label}` : ''}</div>
+            {editingId === entry.id ? <textarea value={editNotes} onChange={event => setEditNotes(event.target.value)} rows={3} style={textareaStyle} /> : <div style={noteStyle}>{entry.notes}</div>}
           </div>
-
-          {/* One bar per cook, in order. Rated up is tall and sage, rated down
-              is short and tomato, unrated sits in between — so the shape of the
-              run is readable at a glance without a legend. */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 30, marginTop: 8 }}>
-            {chronological.map(entry => (
-              <div
-                key={entry.id}
-                title={entry.cooked_date}
-                style={{
-                  flex: 1, minWidth: 3, borderRadius: '2px 2px 0 0',
-                  height: entry.thumbs === 'up' ? '100%' : entry.thumbs === 'down' ? '35%' : '65%',
-                  background: entry.thumbs === 'down' ? 'var(--tomato)' : entry.thumbs === 'up' ? 'var(--sage)' : 'var(--line)',
-                }}
-              />
-            ))}
-          </div>
-
-          {(upCount > 0 || downCount > 0) && (
-            <div style={{ display: 'flex', gap: 14, marginTop: 7, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-              {upCount > 0 && <span>👍 {upCount}</span>}
-              {downCount > 0 && <span>👎 {downCount}</span>}
-            </div>
-          )}
-
-          {byVariant.length > 1 && (
-            <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--charcoal-soft)', marginBottom: 5 }}>
-                {t('cookLog.byVariant')}
-              </div>
-              {byVariant.map(row => (
-                <div key={row.label || 'original'} style={{
-                  display: 'flex', justifyContent: 'space-between', gap: 10,
-                  fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--charcoal)', padding: '2px 0',
-                }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {row.label || t('cookLog.variantOriginal')}
-                  </span>
-                  <span style={{ flexShrink: 0, color: 'var(--charcoal-soft)' }}>
-                    {row.count}×{row.up > 0 ? ` · 👍 ${row.up}` : ''}{row.down > 0 ? ` · 👎 ${row.down}` : ''}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-      )}
-
-      {!loading && entries.length === 0 && !showForm && (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--charcoal-soft)' }}>
-          {isGuest ? t('cookLog.emptyGuest') : t('cookLog.emptyUser')}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
+          {editingId === entry.id ? <><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={textBtnStyle}>Save</button></> : <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}
+          {!isGuest && <button onClick={() => deleteEntry(entry.id)} style={textBtnStyle}>Delete</button>}
         </div>
-      )}
-
-      {entries.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {entries.map(entry => (
-            <div key={entry.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
-              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
-            }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{entry.thumbs === 'up' ? '👍' : entry.thumbs === 'down' ? '👎' : '·'}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>
-                  {formatDate(entry.cooked_date)}{entry.variant_label ? ` · ${entry.variant_label}` : ''}
-                </div>
-                {entry.notes && (
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 3 }}>{entry.notes}</div>
-                )}
-              </div>
-              {!isGuest && (
-                <button
-                  onClick={() => handleDeleteEntry(entry.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--charcoal-soft)', fontSize: 15, flexShrink: 0 }}
-                >×</button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+      </article>)}</div>
+    </>}
+    {!loading && entries.length === 0 && !showForm && <div style={{ ...copyStyle, textAlign: 'center', padding: 24 }}>{isGuest ? t('cookLog.emptyGuest') : t('cookLog.emptyUser')}</div>}
+    {error && <div style={{ color: 'var(--tomato)', fontSize: 12, marginTop: 8 }}>{error}</div>}
+  </div>
 }
 
-function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function SectionLabel({ children }) {
-  return (
-    <div style={{
-      fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)',
-      textTransform: 'uppercase', letterSpacing: '0.08em',
-    }}>{children}</div>
-  )
-}
-
-const addBtnStyle = {
-  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)',
-  fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-}
+function SummaryFact({ value, label }) { return <div style={factStyle}><b>{value}</b><small>{label}</small></div> }
+function formatDate(value) { return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) }
+const summaryStyle = { padding: 14, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--card)' }
+const titleStyle = { margin: 0, fontFamily: 'var(--font-display)', color: 'var(--tomato-deep)', fontSize: 20 }
+const copyStyle = { margin: '3px 0 0', fontFamily: 'var(--font-mono)', color: 'var(--charcoal-soft)', fontSize: 10.5, lineHeight: 1.4 }
+const factsStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, marginTop: 12 }
+const factStyle = { minHeight: 48, padding: '7px 4px', borderRadius: 9, background: 'var(--parchment-dim)', display: 'grid', placeItems: 'center', alignContent: 'center', color: 'var(--tomato-deep)', fontFamily: 'var(--font-display)', fontSize: 17 }
+const sectionLabelStyle = { margin: '15px 2px 7px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '.08em' }
+const entryStyle = { padding: '10px 12px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10 }
+const dateStyle = { fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)' }
+const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 4, lineHeight: 1.45 }
+const textareaStyle = { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 13 }
+const addBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
+const textBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }

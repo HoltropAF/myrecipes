@@ -52,11 +52,12 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
   const startStepTimer = useCallback(() => {
     const label = current?.section || `${t('cookingMode.stepLabel')} ${index + 1}`
     start(stepTimerId, label, stepSeconds)
-  }, [current, index, start, stepSeconds, stepTimerId, t])
+    if (index < flatSteps.length - 1) setIndex(index + 1)
+  }, [current, flatSteps.length, index, start, stepSeconds, stepTimerId, t])
 
   // Timers from other steps that are still counting — the whole point of
   // running several at once.
-  const otherTimers = Object.values(timers).filter(timer => timer.id !== stepTimerId)
+  const activeTimers = Object.values(timers)
 
   const goNext = () => setIndex(i => Math.min(i + 1, flatSteps.length - 1))
   const goBack = () => setIndex(i => Math.max(i - 1, 0))
@@ -203,8 +204,28 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
         ))}
       </div>
 
+      {activeTimers.length > 0 && (
+        <div style={{ padding: '10px 20px 4px' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(253,248,240,0.5)', marginBottom: 7 }}>Currently cooking</div>
+          <div style={{ display: 'grid', gap: 7 }}>
+            {activeTimers.map(timer => {
+              const left = remainingOf(timer)
+              const done = left === 0
+              return <div key={timer.id} style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${done ? 'var(--tomato)' : 'rgba(253,248,240,0.25)'}`, background: done ? 'rgba(193,67,47,.22)' : 'rgba(253,248,240,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 13 }}>{timer.label}</span>
+                <b style={{ fontFamily: 'var(--font-mono)', fontSize: 15 }}>{done ? t('cookingMode.timerDone') : formatDuration(left)}</b>
+                <button onClick={() => toggle(timer.id)} style={timerActionStyle}>{timer.running ? t('cookingMode.pause') : 'Resume'}</button>
+                <button onClick={() => addTime(timer.id, 60)} style={timerActionStyle}>+1</button>
+                <button onClick={() => dismiss(timer.id)} aria-label={t('cookingMode.dismissTimer')} style={timerActionStyle}>×</button>
+              </div>
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Step content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 28px', textAlign: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '12px 20px', padding: '20px 18px', textAlign: 'center', borderRadius: 16, background: activeTimers.length ? 'rgba(253,248,240,.06)' : 'transparent' }}>
+        {activeTimers.length > 0 && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', opacity: .5, marginBottom: 10 }}>Next step</div>}
         {current.section && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--tomato-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
             {current.section}
@@ -262,44 +283,6 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
         )}
       </div>
 
-      {/* Timers started on other steps, still counting down */}
-      {otherTimers.length > 0 && (
-        <div style={{ borderTop: '1px solid rgba(253,248,240,0.12)', padding: '10px 20px 2px' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(253,248,240,0.4)', marginBottom: 7 }}>
-            {t('cookingMode.alsoRunning')}
-          </div>
-          <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 8 }}>
-            {otherTimers.map(timer => {
-              const left = remainingOf(timer)
-              const done = left === 0
-              return (
-                <div
-                  key={timer.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
-                    padding: '6px 8px 6px 11px', borderRadius: 99,
-                    border: `1px solid ${done ? 'var(--tomato)' : 'rgba(253,248,240,0.25)'}`,
-                    background: done ? 'rgba(193,67,47,0.22)' : 'none',
-                  }}
-                >
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(253,248,240,0.75)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {timer.label}
-                  </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: done ? 'var(--tomato-deep)' : 'var(--parchment)' }}>
-                    {done ? t('cookingMode.timerDone') : formatDuration(left)}
-                  </span>
-                  <button
-                    onClick={() => dismiss(timer.id)}
-                    aria-label={t('cookingMode.dismissTimer')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(253,248,240,0.5)', fontSize: 15, lineHeight: 1, padding: '0 2px' }}
-                  >×</button>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Nav buttons */}
       <div style={{ display: 'flex', gap: 10, padding: '16px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={goBack} disabled={isFirst} style={{ ...navBtnStyle, opacity: isFirst ? 0.3 : 1 }}>{t('cookingMode.back')}</button>
@@ -325,3 +308,4 @@ const closeBtnStyle = {
   padding: '10px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--card)',
   color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, cursor: 'pointer',
 }
+const timerActionStyle = { padding: '4px 5px', border: 0, background: 'transparent', color: 'var(--parchment)', fontFamily: 'var(--font-mono)', fontSize: 10, cursor: 'pointer' }
