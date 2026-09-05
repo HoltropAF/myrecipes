@@ -93,10 +93,26 @@ export const ALWAYS_STOCKED = new Set([
   'salt', 'pepper', 'oil', 'olive oil', 'sugar', 'butter', 'flour',
 ])
 
+const ALWAYS_STOCKED_KEY = 'mr_always_stocked_v1'
+
+export function getAlwaysStocked() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ALWAYS_STOCKED_KEY))
+    if (Array.isArray(saved)) return new Set(saved.map(value => String(value).trim().toLowerCase()).filter(Boolean))
+  } catch { /* use defaults when storage is unavailable or invalid */ }
+  return new Set(ALWAYS_STOCKED)
+}
+
+export function saveAlwaysStocked(values) {
+  const cleaned = [...new Set(values.map(value => String(value).trim().toLowerCase()).filter(Boolean))]
+  try { localStorage.setItem(ALWAYS_STOCKED_KEY, JSON.stringify(cleaned)) } catch { /* device storage unavailable */ }
+  return cleaned
+}
+
 export function isPantryStaple(normalisedName) {
   return PANTRY_STAPLES.has(String(normalisedName || '').trim())
 }
 
 export function isAlwaysStocked(normalisedName) {
-  return ALWAYS_STOCKED.has(String(normalisedName || '').trim())
+  return getAlwaysStocked().has(String(normalisedName || '').trim())
 }

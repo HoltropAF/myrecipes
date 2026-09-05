@@ -10,6 +10,7 @@ import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import './settings-view.css'
 import { useBackLayer } from '../../lib/useBackLayer'
+import { ALWAYS_STOCKED, getAlwaysStocked, saveAlwaysStocked } from '../../lib/aisles'
 
 // Sentinel key for recipes with no category, so they can be selected in the
 // PDF filter alongside real category names.
@@ -227,6 +228,9 @@ export default function SettingsView({
               </select>
               <div style={hintStyle}>{t('settings.defaultCategoryHint')}</div>
             </div>
+
+            <SectionLabel>Shopping &amp; pantry</SectionLabel>
+            <AlwaysStockedEditor />
           </>
         )}
 
@@ -870,6 +874,33 @@ function GeneralSection({ userEmail, updateReady, onApplyUpdate, onCheckUpdate }
     </>
   )
 }
+
+function AlwaysStockedEditor() {
+  const [items, setItems] = useState(() => [...getAlwaysStocked()])
+  const [input, setInput] = useState('')
+  const update = next => { setItems(next); saveAlwaysStocked(next) }
+  const add = () => {
+    const value = input.trim().toLowerCase()
+    if (!value || items.includes(value)) return
+    update([...items, value]); setInput('')
+  }
+  const reset = () => update([...ALWAYS_STOCKED])
+
+  return <div style={cardStyle}>
+    <RowLabel>Always stocked</RowLabel>
+    <div style={hintStyle}>Ingredients you normally have at home. They appear as “probably have” and do not count as missing.</div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '12px 0' }}>
+      {items.map(item => <button key={item} onClick={() => update(items.filter(value => value !== item))} title={`Remove ${item}`} style={stockedChipStyle}>{item} ×</button>)}
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 7 }}>
+      <input value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') add() }} placeholder="Add an ingredient" style={selectStyle} />
+      <button onClick={add} disabled={!input.trim()} style={secondaryBtnStyle}>Add</button>
+    </div>
+    <button onClick={reset} style={{ ...secondaryBtnStyle, marginTop: 9 }}>Restore defaults</button>
+  </div>
+}
+
+const stockedChipStyle = { minHeight: 29, padding: '4px 9px', border: '1px solid var(--line)', borderRadius: 99, background: 'var(--parchment-dim)', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, cursor: 'pointer' }
 
 function TagsSection({ recipes, onRecipesChanged }) {
   const { t } = useT()
