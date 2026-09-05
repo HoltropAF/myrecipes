@@ -35,7 +35,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
 
   const allTags = useMemo(
-    () => [...new Set(recipes.flatMap(r => r.tags || []))].sort(),
+    () => [...new Set(recipes.flatMap(r => Array.isArray(r.tags) ? r.tags : []))].sort(),
     [recipes]
   )
 
@@ -61,19 +61,19 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
       if (searchMode === 'ingredient') {
         base = base.filter(r => {
           const allIngredients = [
-            ...(r.ingredients || []),
-            ...(r.variants || []).flatMap(v => v.ingredients || []),
+            ...(Array.isArray(r.ingredients) ? r.ingredients : []),
+            ...(Array.isArray(r.variants) ? r.variants : []).flatMap(v => Array.isArray(v.ingredients) ? v.ingredients : []),
           ]
-          return allIngredients.some(group => group.items.some(item => item.name.toLowerCase().includes(q)))
+          return allIngredients.some(group => (Array.isArray(group?.items) ? group.items : []).some(item => String(item?.name || '').toLowerCase().includes(q)))
         })
       } else {
         base = base.filter(r =>
-          r.title.toLowerCase().includes(q) ||
+          String(r.title || '').toLowerCase().includes(q) ||
           (r.tagline || '').toLowerCase().includes(q) ||
           (r.category || '').toLowerCase().includes(q) ||
           (r.subcategory || '').toLowerCase().includes(q) ||
           (r.notes || '').toLowerCase().includes(q) ||
-          (r.tags || []).some(tag => tag.toLowerCase().includes(q))
+          (Array.isArray(r.tags) ? r.tags : []).some(tag => String(tag).toLowerCase().includes(q))
         )
       }
     }
@@ -246,8 +246,10 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
   // How long ago beats how many times when you're deciding what to cook —
   // "3 weeks ago" tells you something "7x" does not.
   const lastCooked = relativeDayLabel(cookStat?.lastCooked, relativeLabels(t))
+  const ingredientGroups = Array.isArray(r.ingredients) ? r.ingredients : []
+  const recipeTags = Array.isArray(r.tags) ? r.tags : []
   const matchedIngredient = highlightIngredient
-    ? (r.ingredients || []).flatMap(g => g.items).find(item => item.name.toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
+    ? ingredientGroups.flatMap(g => Array.isArray(g?.items) ? g.items : []).find(item => String(item?.name || '').toLowerCase().includes(highlightIngredient.trim().toLowerCase()))
     : null
 
   if (compactMode) {
@@ -302,15 +304,15 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
           {matchedIngredient
             ? t('recipesView.contains')(matchedIngredient.name)
             : <>
-                {(r.ingredients || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.ingredients')} · {(r.steps || []).reduce((s, g) => s + g.items.length, 0)} {t('recipesView.steps')}
+                {ingredientGroups.reduce((s, g) => s + (Array.isArray(g?.items) ? g.items.length : 0), 0)} {t('recipesView.ingredients')} · {(Array.isArray(r.steps) ? r.steps : []).reduce((s, g) => s + (Array.isArray(g?.items) ? g.items.length : 0), 0)} {t('recipesView.steps')}
                 {r.category ? ` · ${r.category}` : ''}
                 {lastCooked ? ` · ${t('recipesView.lastCooked')(lastCooked)}` : ''}
               </>
           }
         </div>
-        {(r.tags || []).length > 0 && (
+        {recipeTags.length > 0 && (
           <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-            {r.tags.map(tag => (
+            {recipeTags.map(tag => (
               <span key={tag} style={{
                 fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--sage)',
                 background: 'var(--sage-light)', borderRadius: 99, padding: '2px 8px',

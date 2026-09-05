@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useT } from '../lib/i18n'
 import { suggestForNow, shufflePick } from '../lib/suggest'
 import { parseHaveList } from '../lib/fridgeMatch'
@@ -90,7 +91,7 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
           </span>
           <span className="decide-home-row__arrow" aria-hidden="true">&gt;</span>
         </button>
-        {showMealTypes && (
+        {showMealTypes && createPortal(
           <div className="decide-meal-picker" role="presentation" onClick={() => setShowMealTypes(false)}>
             <section role="dialog" aria-modal="true" aria-labelledby="meal-picker-title" onClick={event => event.stopPropagation()}>
               <button className="decide-meal-picker__close" onClick={() => setShowMealTypes(false)} aria-label={t('decide.closePicker', 'Close')}>×</button>
@@ -103,7 +104,8 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
               </div>
               {emptyMealType && <small className="decide-meal-picker__empty">{t('decide.noCategoryRecipes', 'You do not have a recipe in that category yet.')}</small>}
             </section>
-          </div>
+          </div>,
+          document.body
         )}
       </>
     )

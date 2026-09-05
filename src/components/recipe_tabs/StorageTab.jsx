@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useT } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
 
@@ -8,7 +8,6 @@ export default function StorageTab({ recipe, isGuest = false }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  useEffect(() => setNote(recipe.notes || ''), [recipe.id, recipe.notes])
   // Must match the render guard below, which treats undefined as "no value" too.
   // Checking only against null made this true for every recipe that has never
   // had the freezer flag set, so the tab rendered completely empty.
