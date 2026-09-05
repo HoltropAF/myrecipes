@@ -26,7 +26,16 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     { id: 'storage',     label: t('recipeTabs.storage') },
   ]
 
-  const variants = recipe.variants || []
+  // A few imported/newly-created rows can arrive as JSON text or as a flat
+  // list instead of the grouped JSON shape used by the detail tabs. Normalize
+  // at this boundary so one unusual recipe cannot take down the whole screen.
+  const ingredients = normalizeGroups(recipe.ingredients, 'ingredient')
+  const steps = normalizeGroups(recipe.steps, 'step')
+  const variants = normalizeList(recipe.variants).map(variant => ({
+    ...variant,
+    ingredients: normalizeGroups(variant?.ingredients, 'ingredient'),
+    steps: normalizeGroups(variant?.steps, 'step'),
+  }))
   const [activeTab, setActiveTab] = useState('info')
   const [activeVariant, setActiveVariant] = useState('main')
   const [servings, setServings] = useState(recipe.servings || null)
@@ -78,7 +87,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   }
 
   const active = activeVariant === 'main'
-    ? { ingredients: recipe.ingredients || [], steps: recipe.steps || [] }
+    ? { ingredients, steps }
     : (variants.find(v => v.id === activeVariant) || { ingredients: [], steps: [] })
 
   const baseServings = recipe.servings || null
@@ -390,4 +399,28 @@ function PlanPicker({ recipeId, onClose }) {
 const navBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato-deep)',
   fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600,
+}
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch { return [] }
+}
+
+function normalizeGroups(value, kind) {
+  const rows = normalizeList(value)
+  if (rows.length === 0) return []
+  const itemKey = kind === 'ingredient' ? 'name' : 'content'
+  const looksFlat = rows.every(row => row && typeof row === 'object' && itemKey in row)
+  const groups = looksFlat ? [{ group: null, items: rows }] : rows
+  return groups
+    .filter(group => group && typeof group === 'object')
+    .map(group => ({
+      ...group,
+      group: group.group ?? group.name ?? group.title ?? null,
+      items: normalizeList(group.items).filter(item => item && typeof item === 'object'),
+    }))
 }
