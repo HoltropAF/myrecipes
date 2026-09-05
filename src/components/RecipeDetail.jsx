@@ -15,6 +15,9 @@ import CollectionForm from './CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
 import { useBackLayer } from '../lib/useBackLayer'
 
+const RECIPE_TABS = new Set(['info', 'ingredients', 'steps', 'cooklog', 'storage'])
+const readLastRecipeTab = () => RECIPE_TABS.has(history.state?.mrRecipeTab) ? history.state.mrRecipeTab : 'info'
+
 export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
   const { t } = useT()
 
@@ -36,7 +39,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     ingredients: normalizeGroups(variant?.ingredients, 'ingredient'),
     steps: normalizeGroups(variant?.steps, 'step'),
   }))
-  const [activeTab, setActiveTab] = useState('info')
+  const [activeTab, setActiveTab] = useState(readLastRecipeTab)
   const [activeVariant, setActiveVariant] = useState('main')
   const [servings, setServings] = useState(recipe.servings || null)
   const [addedToList, setAddedToList] = useState(false)
@@ -60,7 +63,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
   useBackLayer(showCookingMode, () => setShowCookingMode(false), 'cooking-mode')
 
   useEffect(() => {
-    history.replaceState({ ...history.state, mrRecipeTab: 'info' }, '')
+    history.replaceState({ ...history.state, mrRecipeTab: readLastRecipeTab() }, '')
     const handlePopState = event => {
       if (event.state?.mrRecipeTab) setActiveTab(event.state.mrRecipeTab)
     }

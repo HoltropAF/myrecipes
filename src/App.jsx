@@ -4,6 +4,20 @@ import { useBackLayer } from './lib/useBackLayer'
 
 const RECIPE_CACHE_PREFIX = 'mr_recipes_v1'
 const ENGLISH_LANGUAGE_RESET_PREFIX = 'mr_language_reset_en_20260825'
+const APP_TABS = new Set(['home', 'recipes', 'shopping', 'stats', 'mealprep', 'settings'])
+
+function readLastAppTab() {
+  const historyTab = history.state?.mrTab
+  if (APP_TABS.has(historyTab)) return historyTab
+  try {
+    const saved = sessionStorage.getItem('mr_active_tab_v1')
+    return APP_TABS.has(saved) ? saved : 'home'
+  } catch { return 'home' }
+}
+
+function readOpenRecipeId() {
+  try { return sessionStorage.getItem('mr_open_recipe_v1') } catch { return null }
+}
 
 // The offline recipe cache is scoped per user. An unscoped key meant that on a
 // shared device the next person to sign in saw the previous user's cookbook
@@ -126,7 +140,7 @@ function AppInner({ setLanguage }) {
   // to read immediately, so the spinner is only for a genuinely empty screen.
   const [recipesLoaded, setRecipesLoaded] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(readLastAppTab)
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
@@ -239,6 +253,7 @@ function AppInner({ setLanguage }) {
   }, [palette])
 
   const openRecipe = (recipe) => {
+    try { sessionStorage.setItem('mr_open_recipe_v1', recipe.id) } catch { /* unavailable */ }
     setSelectedRecipe(recipe)
   }
   const openWizard = (prefill) => {
@@ -256,6 +271,7 @@ function AppInner({ setLanguage }) {
     setShowWizard(true)
   }
   const closeRecipe = () => {
+    try { sessionStorage.removeItem('mr_open_recipe_v1') } catch { /* unavailable */ }
     setSelectedRecipe(null)
   }
   const closeWizard = () => {
@@ -272,8 +288,9 @@ function AppInner({ setLanguage }) {
 
   useEffect(() => {
     if (!history.state?.mrAppRoot) {
-      history.replaceState({ ...history.state, mrAppRoot: true, mrTab: 'home' }, '')
-      history.pushState({ ...history.state, mrAppRoot: true, mrTab: 'home' }, '')
+      const restoredTab = readLastAppTab()
+      history.replaceState({ ...history.state, mrAppRoot: true, mrTab: restoredTab }, '')
+      history.pushState({ ...history.state, mrAppRoot: true, mrTab: restoredTab }, '')
     }
     const handlePopState = event => {
       if (event.state?.mrTab) setActiveTab(event.state.mrTab)
@@ -289,6 +306,7 @@ function AppInner({ setLanguage }) {
 
   const navigateTab = (tab) => {
     if (tab === activeTab) return
+    try { sessionStorage.setItem('mr_active_tab_v1', tab) } catch { /* unavailable */ }
     history.pushState({ ...history.state, mrTab: tab }, '')
     setActiveTab(tab)
   }
@@ -305,6 +323,8 @@ function AppInner({ setLanguage }) {
   const loadRecipes = async () => {
     if (isGuest) {
       setRecipes(DEMO_RECIPES)
+      const recipeId = readOpenRecipeId()
+      if (recipeId) setSelectedRecipe(current => current || DEMO_RECIPES.find(recipe => recipe.id === recipeId) || null)
       setCookCounts(buildCookStats(DEMO_COOK_LOG))
       return
     }
@@ -332,6 +352,8 @@ function AppInner({ setLanguage }) {
       is_pescatarian_or_better: tagMap[r.id]?.is_pescatarian_or_better ?? false,
     }))
     setRecipes(freshRecipes)
+    const recipeId = readOpenRecipeId()
+    if (recipeId) setSelectedRecipe(current => current || freshRecipes.find(recipe => recipe.id === recipeId) || null)
     writeCachedRecipes(session?.user?.id, freshRecipes)
     if (Array.isArray(logData)) setCookCounts(buildCookStats(logData))
     setRecipesLoaded(true)
