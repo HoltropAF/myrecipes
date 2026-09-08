@@ -60,16 +60,7 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
   }
 
   const handleCompactChoice = (mealType) => {
-    const categoryMatches = {
-      dinner: ['dinner', 'main dish', 'main dishes'],
-      breakfastLunch: ['breakfast', 'brunch', 'lunch', 'breakfast & brunch', 'breakfast/lunch'],
-      drink: ['drink', 'drinks', 'beverage', 'beverages'],
-    }
-    const allowed = categoryMatches[mealType]
-    const candidates = recipes.filter(recipe => {
-      const category = (recipe.category || '').trim().toLowerCase()
-      return allowed.some(name => category === name || category.includes(name))
-    })
+    const candidates = recipes.filter(recipe => matchesMealType(recipe, mealType))
     const { recipe } = shufflePick(candidates)
     if (!recipe) {
       setEmptyMealType(mealType)
@@ -212,6 +203,17 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
       )}
     </div>
   )
+}
+
+function matchesMealType(recipe, mealType) {
+  const label = `${recipe.category || ''} ${recipe.subcategory || ''}`.trim().toLowerCase()
+  if (!label || /household|huishouden/.test(label)) return false
+  const breakfastLunch = /breakfast|brunch|lunch|ontbijt|sandwich/.test(label)
+  const drink = /drink|beverage|cocktail|mocktail|drank/.test(label)
+  if (mealType === 'breakfastLunch') return breakfastLunch
+  if (mealType === 'drink') return drink
+  if (mealType === 'dinner') return !breakfastLunch && !drink && !/dessert|baking|cake|sweet|snack|appetizer/.test(label)
+  return false
 }
 
 function DinnerBellIcon() {
