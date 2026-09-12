@@ -6,6 +6,7 @@ import { parseHaveList } from '../lib/fridgeMatch'
 import { relativeDayLabel } from '../lib/dateUtils'
 import { useBackLayer } from '../lib/useBackLayer'
 import { supabase } from '../lib/supabase'
+import { rememberRecipesForPlanning } from '../lib/mealPlanning'
 
 // "What am I making tonight" — one suggestion from the clock and the cook log,
 // and a shuffle for when you don't like the answer.
@@ -116,6 +117,7 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
       setCompactError('The ingredients could not be added. Please try again.')
       return
     }
+    await rememberRecipesForPlanning([compactSuggestion.id])
     setAddedToList(true)
   }
 

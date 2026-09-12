@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
 import DopamineShelf from '../DopamineShelf'
 import { useBackLayer } from '../../lib/useBackLayer'
+import { PLANNER_BACKLOG_NAME, PLANNER_BACKLOG_NOTE, rememberRecipesForPlanning } from '../../lib/mealPlanning'
 
 const WEEK_PREFIX = 'myrecipes-week-v1:'
 const dateKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -21,13 +22,18 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const [groups, setGroups] = useState(() => isGuest ? (demoMealGroups || []) : [])
   const [shoppingIds, setShoppingIds] = useState(new Set())
   const [pickerRecipe, setPickerRecipe] = useState(null)
+  const [recipePickerOpen, setRecipePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   useBackLayer(!!pickerRecipe, () => setPickerRecipe(null), 'day-picker')
+  useBackLayer(recipePickerOpen, () => setRecipePickerOpen(false), 'recipe-picker')
 
   useEffect(() => {
-    if (isGuest) { setGroups(demoMealGroups || []); return }
     let cancelled = false
+    if (isGuest) {
+      Promise.resolve().then(() => { if (!cancelled) setGroups(demoMealGroups || []) })
+      return () => { cancelled = true }
+    }
     Promise.all([
       supabase.from('meal_groups').select('id, user_id, name, notes, recipe_ids, created_at').order('created_at', { ascending: false }),
       supabase.from('shopping_list').select('recipe_id').not('recipe_id', 'is', null),
@@ -37,8 +43,15 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
         setError(lang === 'nl' ? 'Je weekmenu kon niet worden geladen. Probeer het zo opnieuw.' : 'Your meal plan could not be loaded. Try again shortly.')
         return
       }
-      setGroups(groupResult.data || [])
-      setShoppingIds(new Set((shoppingResult.data || []).map(row => row.recipe_id).filter(Boolean)))
+      const loadedGroups = groupResult.data || []
+      const loadedShoppingIds = [...new Set((shoppingResult.data || []).map(row => row.recipe_id).filter(Boolean))]
+      setGroups(loadedGroups)
+      setShoppingIds(new Set(loadedShoppingIds))
+      // A recipe is planning intent, not disposable shopping-list state. Remember
+      // every recipe encountered on the list in a small persistent planner inbox.
+      const knownIds = new Set(loadedGroups.flatMap(group => group.recipe_ids || []))
+      const newlySeen = loadedShoppingIds.filter(id => !knownIds.has(id))
+      if (newlySeen.length) rememberForLater(newlySeen, loadedGroups, setGroups)
     })
     return () => { cancelled = true }
   }, [isGuest, demoMealGroups, lang])
@@ -60,6 +73,20 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const waiting = useMemo(() => [...new Set([...shoppingIds, ...plannedIds])]
     .filter(id => !assignedAnywhereIds.has(id) && recipesById.has(id)).map(id => recipesById.get(id)),
   [shoppingIds, plannedIds, assignedAnywhereIds, recipesById])
+
+  const startPlanning = async recipe => {
+    setRecipePickerOpen(false)
+    setPickerRecipe(recipe)
+    if (isGuest) {
+      const backlog = groups.find(group => group.notes === PLANNER_BACKLOG_NOTE)
+      if (!(backlog?.recipe_ids || []).includes(recipe.id)) {
+        const next = { ...(backlog || { id: 'guest-planner-backlog', name: PLANNER_BACKLOG_NAME, notes: PLANNER_BACKLOG_NOTE }), recipe_ids: [...(backlog?.recipe_ids || []), recipe.id] }
+        setGroups(old => backlog ? old.map(group => group.id === backlog.id ? next : group) : [next, ...old])
+      }
+      return
+    }
+    await rememberForLater([recipe.id], groups, setGroups)
+  }
 
   const saveAssignment = async (recipe, day) => {
     if (saving) return
@@ -105,6 +132,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       <button aria-label={t('mealPrep.nextWeek')} onClick={() => setWeekStart(addDays(weekStart, 7))} style={arrowStyle}>›</button>
     </div>
 
+    <button onClick={() => setRecipePickerOpen(true)} style={addRecipeButtonStyle}><span>＋</span><span><b>Add a recipe</b><small>Search your cookbook and choose a day</small></span></button>
+
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 14 }}>
       {days.map(day => {
         const key = dateKey(day); const hasMeal = Object.values(assignments).includes(key); const isToday = key === today
@@ -133,6 +162,33 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
         <div key={recipe.id} style={{ padding: '9px 0', borderTop: index ? '1px solid var(--line)' : 'none' }}><RecipeCard compact recipe={recipe} shopping={shoppingIds.has(recipe.id)} onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => setPickerRecipe(recipe)} t={t} /></div>)}
     </div>
     {pickerRecipe && <DayPicker recipe={pickerRecipe} days={days} assignedDate={assignments[pickerRecipe.id]} saving={saving} onChoose={day => saveAssignment(pickerRecipe, day)} onClose={() => setPickerRecipe(null)} t={t} />}
+    {recipePickerOpen && <RecipePicker recipes={recipes} plannedIds={plannedIds} onChoose={startPlanning} onClose={() => setRecipePickerOpen(false)} />}
+  </div>
+}
+
+async function rememberForLater(recipeIds, currentGroups, setGroups) {
+  const backlog = currentGroups.find(group => group.notes === PLANNER_BACKLOG_NOTE)
+  const nextIds = [...new Set([...(backlog?.recipe_ids || []), ...recipeIds])]
+  if (nextIds.length === (backlog?.recipe_ids || []).length) return
+  const result = await rememberRecipesForPlanning(recipeIds)
+  if (!result.error) setGroups(old => backlog ? old.map(group => group.id === backlog.id ? result.data : group) : [result.data, ...old])
+}
+
+function RecipePicker({ recipes, plannedIds, onChoose, onClose }) {
+  const [query, setQuery] = useState('')
+  const shown = recipes.filter(recipe => !query.trim() || `${recipe.title} ${recipe.category || ''}`.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 40)
+  return <div onMouseDown={event => event.target === event.currentTarget && onClose()} style={sheetBackdropStyle}>
+    <section style={pickerSheetStyle} role="dialog" aria-modal="true" aria-labelledby="recipe-picker-title">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ flex: 1 }}><h2 id="recipe-picker-title" style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--tomato-deep)' }}>Add a recipe</h2><p style={{ margin: '4px 0 12px', ...monoStyle }}>Tap one, then choose its day.</p></div><button onClick={onClose} aria-label="Close" style={closeButtonStyle}>×</button></div>
+      <input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search recipes…" style={searchStyle} />
+      <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+        {shown.map(recipe => <button key={recipe.id} onClick={() => onChoose(recipe)} style={pickerRecipeStyle}>
+          {recipe.photo_url ? <img src={recipe.photo_url} alt="" style={{ width: 46, height: 46, borderRadius: 8, objectFit: 'cover' }} /> : <span style={{ width: 46, height: 46, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--parchment-dim)' }}><FoodIcon /></span>}
+          <span style={{ minWidth: 0, textAlign: 'left' }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)', fontSize: 14 }}>{recipe.title}</b><small style={monoStyle}>{plannedIds.has(recipe.id) ? 'Already saved · choose or change day' : (recipe.total_minutes ? `${recipe.total_minutes} min` : 'Save to meal plan')}</small></span><span style={{ marginLeft: 'auto', color: 'var(--tomato-deep)', fontSize: 20 }}>&gt;</span>
+        </button>)}
+        {!shown.length && <div style={emptyStyle}>No recipes found.</div>}
+      </div>
+    </section>
   </div>
 }
 
@@ -164,3 +220,9 @@ const monoStyle = { fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(
 const arrowStyle = { width: 36, height: 36, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--tomato-deep)', fontSize: 22, cursor: 'pointer', display: 'grid', placeItems: 'center' }
 const emptyStyle = { padding: 16, border: '1px dashed var(--line)', borderRadius: 12, textAlign: 'center', background: 'var(--card)', fontSize: 13, color: 'var(--charcoal-soft)', lineHeight: 1.5 }
 const planButtonStyle = { border: '1px solid var(--tomato)', borderRadius: 8, padding: '6px 9px', background: 'none', color: 'var(--tomato-deep)', fontWeight: 650, fontSize: 11.5, cursor: 'pointer', flexShrink: 0 }
+const addRecipeButtonStyle = { width: '100%', minHeight: 54, display: 'flex', alignItems: 'center', gap: 11, marginBottom: 14, padding: '8px 13px', border: '1px solid var(--tomato)', borderRadius: 11, background: 'color-mix(in srgb,var(--tomato) 9%,var(--card))', color: 'var(--tomato-deep)', textAlign: 'left', cursor: 'pointer' }
+const sheetBackdropStyle = { position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end', background: 'rgba(42,36,32,.58)' }
+const pickerSheetStyle = { width: '100%', maxHeight: '78dvh', overflowY: 'auto', boxSizing: 'border-box', padding: '18px 20px 32px', borderRadius: '18px 18px 0 0', background: 'var(--card)' }
+const closeButtonStyle = { width: 34, height: 34, border: 0, background: 'none', color: 'var(--charcoal-soft)', fontSize: 23, cursor: 'pointer' }
+const searchStyle = { width: '100%', boxSizing: 'border-box', minHeight: 42, padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--parchment)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14 }
+const pickerRecipeStyle = { width: '100%', display: 'grid', gridTemplateColumns: '46px minmax(0,1fr) 16px', alignItems: 'center', gap: 10, padding: 7, border: '1px solid var(--line)', borderRadius: 10, background: 'var(--parchment)', color: 'var(--charcoal)', cursor: 'pointer' }

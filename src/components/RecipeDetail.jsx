@@ -14,6 +14,7 @@ import { useCompact } from '../lib/useCompact'
 import CollectionForm from './CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../lib/collectionEmojis'
 import { useBackLayer } from '../lib/useBackLayer'
+import { rememberRecipesForPlanning } from '../lib/mealPlanning'
 
 const RECIPE_TABS = new Set(['info', 'ingredients', 'steps', 'cooklog', 'storage'])
 const readLastRecipeTab = () => {
@@ -129,6 +130,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
     const user_id = userData?.user?.id
     if (!user_id) return
     await supabase.from('shopping_list').insert(rows.map(r => ({ ...r, user_id, recipe_id: recipe.id })))
+    await rememberRecipesForPlanning([recipe.id])
     setAddedToList(true)
     setTimeout(() => setAddedToList(false), 2000)
   }
