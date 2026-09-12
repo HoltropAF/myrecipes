@@ -1,5 +1,5 @@
 .settings-view { min-height: 100dvh; display: flex; flex-direction: column; color: var(--charcoal); }
-.settings-view__head { position: sticky; top: 0; z-index: 5; flex: none; padding: 16px 18px 12px; border-bottom: 1px solid color-mix(in srgb,var(--tomato) 18%,transparent); background: color-mix(in srgb,var(--card) 97%,transparent); }
+.settings-view__head { position: sticky; top: 0; z-index: 5; flex: none; padding: 16px 18px 0; border-bottom: 1px solid color-mix(in srgb,var(--tomato) 18%,transparent); background: color-mix(in srgb,var(--card) 97%,transparent); }
 .settings-view__head h1 { display: flex; align-items: center; gap: 10px; margin: 0 0 11px; color: var(--tomato-deep); font: 600 25px/1 var(--font-display); }
 .settings-view__head h1 svg { width: 24px; height: 24px; flex: none; }
 .settings-view__tabs { display: flex; align-items: end; gap: 4px; margin-top: 7px; overflow: hidden; }
