@@ -5,13 +5,14 @@ import { suggestForNow, shufflePick } from '../lib/suggest'
 import { parseHaveList } from '../lib/fridgeMatch'
 import { relativeDayLabel } from '../lib/dateUtils'
 import { useBackLayer } from '../lib/useBackLayer'
+import { supabase } from '../lib/supabase'
 
 // "What am I making tonight" — one suggestion from the clock and the cook log,
 // and a shuffle for when you don't like the answer.
 //
 // Sits above the cookbook rather than replacing it: browsing stays exactly where
 // it was, this is just a faster way in.
-export default function DecideCard({ recipes, cookStats = {}, onSelect, homeCompact = false }) {
+export default function DecideCard({ recipes, cookStats = {}, onSelect, homeCompact = false, isGuest = false }) {
   const { t } = useT()
   const [shuffled, setShuffled] = useState(null)
   const [ingredients, setIngredients] = useState('')
@@ -20,6 +21,12 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
   const [spinning, setSpinning] = useState(false)
   const [showMealTypes, setShowMealTypes] = useState(false)
   const [emptyMealType, setEmptyMealType] = useState('')
+  const [compactMealType, setCompactMealType] = useState('')
+  const [compactSuggestion, setCompactSuggestion] = useState(null)
+  const [compactAccepted, setCompactAccepted] = useState(false)
+  const [addingToList, setAddingToList] = useState(false)
+  const [addedToList, setAddedToList] = useState(false)
+  const [compactError, setCompactError] = useState('')
   useBackLayer(showIngredients, () => setShowIngredients(false), 'ingredient-match')
   useBackLayer(showMealTypes, () => setShowMealTypes(false), 'meal-types')
 
@@ -59,22 +66,63 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
     }, 420)
   }
 
-  const handleCompactChoice = (mealType) => {
+  const handleCompactChoice = (mealType, exclude = null) => {
     const candidates = recipes.filter(recipe => matchesMealType(recipe, mealType))
-    const { recipe } = shufflePick(candidates)
+    const { recipe } = shufflePick(candidates, { exclude })
     if (!recipe) {
       setEmptyMealType(mealType)
       return
     }
-    setShowMealTypes(false)
     setEmptyMealType('')
-    onSelect(recipe)
+    setCompactMealType(mealType)
+    setCompactSuggestion(recipe)
+    setCompactAccepted(false)
+    setAddedToList(false)
+    setCompactError('')
+  }
+
+  const closeCompactPicker = () => {
+    setShowMealTypes(false)
+    setCompactSuggestion(null)
+    setCompactAccepted(false)
+    setEmptyMealType('')
+    setCompactError('')
+  }
+
+  const addCompactSuggestionToList = async () => {
+    const rows = ingredientRows(compactSuggestion)
+    if (!rows.length) {
+      setCompactError('This recipe has no ingredients to add yet.')
+      return
+    }
+    if (isGuest) {
+      setCompactError('Sign in to add ingredients to your shopping list.')
+      return
+    }
+    setAddingToList(true)
+    setCompactError('')
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData?.user?.id
+    if (!userId) {
+      setCompactError('Please sign in again, then try once more.')
+      setAddingToList(false)
+      return
+    }
+    const { error } = await supabase.from('shopping_list').insert(
+      rows.map(row => ({ ...row, user_id: userId, recipe_id: compactSuggestion.id }))
+    )
+    setAddingToList(false)
+    if (error) {
+      setCompactError('The ingredients could not be added. Please try again.')
+      return
+    }
+    setAddedToList(true)
   }
 
   if (homeCompact) {
     return (
       <>
-        <button className="decide-home-row" onClick={() => setShowMealTypes(true)}>
+        <button className="decide-home-row" onClick={() => { setShowMealTypes(true); setCompactSuggestion(null); setCompactAccepted(false) }}>
           <span className="decide-home-row__icon" aria-hidden="true"><DinnerBellIcon /></span>
           <span className="decide-home-row__copy">
             <b>{t('decide.compactTitle', "Can't decide?")}</b>
@@ -83,17 +131,35 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
           <span className="decide-home-row__arrow" aria-hidden="true">&gt;</span>
         </button>
         {showMealTypes && createPortal(
-          <div className="decide-meal-picker" role="presentation" onClick={() => setShowMealTypes(false)}>
+          <div className="decide-meal-picker" role="presentation" onClick={closeCompactPicker}>
             <section role="dialog" aria-modal="true" aria-labelledby="meal-picker-title" onClick={event => event.stopPropagation()}>
-              <button className="decide-meal-picker__close" onClick={() => setShowMealTypes(false)} aria-label={t('decide.closePicker', 'Close')}>×</button>
-              <h3 id="meal-picker-title">{t('decide.pickMealType', 'What kind of recipe?')}</h3>
-              <p>{t('decide.pickMealHint', 'Choose one and the cookbook will surprise you.')}</p>
-              <div className="decide-meal-picker__choices">
-                <button onClick={() => handleCompactChoice('dinner')}>{t('decide.dinner', 'Dinner')}<span>&gt;</span></button>
-                <button onClick={() => handleCompactChoice('breakfastLunch')}>{t('decide.breakfastLunch', 'Breakfast / lunch')}<span>&gt;</span></button>
-                <button onClick={() => handleCompactChoice('drink')}>{t('decide.drink', 'Drink')}<span>&gt;</span></button>
-              </div>
+              <button className="decide-meal-picker__close" onClick={closeCompactPicker} aria-label={t('decide.closePicker', 'Close')}>×</button>
+              {!compactSuggestion ? <>
+                <h3 id="meal-picker-title">{t('decide.pickMealType', 'What kind of recipe?')}</h3>
+                <p>{t('decide.pickMealHint', 'Choose one and the cookbook will surprise you.')}</p>
+                <div className="decide-meal-picker__choices">
+                  <button onClick={() => handleCompactChoice('dinner')}>{t('decide.dinner', 'Dinner')}<span>&gt;</span></button>
+                  <button onClick={() => handleCompactChoice('breakfastLunch')}>{t('decide.breakfastLunch', 'Breakfast / lunch')}<span>&gt;</span></button>
+                  <button onClick={() => handleCompactChoice('drink')}>{t('decide.drink', 'Drink')}<span>&gt;</span></button>
+                </div>
+              </> : <>
+                <h3 id="meal-picker-title">How about this?</h3>
+                <article className="decide-meal-picker__suggestion">
+                  {compactSuggestion.photo_url ? <img src={compactSuggestion.photo_url} alt="" /> : <span className="decide-meal-picker__placeholder">🍽</span>}
+                  <div><b>{compactSuggestion.title}</b><small>{compactSuggestion.total_minutes ? `${compactSuggestion.total_minutes} min` : compactSuggestion.category || 'From your cookbook'}</small></div>
+                </article>
+                {!compactAccepted ? <div className="decide-meal-picker__decision">
+                  <button className="is-secondary" onClick={() => handleCompactChoice(compactMealType, compactSuggestion.id)}>Another one</button>
+                  <button onClick={() => setCompactAccepted(true)}>Yes, this one</button>
+                </div> : <div className="decide-meal-picker__accepted">
+                  <p>Lovely. What would you like to do?</p>
+                  <button onClick={addCompactSuggestionToList} disabled={addingToList || addedToList}>{addedToList ? '✓ Added to shopping list' : addingToList ? 'Adding…' : 'Add ingredients to shopping list'}</button>
+                  <button className="is-secondary" onClick={() => { closeCompactPicker(); onSelect(compactSuggestion) }}>Open recipe</button>
+                  <button className="is-link" onClick={() => handleCompactChoice(compactMealType, compactSuggestion.id)}>Actually, show another</button>
+                </div>}
+              </>}
               {emptyMealType && <small className="decide-meal-picker__empty">{t('decide.noCategoryRecipes', 'You do not have a recipe in that category yet.')}</small>}
+              {compactError && <small className="decide-meal-picker__empty">{compactError}</small>}
             </section>
           </div>,
           document.body
@@ -203,6 +269,21 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
       )}
     </div>
   )
+}
+
+function ingredientRows(recipe) {
+  if (!recipe) return []
+  let groups = recipe.ingredients
+  if (typeof groups === 'string') {
+    try { groups = JSON.parse(groups) } catch { groups = [] }
+  }
+  if (!Array.isArray(groups)) return []
+  return groups.flatMap(group => {
+    const items = Array.isArray(group?.items) ? group.items : (group?.name ? [group] : [])
+    return items.filter(item => String(item?.name || '').trim()).map(item => ({
+      name: String(item.name).trim(), amount: item.amount ?? null, unit: item.unit ?? null, checked: false,
+    }))
+  })
 }
 
 function matchesMealType(recipe, mealType) {

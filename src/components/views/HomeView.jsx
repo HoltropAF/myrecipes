@@ -19,7 +19,7 @@ export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddReci
           <span><b>{t('home.indexTitle', 'Recipe index')}</b><small>{t('home.indexSubtitle', 'ways into your kitchen')}</small></span>
           <i aria-hidden="true" />
         </h2>
-        <div className="recipe-home__bell"><DecideCard recipes={recipes} cookStats={cookStats} onSelect={onSelectRecipe} homeCompact /></div>
+        <div className="recipe-home__bell"><DecideCard recipes={recipes} cookStats={cookStats} onSelect={onSelectRecipe} homeCompact isGuest={isGuest} /></div>
         {!isGuest && <>
           <HomeRow icon={<RecipeAddIcon />} label={t('fab.addRecipe')} hint={t('home.addRecipeHint', 'Save a new recipe')} onClick={onAddRecipe} />
           <HomeRow icon={<LogIcon />} label={t('fab.logCook')} hint={t('home.logHint', 'Remember what you made')} onClick={onLogCook} />
