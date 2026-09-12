@@ -79,7 +79,7 @@ export default function CookLogSection({ recipeId, variants = [], isGuest = fals
           <DateBadge value={entry.cooked_date} />
           <div style={{ minWidth: 0 }}>
             <div style={entryHeadStyle}><strong style={entryTitleStyle}>{entry.variant_label || 'Dinner at home'}{entry.thumbs ? ` · Thumbs ${entry.thumbs}` : ''}</strong>{editingId !== entry.id && <button onClick={() => { setEditingId(entry.id); setEditNotes(entry.notes || '') }} style={textBtnStyle}>Edit note</button>}</div>
-            {editingId === entry.id ? <textarea value={editNotes} onChange={event => setEditNotes(event.target.value)} rows={3} style={textareaStyle} /> : <div style={noteStyle}>{entry.notes}</div>}
+            {editingId === entry.id ? <textarea value={editNotes} onChange={event => setEditNotes(event.target.value)} rows={3} style={textareaStyle} /> : <div style={noteBoxStyle}><div style={noteStyle}>{entry.notes}</div></div>}
             {editingId === entry.id && <div style={editActionsStyle}><button onClick={() => setEditingId(null)} style={textBtnStyle}>Cancel</button><button onClick={() => saveEditedNote(entry)} disabled={saving} style={saveNoteButtonStyle}>Save note</button></div>}
           </div>
       </article>)}</div>
@@ -103,7 +103,8 @@ const entryStyle = { display: 'grid', gridTemplateColumns: '43px 1fr', gap: 10, 
 const dateBadgeStyle = { width: 43, height: 45, paddingTop: 5, boxSizing: 'border-box', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--tomato-deep)', textAlign: 'center', display: 'grid', alignContent: 'center', fontFamily: 'var(--font-display)' }
 const entryHeadStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
 const entryTitleStyle = { color: 'var(--charcoal)', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600 }
-const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--charcoal)', marginTop: 4, lineHeight: 1.45 }
+const noteBoxStyle = { marginTop: 7, padding: '9px 10px', borderRadius: 8, background: 'var(--parchment-dim)' }
+const noteStyle = { fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--charcoal)', lineHeight: 1.5 }
 const textareaStyle = { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 13 }
 const textBtnStyle = { background: 'none', border: 0, color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }
 const editActionsStyle = { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 7 }
