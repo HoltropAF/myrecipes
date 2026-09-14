@@ -402,7 +402,11 @@ function AppInner({ setLanguage }) {
     }))
     setRecipes(freshRecipes)
     const recipeId = readOpenRecipeId()
-    if (recipeId) setSelectedRecipe(current => current || freshRecipes.find(recipe => recipe.id === recipeId) || null)
+    // Prefer the freshly fetched copy over whatever's already selected — a
+    // recipe left open across a reload or pull-to-refresh otherwise keeps
+    // showing the state it had at the moment it opened forever, since it's
+    // already non-null by the time this runs.
+    if (recipeId) setSelectedRecipe(current => freshRecipes.find(recipe => recipe.id === recipeId) || current || null)
     writeCachedRecipes(session?.user?.id, freshRecipes)
     if (Array.isArray(logData)) setCookCounts(buildCookStats(logData))
     setRecipesLoaded(true)
