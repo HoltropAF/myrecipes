@@ -252,6 +252,11 @@ function AppInner({ setLanguage }) {
         ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
         : theme
       document.documentElement.setAttribute('data-theme', resolved)
+      // Status bar / notification tray color, kept in sync with --card since
+      // that's the background every header in the app actually uses — not
+      // the accent color, and not something the palette picker changes.
+      const meta = document.querySelector('meta[name="theme-color"]')
+      if (meta) meta.content = resolved === 'dark' ? '#2a221c' : '#fffdf9'
     }
     apply()
     if (theme === 'auto') {
