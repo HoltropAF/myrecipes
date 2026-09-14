@@ -8,11 +8,16 @@ export default function VariantStep({
   variantLabel, setVariantLabel,
   groups, setGroups, paste, setPaste,
   stepGroups, setStepGroups, stepPaste, setStepPaste,
-  savedVariants = [], onAddVariant, onRemoveVariant, onUpdateVariantPhoto,
+  savedVariants = [], onAddVariant, onRemoveVariant,
+  editingVariantId, onEditVariant, onCancelEdit, recipeTitle,
   photoPreview, onPhotoChange, onPhotoUrlPaste,
 }) {
   const [photoUrlDraft, setPhotoUrlDraft] = useState('')
   const [photoUrlError, setPhotoUrlError] = useState(false)
+  const imageSearchQuery = [recipeTitle, variantLabel].filter(v => v?.trim()).join(' ').trim()
+  const imageSearchUrl = imageSearchQuery
+    ? `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(imageSearchQuery)}`
+    : null
 
   const submitPhotoUrl = () => {
     const url = photoUrlDraft.trim()
@@ -62,30 +67,28 @@ export default function VariantStep({
           {savedVariants.map(v => (
             <div key={v.id} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-              background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
+              background: 'var(--card)', borderRadius: 10,
+              border: `1px solid ${v.id === editingVariantId ? 'var(--tomato)' : 'var(--line)'}`,
             }}>
-              {onUpdateVariantPhoto && (
-                <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}>
-                  {v.photo_url ? (
-                    <img src={v.photo_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', display: 'block' }} />
-                  ) : (
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 8, border: '1px dashed var(--line)',
-                      display: 'grid', placeItems: 'center', fontSize: 16, color: 'var(--charcoal-soft)',
-                    }}>+</div>
-                  )}
-                  <input
-                    type="file" accept="image/*" style={{ display: 'none' }}
-                    onChange={e => onUpdateVariantPhoto(v.id, e.target.files?.[0] || null)}
-                  />
-                </label>
-              )}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>{v.label}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 2 }}>
-                  {t('variantStep.ingredientCount')((v.ingredients || []).reduce((s, g) => s + g.items.length, 0))} · {t('variantStep.stepCount')((v.steps || []).reduce((s, g) => s + g.items.length, 0))}
+              <button
+                onClick={() => onEditVariant?.(v)}
+                style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: 'none', border: 0, cursor: 'pointer', padding: 0 }}
+              >
+                {v.photo_url ? (
+                  <img src={v.photo_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 8, border: '1px dashed var(--line)', flexShrink: 0,
+                    display: 'grid', placeItems: 'center', fontSize: 16, color: 'var(--charcoal-soft)',
+                  }}>+</div>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>{v.label}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 2 }}>
+                    {t('variantStep.ingredientCount')((v.ingredients || []).reduce((s, g) => s + g.items.length, 0))} · {t('variantStep.stepCount')((v.steps || []).reduce((s, g) => s + g.items.length, 0))}
+                  </div>
                 </div>
-              </div>
+              </button>
               <button
                 onClick={() => onRemoveVariant?.(v.id)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tomato)', fontSize: 18, padding: '0 4px' }}
@@ -95,8 +98,16 @@ export default function VariantStep({
         </div>
       )}
 
-      {/* Form to add a new variant */}
+      {/* Form to add a new variant, or edit one tapped from the list above */}
       <div style={{ background: 'var(--parchment-dim)', borderRadius: 12, padding: 14 }}>
+        {editingVariantId && (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ ...labelTextStyle, flex: 1, color: 'var(--tomato-deep)', fontWeight: 700 }}>{t('variantStep.editingLabel')}</span>
+            <button type="button" onClick={onCancelEdit} style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700 }}>
+              {t('variantStep.cancelEdit')}
+            </button>
+          </div>
+        )}
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
           <span style={labelTextStyle}>{t('variantStep.variantNameLabel')}</span>
           <input
@@ -139,7 +150,15 @@ export default function VariantStep({
         </div>
 
         <label style={{ ...labelStyle, marginBottom: 14 }}>
-          <span style={labelTextStyle}>{t('variantStep.photoLabel')}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={labelTextStyle}>{t('variantStep.photoLabel')}</span>
+            {imageSearchUrl && (
+              <a
+                href={imageSearchUrl} target="_blank" rel="noreferrer"
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--tomato-deep)', textDecoration: 'none' }}
+              >{t('extrasStep.searchImages')}</a>
+            )}
+          </div>
           {photoPreview ? (
             <div style={{ position: 'relative', marginTop: 4 }}>
               <img src={photoPreview} alt="" style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 140, objectFit: 'cover' }} />
@@ -197,7 +216,7 @@ export default function VariantStep({
             fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
             cursor: canAdd ? 'pointer' : 'default',
           }}
-        >{t('variantStep.addVariantBtn')}</button>
+        >{editingVariantId ? t('variantStep.saveChangesBtn') : t('variantStep.addVariantBtn')}</button>
       </div>
     </div>
   )

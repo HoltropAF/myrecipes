@@ -78,6 +78,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [variantStepPaste, setVariantStepPaste] = useState('')
   const [variantPhotoFile, setVariantPhotoFile] = useState(null)
   const [variantPhotoPreview, setVariantPhotoPreview] = useState(null)
+  const [editingVariantId, setEditingVariantId] = useState(null)
 
   const step = STEPS[stepIndex]
   const goNext = () => setStepIndex(i => Math.min(i + 1, STEPS.length - 1))
@@ -117,22 +118,8 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     setVariantPhotoPreview(url)
   }
 
-  const addCurrentVariant = () => {
-    if (!variantLabel.trim()) return
-    setVariants(prev => [...prev, {
-      id: `var_${Date.now()}`,
-      label: variantLabel.trim(),
-      ingredients: variantIngredientGroups
-        .map(g => ({ ...g, items: g.items.filter(item => item.name.trim().length > 0) }))
-        .filter(g => g.items.length > 0),
-      steps: variantStepGroups
-        .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
-        .filter(g => g.items.length > 0),
-      // photoFile is stripped and uploaded (or dropped if it's a pasted link
-      // already) in handleSave — it can't be stored as JSON as-is.
-      photoFile: variantPhotoFile,
-      photo_url: variantPhotoFile ? null : variantPhotoPreview,
-    }])
+  const resetVariantForm = () => {
+    setEditingVariantId(null)
     setVariantLabel('')
     setVariantIngredientGroups([emptyGroup()])
     setVariantStepGroups([{ group: t('stepsStep.commonSections')[0], items: [] }])
@@ -140,20 +127,48 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     setVariantPhotoPreview(null)
   }
 
-  const removeVariant = (id) => setVariants(prev => prev.filter(v => v.id !== id))
+  const startEditingVariant = (variant) => {
+    setEditingVariantId(variant.id)
+    setVariantLabel(variant.label)
+    setVariantIngredientGroups(variant.ingredients?.length ? variant.ingredients : [emptyGroup()])
+    setVariantStepGroups(variant.steps?.length ? variant.steps : [{ group: t('stepsStep.commonSections')[0], items: [] }])
+    setVariantPhotoFile(null)
+    setVariantPhotoPreview(variant.photo_url || null)
+  }
 
-  // Sets or replaces the photo on an already-saved variant, in place — the
-  // compose form's photo picker only covers a variant while it's being built.
-  const updateVariantPhoto = (variantId, file) => {
-    if (!file) {
-      setVariants(prev => prev.map(v => v.id === variantId ? { ...v, photoFile: null, photo_url: null } : v))
-      return
+  const addCurrentVariant = () => {
+    if (!variantLabel.trim()) return
+    const ingredients = variantIngredientGroups
+      .map(g => ({ ...g, items: g.items.filter(item => item.name.trim().length > 0) }))
+      .filter(g => g.items.length > 0)
+    const steps = variantStepGroups
+      .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
+      .filter(g => g.items.length > 0)
+
+    if (editingVariantId) {
+      setVariants(prev => prev.map(v => v.id === editingVariantId ? {
+        ...v, label: variantLabel.trim(), ingredients, steps,
+        photoFile: variantPhotoFile,
+        photo_url: variantPhotoFile ? null : variantPhotoPreview,
+      } : v))
+    } else {
+      setVariants(prev => [...prev, {
+        id: `var_${Date.now()}`,
+        label: variantLabel.trim(),
+        ingredients,
+        steps,
+        // photoFile is stripped and uploaded (or dropped if it's a pasted
+        // link already) in handleSave — it can't be stored as JSON as-is.
+        photoFile: variantPhotoFile,
+        photo_url: variantPhotoFile ? null : variantPhotoPreview,
+      }])
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      setVariants(prev => prev.map(v => v.id === variantId ? { ...v, photoFile: file, photo_url: reader.result } : v))
-    }
-    reader.readAsDataURL(file)
+    resetVariantForm()
+  }
+
+  const removeVariant = (id) => {
+    setVariants(prev => prev.filter(v => v.id !== id))
+    if (editingVariantId === id) resetVariantForm()
   }
 
   const handleSave = async () => {
@@ -277,7 +292,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             savedVariants={variants}
             onAddVariant={addCurrentVariant}
             onRemoveVariant={removeVariant}
-            onUpdateVariantPhoto={updateVariantPhoto}
+            editingVariantId={editingVariantId}
+            onEditVariant={startEditingVariant}
+            onCancelEdit={resetVariantForm}
+            recipeTitle={title}
             photoPreview={variantPhotoPreview}
             onPhotoChange={handleVariantPhotoChange}
             onPhotoUrlPaste={handleVariantPhotoUrlPaste}
