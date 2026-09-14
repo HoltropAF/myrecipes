@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 import CollectionForm from '../CollectionForm'
 import { DEFAULT_COLLECTION_EMOJI } from '../../lib/collectionEmojis'
 import { useBackLayer } from '../../lib/useBackLayer'
+import MergeRecipesSheet from '../MergeRecipesSheet'
 
 
 
@@ -21,7 +22,7 @@ const relativeLabels = (t) => ({
   years: (n) => t('relative.years')(n),
 })
 
-export default function AllRecipesView({ recipes, loading, onSelect, onAdd, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
+export default function AllRecipesView({ recipes, loading, onSelect, onAdd, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged }) {
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
@@ -32,7 +33,24 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const [showFilters, setShowFilters] = useState(false)
   const [wishlistOnly, setWishlistOnly] = useState(false)
   const [activeCollection, setActiveCollection] = useState(null)
+  const [mergeMode, setMergeMode] = useState(false)
+  const [mergeSelectedIds, setMergeSelectedIds] = useState(new Set())
+  const [showMergeSheet, setShowMergeSheet] = useState(false)
   useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
+  useBackLayer(showMergeSheet, () => setShowMergeSheet(false), 'merge-recipes')
+
+  const toggleMergeMode = () => {
+    setMergeMode(v => !v)
+    setMergeSelectedIds(new Set())
+  }
+  const toggleMergeSelected = (id) => {
+    setMergeSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const mergeSelectedRecipes = recipes.filter(r => mergeSelectedIds.has(r.id))
 
   const allTags = useMemo(
     () => [...new Set(recipes.flatMap(r => Array.isArray(r.tags) ? r.tags : []))].sort(),
@@ -142,7 +160,17 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         <button onClick={() => onCompactModeChange?.(!compactMode)} aria-pressed={compactMode} style={{ ...toolbarButtonStyle, background: compactMode ? 'var(--tomato)' : 'var(--card)', color: compactMode ? '#fffdf9' : 'var(--charcoal-soft)' }}>
           <RowsIcon /> <span>{t('recipesView.compact')}</span>
         </button>
+        {!isGuest && (
+          <button onClick={toggleMergeMode} aria-pressed={mergeMode} style={{ ...toolbarButtonStyle, background: mergeMode ? 'var(--tomato)' : 'var(--card)', color: mergeMode ? '#fffdf9' : 'var(--charcoal-soft)' }}>
+            <span>{mergeMode ? t('recipesView.cancelMerge') : t('recipesView.mergeBtn')}</span>
+          </button>
+        )}
       </div>
+      {mergeMode && (
+        <div style={{ ...emptyStyle, borderStyle: 'solid', textAlign: 'left', padding: '10px 12px', marginBottom: 10 }}>
+          {t('recipesView.mergeHint')}
+        </div>
+      )}
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', margin: '0 2px 12px' }}>
         {t('recipesView.resultCount')(visibleRecipes.length, recipes.length)}
       </div>
@@ -200,12 +228,33 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {visibleRecipes.map(r => (
             <RecipeCard
-              key={r.id} recipe={r} onClick={() => onSelect(r)}
+              key={r.id} recipe={r}
+              onClick={() => mergeMode ? toggleMergeSelected(r.id) : onSelect(r)}
               highlightIngredient={searchMode === 'ingredient' ? query : null}
               compactMode={compactMode} cookStat={cookCounts[r.id]}
+              mergeMode={mergeMode} mergeSelected={mergeSelectedIds.has(r.id)}
             />
           ))}
         </div>
+      )}
+
+      {mergeMode && mergeSelectedIds.size >= 2 && (
+        <button onClick={() => setShowMergeSheet(true)} style={mergeFabStyle}>
+          {t('recipesView.mergeSelected')(mergeSelectedIds.size)}
+        </button>
+      )}
+
+      {showMergeSheet && (
+        <MergeRecipesSheet
+          recipes={mergeSelectedRecipes}
+          onClose={() => setShowMergeSheet(false)}
+          onMerged={async () => {
+            setShowMergeSheet(false)
+            setMergeMode(false)
+            setMergeSelectedIds(new Set())
+            await onRecipesChanged?.()
+          }}
+        />
       )}
     </div>
   )
@@ -216,6 +265,15 @@ function FilterIcon() { return <svg aria-hidden="true" width="16" height="16" vi
 function RowsIcon() { return <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg> }
 function CloseIcon() { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18"/></svg> }
 function HeartIcon({ filled }) { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg> }
+function MergeCheckbox({ selected }) {
+  return (
+    <span style={{
+      width: 22, height: 22, borderRadius: 99, flexShrink: 0, display: 'grid', placeItems: 'center',
+      border: `1.5px solid ${selected ? 'var(--tomato)' : 'var(--line)'}`,
+      background: selected ? 'var(--tomato)' : 'transparent', color: '#fffdf9', fontSize: 12, fontWeight: 700,
+    }}>{selected ? '✓' : ''}</span>
+  )
+}
 
 function FilterGroup({ label, options, active, onSelect }) {
   return (
@@ -240,7 +298,7 @@ function FilterGroup({ label, options, active, onSelect }) {
   )
 }
 
-export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookStat }) {
+export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMode = false, cookStat, mergeMode = false, mergeSelected = false }) {
   const { t } = useT()
   const cookCount = cookStat?.count || 0
   // How long ago beats how many times when you're deciding what to cook —
@@ -255,10 +313,12 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
   if (compactMode) {
     return (
       <div onClick={onClick} style={{
-        background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+        background: 'var(--card)', borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+        border: `1px solid ${mergeSelected ? 'var(--tomato)' : 'var(--line)'}`,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
       }}>
-        <div style={{ minWidth: 0 }}>
+        {mergeMode && <MergeCheckbox selected={mergeSelected} />}
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {r.title}
           </div>
@@ -284,9 +344,11 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
 
   return (
     <div onClick={onClick} style={{
-      background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
+      background: 'var(--card)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
+      border: `1px solid ${mergeSelected ? 'var(--tomato)' : 'var(--line)'}`,
       display: 'flex', gap: 12, alignItems: 'center',
     }}>
+      {mergeMode && <MergeCheckbox selected={mergeSelected} />}
       {r.photo_url ? (
         <img src={r.photo_url} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
       ) : (
@@ -489,3 +551,8 @@ const sheetStyle = { width: '100%', maxWidth: 480, maxHeight: '82dvh', overflowY
 const wishlistButtonStyle = { width: '100%', padding: '10px 12px', marginBottom: 14, border: '1px solid', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
 const clearButtonStyle = { flex: 1, minHeight: 44, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
 const showButtonStyle = { flex: 1.5, minHeight: 44, borderRadius: 12, border: 0, background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
+const mergeFabStyle = {
+  position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(78px + env(safe-area-inset-bottom))',
+  zIndex: 90, padding: '13px 22px', borderRadius: 99, border: 0, background: 'var(--tomato)', color: '#fffdf9',
+  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 8px 24px rgba(42,36,32,0.28)',
+}

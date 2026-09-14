@@ -771,6 +771,8 @@ function AppInner({ setLanguage }) {
             collections={isGuest ? [] : collections}
             collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
             onCollectionsChanged={loadCollections}
+            isGuest={isGuest}
+            onRecipesChanged={loadRecipes}
           />
         )}
         {activeTab === 'shopping' && (
