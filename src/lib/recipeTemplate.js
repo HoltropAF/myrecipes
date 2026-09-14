@@ -2,6 +2,8 @@ const fields = {
   Name: 'title', 'Short description': 'tagline', Servings: 'servings',
   'Total time (minutes)': 'total_minutes', Category: 'category', Subcategory: 'subcategory',
   'Tags (separate with commas)': 'tags', 'Source (link or description)': 'source',
+  'Fridge storage': 'fridge_storage', 'Freezer friendly (yes/no)': 'freezer_friendly',
+  Reheating: 'reheat_instructions', 'Prep ahead': 'prep_ahead',
 }
 export const titleKey = title => title.trim().toLocaleLowerCase().replace(/\s+/g, ' ')
 
@@ -22,7 +24,8 @@ export function parseRecipeTemplate(text) {
     if (line === '--- RECIPE ---') {
       if (recipe) fail(n, 'Finish the previous recipe with --- END RECIPE ---.')
       recipe = { id: crypto.randomUUID(), title: '', tagline: null, servings: null, total_minutes: null,
-        category: null, subcategory: null, tags: [], source: null, ingredients: [], steps: [], notes: '', variants: [] }
+        category: null, subcategory: null, tags: [], source: null, ingredients: [], steps: [], notes: '', variants: [],
+        fridge_storage: null, freezer_friendly: null, reheat_instructions: null, prep_ahead: null }
       section = null; seen = new Set()
       return
     }
@@ -49,6 +52,11 @@ export function parseRecipeTemplate(text) {
       if (key === 'servings' || key === 'total_minutes') {
         if (value && (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 2147483647)) fail(n, `${label} must be a positive whole number.`)
         recipe[key] = value ? Number(value) : null
+      } else if (key === 'freezer_friendly') {
+        if (!value) recipe[key] = null
+        else if (/^y(es)?$/i.test(value)) recipe[key] = true
+        else if (/^n(o)?$/i.test(value)) recipe[key] = false
+        else fail(n, `${label} must be yes, no, or left blank.`)
       } else recipe[key] = key === 'tags' ? [...new Set(value.split(',').map(s => s.trim()).filter(Boolean))] : value || null
       return
     }

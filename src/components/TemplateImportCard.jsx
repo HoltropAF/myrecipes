@@ -115,6 +115,16 @@ export default function TemplateImportCard({ existingRecipes, onImported }) {
                     </div>
                   ))}
                   {r.notes && <div style={{ ...noteStyle, whiteSpace: 'pre-wrap' }}>{r.notes}</div>}
+                  {(r.fridge_storage || r.freezer_friendly !== null || r.reheat_instructions || r.prep_ahead) && (
+                    <div style={{ ...hintStyle0, marginTop: 8 }}>
+                      {[
+                        r.fridge_storage,
+                        r.freezer_friendly === true ? (nl ? 'Vriezen: ja' : 'Freezes: yes') : r.freezer_friendly === false ? (nl ? 'Vriezen: nee' : 'Freezes: no') : null,
+                        r.reheat_instructions,
+                        r.prep_ahead,
+                      ].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
                   {r.source && <div style={hintStyle0}>{r.source}</div>}
                 </div>
               </details>

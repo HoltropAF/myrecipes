@@ -13,6 +13,10 @@ Category:
 Subcategory:
 Tags (separate with commas):
 Source (link or description):
+Fridge storage:
+Freezer friendly (yes/no):
+Reheating:
+Prep ahead:
 
 INGREDIENTS
 # One ingredient per line: amount | unit | name | optional note
