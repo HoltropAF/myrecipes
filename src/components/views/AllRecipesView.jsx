@@ -294,9 +294,11 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         <GroupMembersSheet
           group={openGroup.group}
           members={openGroup.members}
+          allRecipes={recipes}
           onClose={() => setOpenGroupId(null)}
           onOpenRecipe={recipe => { setOpenGroupId(null); onSelect(recipe) }}
           onUngrouped={async () => { setOpenGroupId(null); await onRecipesChanged?.() }}
+          onMembersAdded={onRecipesChanged}
         />
       )}
     </div>
@@ -473,10 +475,19 @@ function GroupCard({ group, members, onOpen }) {
   )
 }
 
-function GroupMembersSheet({ group, members, onClose, onOpenRecipe, onUngrouped }) {
+function GroupMembersSheet({ group, members, allRecipes = [], onClose, onOpenRecipe, onUngrouped, onMembersAdded }) {
   const { t } = useT()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [showAddPicker, setShowAddPicker] = useState(false)
+  const [addQuery, setAddQuery] = useState('')
+  const [addSelectedIds, setAddSelectedIds] = useState(new Set())
+
+  const memberIds = new Set(members.map(m => m.id))
+  const addCandidates = allRecipes
+    .filter(r => !memberIds.has(r.id))
+    .filter(r => !addQuery.trim() || r.title.toLowerCase().includes(addQuery.trim().toLowerCase()))
+    .slice(0, 60)
 
   const handleUngroup = async () => {
     setBusy(true)
@@ -492,6 +503,32 @@ function GroupMembersSheet({ group, members, onClose, onOpenRecipe, onUngrouped 
     }
   }
 
+  const toggleAddSelected = (id) => {
+    setAddSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const handleAddMembers = async () => {
+    if (!addSelectedIds.size) return
+    setBusy(true)
+    setError('')
+    try {
+      const { error: updateError } = await supabase.from('recipes').update({ group_id: group.id }).in('id', [...addSelectedIds])
+      if (updateError) throw updateError
+      setShowAddPicker(false)
+      setAddQuery('')
+      setAddSelectedIds(new Set())
+      await onMembersAdded?.()
+    } catch (err) {
+      setError(err.message || t('recipesView.addToGroupError'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div onMouseDown={e => e.target === e.currentTarget && onClose()} style={sheetBackdropStyle}>
       <section style={sheetStyle} role="dialog" aria-modal="true" aria-labelledby="group-members-title">
@@ -499,23 +536,65 @@ function GroupMembersSheet({ group, members, onClose, onOpenRecipe, onUngrouped 
           <h2 id="group-members-title" style={{ margin: 0, flex: 1, fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--tomato-deep)' }}>{group.name}</h2>
           <button onClick={onClose} aria-label={t('recipesView.closeFilters')} style={iconButtonStyle}><CloseIcon /></button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-          {members.map(m => (
-            <button key={m.id} onClick={() => onOpenRecipe(m)} style={groupMemberButtonStyle}>
-              {m.photo_url ? (
-                <img src={m.photo_url} alt="" style={{ width: 46, height: 46, borderRadius: 8, objectFit: 'cover' }} />
-              ) : (
-                <span style={{ width: 46, height: 46, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--parchment-dim)', fontSize: 20 }}>🍽</span>
-              )}
-              <b style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{m.title}</b>
-              <span style={{ color: 'var(--tomato-deep)', fontSize: 20 }}>&gt;</span>
+
+        {showAddPicker ? (
+          <>
+            <input
+              autoFocus type="text" value={addQuery} onChange={e => setAddQuery(e.target.value)}
+              placeholder={t('recipesView.addToGroupSearch')}
+              style={groupSearchInputStyle}
+            />
+            <div style={{ display: 'grid', gap: 6, marginTop: 10, marginBottom: 14 }}>
+              {addCandidates.map(r => {
+                const selected = addSelectedIds.has(r.id)
+                return (
+                  <button key={r.id} onClick={() => toggleAddSelected(r.id)} style={{ ...groupMemberButtonStyle, borderColor: selected ? 'var(--tomato)' : 'var(--line)' }}>
+                    <MergeCheckbox selected={selected} />
+                    {r.photo_url ? (
+                      <img src={r.photo_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ width: 40, height: 40, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--parchment-dim)', fontSize: 18 }}>🍽</span>
+                    )}
+                    <b style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{r.title}</b>
+                  </button>
+                )
+              })}
+              {!addCandidates.length && <div style={{ textAlign: 'center', padding: 16, fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--charcoal-soft)' }}>{t('recipesView.noMatch')}</div>}
+            </div>
+            {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setShowAddPicker(false); setAddQuery(''); setAddSelectedIds(new Set()) }} disabled={busy} style={{ ...ungroupButtonStyle, flex: 1 }}>
+                {t('recipesView.cancelMerge')}
+              </button>
+              <button onClick={handleAddMembers} disabled={busy || !addSelectedIds.size} style={{ ...confirmAddButtonStyle, flex: 2, opacity: busy || !addSelectedIds.size ? 0.5 : 1 }}>
+                {busy ? t('mergeRecipes.merging') : t('recipesView.addToGroupConfirm')(addSelectedIds.size)}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {members.map(m => (
+                <button key={m.id} onClick={() => onOpenRecipe(m)} style={groupMemberButtonStyle}>
+                  {m.photo_url ? (
+                    <img src={m.photo_url} alt="" style={{ width: 46, height: 46, borderRadius: 8, objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ width: 46, height: 46, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--parchment-dim)', fontSize: 20 }}>🍽</span>
+                  )}
+                  <b style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{m.title}</b>
+                  <span style={{ color: 'var(--tomato-deep)', fontSize: 20 }}>&gt;</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowAddPicker(true)} style={{ ...groupMemberButtonStyle, justifyContent: 'center', color: 'var(--tomato-deep)', fontWeight: 700, marginBottom: 14 }}>
+              {t('recipesView.addToGroupBtn')}
             </button>
-          ))}
-        </div>
-        {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
-        <button onClick={handleUngroup} disabled={busy} style={{ ...ungroupButtonStyle, opacity: busy ? 0.6 : 1 }}>
-          {busy ? t('recipesView.ungrouping') : t('recipesView.ungroupBtn')}
-        </button>
+            {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
+            <button onClick={handleUngroup} disabled={busy} style={{ ...ungroupButtonStyle, opacity: busy ? 0.6 : 1 }}>
+              {busy ? t('recipesView.ungrouping') : t('recipesView.ungroupBtn')}
+            </button>
+          </>
+        )}
       </section>
     </div>
   )
@@ -678,3 +757,5 @@ const mergeFabStyle = {
 }
 const groupMemberButtonStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 7, border: '1px solid var(--line)', borderRadius: 10, background: 'var(--parchment)', color: 'var(--charcoal)', cursor: 'pointer', boxSizing: 'border-box' }
 const ungroupButtonStyle = { width: '100%', minHeight: 44, border: '1px solid var(--tomato)', borderRadius: 10, background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
+const groupSearchInputStyle = { width: '100%', boxSizing: 'border-box', minHeight: 42, padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--parchment)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14 }
+const confirmAddButtonStyle = { minHeight: 44, border: 0, borderRadius: 10, background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
