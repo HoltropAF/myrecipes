@@ -326,7 +326,15 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
           members={openGroup.members}
           allRecipes={recipes}
           onClose={() => setOpenGroupId(null)}
-          onOpenRecipe={recipe => { setOpenGroupId(null); onSelect(recipe) }}
+          onOpenRecipe={recipe => {
+            setOpenGroupId(null)
+            // useBackLayer's cleanup calls history.back() to consume this
+            // sheet's history entry, but that navigation is asynchronous.
+            // Opening the recipe pushes its own entry synchronously, so
+            // without this delay the deferred back() lands afterward and
+            // immediately pops the recipe's entry right back off.
+            setTimeout(() => onSelect(recipe), 0)
+          }}
           onUngrouped={async () => { setOpenGroupId(null); await onRecipesChanged?.() }}
           onMembersAdded={onRecipesChanged}
         />
