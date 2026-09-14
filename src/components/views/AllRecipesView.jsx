@@ -305,17 +305,21 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
             ? t('recipesView.contains')(matchedIngredient.name)
             : <>
                 {ingredientGroups.reduce((s, g) => s + (Array.isArray(g?.items) ? g.items.length : 0), 0)} {t('recipesView.ingredients')} · {(Array.isArray(r.steps) ? r.steps : []).reduce((s, g) => s + (Array.isArray(g?.items) ? g.items.length : 0), 0)} {t('recipesView.steps')}
-                {r.category ? ` · ${r.category}` : ''}
-                {lastCooked ? ` · ${t('recipesView.lastCooked')(lastCooked)}` : ''}
+                {r.variants?.length > 0 ? ` · ${t('recipesView.variants')(r.variants.length)}` : ''}
               </>
           }
         </div>
+        {(r.category || lastCooked) && !matchedIngredient && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 2 }}>
+            {[r.category, lastCooked ? t('recipesView.lastCooked')(lastCooked) : null].filter(Boolean).join(' · ')}
+          </div>
+        )}
         {recipeTags.length > 0 && (
           <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
             {recipeTags.map(tag => (
               <span key={tag} style={{
-                fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--sage)',
-                background: 'var(--sage-light)', borderRadius: 99, padding: '2px 8px',
+                fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--sage)',
+                background: 'var(--sage-light)', borderRadius: 99, padding: '1px 6px',
               }}>{tag}</span>
             ))}
           </div>
@@ -456,7 +460,7 @@ export function GridCard({ recipe: r, onClick, cookStat }) {
 function AllergenBadge({ children, diet = false }) {
   return (
     <span style={{
-      fontFamily: 'var(--font-mono)', fontSize: 10, borderRadius: 99, padding: '2px 8px',
+      fontFamily: 'var(--font-mono)', fontSize: 9, borderRadius: 99, padding: '1px 6px',
       color: diet ? 'var(--sage)' : 'var(--charcoal-soft)',
       background: diet ? 'var(--sage-light)' : 'var(--parchment-dim)',
     }}>{children}</span>
