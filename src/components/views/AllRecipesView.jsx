@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import { CATEGORY_ICONS } from '../../lib/categories'
-import { MAIN_INGREDIENTS, MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS, getMainIngredientKeys } from '../../lib/recipeTags'
+import { MEAL_TYPES, ALLERGEN_LABELS, DIET_TAGS } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'
 import { relativeDayLabel } from '../../lib/dateUtils'
 import { supabase } from '../../lib/supabase'
@@ -22,12 +22,11 @@ const relativeLabels = (t) => ({
   years: (n) => t('relative.years')(n),
 })
 
-export default function AllRecipesView({ recipes, loading, onSelect, onAdd, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged, recipeGroups = [] }) {
+export default function AllRecipesView({ recipes, loading, onSelect, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged, recipeGroups = [], groupedView = false, onGroupedViewChange }) {
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [mealTypeFilter, setMealTypeFilter] = useState(null)
-  const [proteinFilter, setProteinFilter] = useState(null)
   const [tagFilter, setTagFilter] = useState(null)
   const [dietFilter, setDietFilter] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -36,8 +35,8 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const [mergeMode, setMergeMode] = useState(false)
   const [mergeSelectedIds, setMergeSelectedIds] = useState(new Set())
   const [showMergeSheet, setShowMergeSheet] = useState(false)
-  const [groupedView, setGroupedView] = useState(false)
   const [openGroupId, setOpenGroupId] = useState(null)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
   useBackLayer(showMergeSheet, () => setShowMergeSheet(false), 'merge-recipes')
   useBackLayer(!!openGroupId, () => setOpenGroupId(null), 'group-members')
@@ -45,6 +44,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const toggleMergeMode = () => {
     setMergeMode(v => !v)
     setMergeSelectedIds(new Set())
+    setShowMoreMenu(false)
   }
   const toggleMergeSelected = (id) => {
     setMergeSelectedIds(prev => {
@@ -65,9 +65,6 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
     if (mealTypeFilter) {
       const mt = MEAL_TYPES.find(m => m.key === mealTypeFilter)
       if (mt) base = base.filter(r => mt.match(r))
-    }
-    if (proteinFilter) {
-      base = base.filter(r => getMainIngredientKeys(r).includes(proteinFilter))
     }
     if (tagFilter) {
       base = base.filter(r => (r.tags || []).includes(tagFilter))
@@ -105,9 +102,9 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
     else if (sortBy === 'time') sorted.sort((a, b) => (a.total_minutes || Number.MAX_SAFE_INTEGER) - (b.total_minutes || Number.MAX_SAFE_INTEGER))
     else sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     return sorted
-  }, [recipes, query, searchMode, sortBy, mealTypeFilter, proteinFilter, tagFilter, dietFilter, wishlistOnly, cookCounts])
+  }, [recipes, query, searchMode, sortBy, mealTypeFilter, tagFilter, dietFilter, wishlistOnly, cookCounts])
 
-  const activeFilterCount = [mealTypeFilter, proteinFilter, tagFilter, dietFilter, wishlistOnly].filter(Boolean).length
+  const activeFilterCount = [mealTypeFilter, tagFilter, dietFilter, wishlistOnly].filter(Boolean).length
 
   // Apply collection filter on top of the search/sort filtered list
   const visibleRecipes = activeCollection
@@ -135,14 +132,12 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const openGroup = openGroupId ? displayItems.find(item => item.type === 'group' && item.group.id === openGroupId) : null
 
   const translatedMealTypes = MEAL_TYPES.map(m => ({ ...m, label: t(`mealTypes.${m.key}`) }))
-  const translatedMainIngredients = MAIN_INGREDIENTS.map(m => ({ ...m, label: t(`mainIngredients.${m.key}`) }))
   const translatedDietTags = DIET_TAGS.map(d => ({ ...d, label: t(`diet.${d.key}`) }))
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)' }}>{t('recipesView.title')}</h1>
-        {onAdd && <button onClick={() => onAdd(null)} style={addBtnStyle}>{t('recipesView.addBtn')}</button>}
+      <div style={{ marginBottom: 14 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', margin: 0 }}>{t('recipesView.title')}</h1>
       </div>
 
       <CollectionsBar
@@ -172,7 +167,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8, position: 'relative' }}>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sortSelectStyle} aria-label={t('recipesView.sortLabel')}>
           <option value="recent">{t('recipesView.sortRecent')}</option>
           <option value="name">{t('recipesView.sortName')}</option>
@@ -184,14 +179,34 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
           <RowsIcon /> <span>{t('recipesView.compact')}</span>
         </button>
         {!isGuest && (
-          <button onClick={toggleMergeMode} aria-pressed={mergeMode} style={{ ...toolbarButtonStyle, background: mergeMode ? 'var(--tomato)' : 'var(--card)', color: mergeMode ? '#fffdf9' : 'var(--charcoal-soft)' }}>
-            <span>{mergeMode ? t('recipesView.cancelMerge') : t('recipesView.mergeBtn')}</span>
-          </button>
+          mergeMode ? (
+            <button onClick={toggleMergeMode} style={{ ...toolbarButtonStyle, background: 'var(--tomato)', color: '#fffdf9' }}>
+              <span>{t('recipesView.cancelMerge')}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowMoreMenu(v => !v)} aria-expanded={showMoreMenu} aria-label={t('recipesView.moreBtn')}
+              style={{ ...toolbarButtonStyle, width: 36, justifyContent: 'center', padding: 0, background: (groupedView || showMoreMenu) ? 'var(--tomato)' : 'var(--card)', color: (groupedView || showMoreMenu) ? '#fffdf9' : 'var(--charcoal-soft)' }}
+            ><MoreIcon /></button>
+          )
         )}
-        {!isGuest && (
-          <button onClick={() => setGroupedView(v => !v)} aria-pressed={groupedView} style={{ ...toolbarButtonStyle, background: groupedView ? 'var(--tomato)' : 'var(--card)', color: groupedView ? '#fffdf9' : 'var(--charcoal-soft)' }}>
-            <span>{t('recipesView.groupedBtn')}</span>
-          </button>
+
+        {showMoreMenu && (
+          <>
+            <div onClick={() => setShowMoreMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 95 }} />
+            <div style={moreMenuStyle}>
+              <button
+                onClick={() => { onGroupedViewChange?.(!groupedView); setShowMoreMenu(false) }}
+                style={{ ...moreMenuItemStyle, borderTop: 'none' }}
+              >
+                <span>{t('recipesView.groupedBtn')}</span>
+                {groupedView && <span style={{ color: 'var(--tomato-deep)', fontWeight: 700 }}>✓</span>}
+              </button>
+              <button onClick={toggleMergeMode} style={moreMenuItemStyle}>
+                <span>{t('recipesView.mergeBtn')}</span>
+              </button>
+            </div>
+          </>
         )}
       </div>
       {mergeMode && (
@@ -214,20 +229,11 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
               <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', color: 'var(--tomato-deep)', fontSize: 22 }}>{t('recipesView.filtersBtn')}</h2>
               <button onClick={() => setShowFilters(false)} aria-label={t('recipesView.closeFilters')} style={iconButtonStyle}><CloseIcon /></button>
             </div>
-            <button onClick={() => setWishlistOnly(v => !v)} aria-pressed={wishlistOnly} style={{ ...wishlistButtonStyle, borderColor: wishlistOnly ? 'var(--tomato)' : 'var(--line)', background: wishlistOnly ? 'var(--tomato)' : 'var(--parchment-dim)', color: wishlistOnly ? '#fffdf9' : 'var(--charcoal)' }}>
-              <HeartIcon filled={wishlistOnly} /> {t('recipesView.wishlistOnly')}
-            </button>
           <FilterGroup
             label={t('recipesView.filterMealType')}
             options={translatedMealTypes}
             active={mealTypeFilter}
             onSelect={setMealTypeFilter}
-          />
-          <FilterGroup
-            label={t('recipesView.filterMainIngredient')}
-            options={translatedMainIngredients}
-            active={proteinFilter}
-            onSelect={setProteinFilter}
           />
           {allTags.length > 0 && (
             <FilterGroup
@@ -237,14 +243,38 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
               onSelect={setTagFilter}
             />
           )}
-          <FilterGroup
-            label={t('recipesView.filterDiet')}
-            options={translatedDietTags}
-            active={dietFilter}
-            onSelect={setDietFilter}
-          />
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+              {t('recipesView.filterDiet')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <button
+                onClick={() => setWishlistOnly(v => !v)} aria-pressed={wishlistOnly}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 99,
+                  border: `1px solid ${wishlistOnly ? 'var(--tomato)' : 'var(--line)'}`,
+                  background: wishlistOnly ? 'var(--tomato)' : 'var(--parchment-dim)',
+                  color: wishlistOnly ? 'var(--card)' : 'var(--charcoal)',
+                  fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                }}
+              ><HeartIcon filled={wishlistOnly} /> {t('recipesView.wishlistOnly')}</button>
+              {translatedDietTags.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setDietFilter(dietFilter === opt.key ? null : opt.key)}
+                  style={{
+                    padding: '5px 11px', borderRadius: 99,
+                    border: `1px solid ${dietFilter === opt.key ? 'var(--tomato)' : 'var(--line)'}`,
+                    background: dietFilter === opt.key ? 'var(--tomato)' : 'var(--parchment-dim)',
+                    color: dietFilter === opt.key ? 'var(--card)' : 'var(--charcoal)',
+                    fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >{opt.label}</button>
+              ))}
+            </div>
+          </div>
             <div style={{ display: 'flex', gap: 10, position: 'sticky', bottom: 0, paddingTop: 12, background: 'var(--card)' }}>
-              <button onClick={() => { setMealTypeFilter(null); setProteinFilter(null); setTagFilter(null); setDietFilter(null); setWishlistOnly(false) }} style={clearButtonStyle}>{t('recipesView.clearAll')}</button>
+              <button onClick={() => { setMealTypeFilter(null); setTagFilter(null); setDietFilter(null); setWishlistOnly(false) }} style={clearButtonStyle}>{t('recipesView.clearAll')}</button>
               <button onClick={() => setShowFilters(false)} style={showButtonStyle}>{t('recipesView.showResults')(visibleRecipes.length)}</button>
             </div>
           </div>
@@ -310,6 +340,7 @@ function FilterIcon() { return <svg aria-hidden="true" width="16" height="16" vi
 function RowsIcon() { return <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg> }
 function CloseIcon() { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18"/></svg> }
 function HeartIcon({ filled }) { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg> }
+function MoreIcon() { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg> }
 function MergeCheckbox({ selected }) {
   return (
     <span style={{
@@ -358,27 +389,22 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
   if (compactMode) {
     return (
       <div onClick={onClick} style={{
-        background: 'var(--card)', borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+        background: 'var(--card)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer',
         border: `1px solid ${mergeSelected ? 'var(--tomato)' : 'var(--line)'}`,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
       }}>
         {mergeMode && <MergeCheckbox selected={mergeSelected} />}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {r.title}
           </div>
-          {r.tagline && (
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--charcoal-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {r.tagline}
-            </div>
-          )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tomato-deep)', fontWeight: 600 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--tomato-deep)', fontWeight: 600 }}>
             {cookCount > 0 ? t('recipesView.cookedCount')(cookCount) : t('recipesView.notYetCooked')}
           </div>
           {lastCooked && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--charcoal-soft)', marginTop: 1 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--charcoal-soft)', marginTop: 1 }}>
               {lastCooked}
             </div>
           )}
@@ -736,18 +762,14 @@ function Empty({ children }) {
   )
 }
 
-const addBtnStyle = {
-  padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--tomato)',
-  color: 'var(--card)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-}
-
 const iconButtonStyle = { width: 34, height: 34, border: 0, borderRadius: 99, background: 'transparent', color: 'var(--charcoal-soft)', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }
 const filterButtonStyle = { minHeight: 38, padding: '0 11px', border: 0, borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
 const sortSelectStyle = { minWidth: 0, flex: 1, height: 36, padding: '0 10px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600 }
 const toolbarButtonStyle = { height: 36, padding: '0 11px', borderRadius: 99, border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
+const moreMenuStyle = { position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 96, minWidth: 180, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 8px 24px rgba(42,36,32,0.18)', overflow: 'hidden' }
+const moreMenuItemStyle = { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', border: 0, borderTop: '1px solid var(--line)', background: 'none', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
 const sheetBackdropStyle = { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(38, 25, 22, 0.38)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingTop: 40 }
 const sheetStyle = { width: '100%', maxWidth: 480, maxHeight: '82dvh', overflowY: 'auto', boxSizing: 'border-box', background: 'var(--card)', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(18px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(55, 23, 18, 0.18)' }
-const wishlistButtonStyle = { width: '100%', padding: '10px 12px', marginBottom: 14, border: '1px solid', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
 const clearButtonStyle = { flex: 1, minHeight: 44, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
 const showButtonStyle = { flex: 1.5, minHeight: 44, borderRadius: 12, border: 0, background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
 const mergeFabStyle = {

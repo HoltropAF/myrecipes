@@ -180,6 +180,11 @@ function AppInner({ setLanguage }) {
   const [recipeViewMode, setRecipeViewMode] = useState('folders') // 'folders' | 'list'
   const [recipeSearchMode, setRecipeSearchMode] = useState('title') // 'title' | 'ingredient'
   const [compactMode, setCompactMode] = useState(false)
+  // Lifted out of AllRecipesView itself: that component fully unmounts
+  // whenever a recipe is opened (App swaps to RecipeDetail), so state kept
+  // there resets on every trip back from a recipe. Doesn't need to survive
+  // a full reload the way compactMode does, just this mount/unmount cycle.
+  const [groupedView, setGroupedView] = useState(false)
   const [homeIcon, setHomeIcon] = useState(() => {
     try { return localStorage.getItem('mr_home_icon_v1') === 'cookbook' ? 'cookbook' : 'compass' } catch { return 'compass' }
   })
@@ -764,12 +769,13 @@ function AppInner({ setLanguage }) {
             recipes={recipes}
             loading={!isGuest && !recipesLoaded && recipes.length === 0}
             onSelect={openRecipe}
-            onAdd={isGuest ? null : openWizard}
             defaultOpenCategory={defaultCategory}
             viewMode={recipeViewMode}
             searchMode={recipeSearchMode}
             compactMode={compactMode}
             onCompactModeChange={value => { setCompactMode(value); savePreferences({ compact_mode: value }) }}
+            groupedView={groupedView}
+            onGroupedViewChange={setGroupedView}
             cookCounts={cookCounts}
             collections={isGuest ? [] : collections}
             collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
