@@ -27,8 +27,15 @@ create policy "Users read their own recipe tags" on recipe_computed_tags
 
 grant select on recipe_computed_tags to authenticated, anon;
 
+-- security definer: this runs from a trigger fired by an ordinary user's
+-- recipe insert/update, but recipe_computed_tags only grants that role
+-- SELECT (see policy above) - without this the trigger's own insert/update
+-- into the table fails with "new row violates row-level security policy".
 create or replace function recompute_recipe_tags(p_recipe_id uuid) returns void
-language plpgsql as $$
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   v_tags text[];
 begin
