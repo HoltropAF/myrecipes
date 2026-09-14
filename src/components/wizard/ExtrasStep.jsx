@@ -7,13 +7,24 @@ export default function ExtrasStep({
   title, servings, setServings, totalMinutes, setTotalMinutes,
   category, setCategory, subcategory, setSubcategory,
   existingCategories, existingSubcategories = {},
-  photoPreview, onPhotoChange,
+  photoPreview, onPhotoChange, onPhotoUrlPaste,
   notes, setNotes, tags, setTags, existingTags,
 }) {
   const { t } = useT()
+  const [photoUrlDraft, setPhotoUrlDraft] = useState('')
+  const [photoUrlError, setPhotoUrlError] = useState(false)
   const imageSearchUrl = title?.trim()
     ? `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(title.trim())}`
     : null
+
+  const submitPhotoUrl = () => {
+    const url = photoUrlDraft.trim()
+    if (!url) return
+    if (!/^https?:\/\/.+/i.test(url)) { setPhotoUrlError(true); return }
+    setPhotoUrlError(false)
+    onPhotoUrlPaste(url)
+    setPhotoUrlDraft('')
+  }
 
   const subcategoryOptions = category ? (existingSubcategories[category] || []) : []
 
@@ -84,14 +95,40 @@ export default function ExtrasStep({
             >×</button>
           </div>
         ) : (
-          <label style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100,
-            borderRadius: 10, border: '2px dashed var(--line)', cursor: 'pointer', marginTop: 4,
-            color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 13,
-          }}>
-            {t('extrasStep.tapToAddPhoto')}
-            <input type="file" accept="image/*" onChange={e => onPhotoChange(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-          </label>
+          <>
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100,
+              borderRadius: 10, border: '2px dashed var(--line)', cursor: 'pointer', marginTop: 4,
+              color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)', fontSize: 13,
+            }}>
+              {t('extrasStep.tapToAddPhoto')}
+              <input type="file" accept="image/*" onChange={e => onPhotoChange(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+            </label>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <input
+                type="url" inputMode="url"
+                value={photoUrlDraft}
+                onChange={e => { setPhotoUrlDraft(e.target.value); setPhotoUrlError(false) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitPhotoUrl() } }}
+                placeholder={t('extrasStep.pastePhotoUrlPlaceholder')}
+                style={{ ...inputStyle, flex: 1, padding: '9px 11px', fontSize: 14, borderColor: photoUrlError ? 'var(--tomato)' : 'var(--line)' }}
+              />
+              <button
+                type="button" onClick={submitPhotoUrl} disabled={!photoUrlDraft.trim()}
+                style={{
+                  padding: '0 14px', borderRadius: 9, border: '1px solid var(--tomato)',
+                  background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)',
+                  fontWeight: 700, fontSize: 14, cursor: photoUrlDraft.trim() ? 'pointer' : 'default',
+                  opacity: photoUrlDraft.trim() ? 1 : 0.5,
+                }}
+              >{t('extrasStep.usePhotoUrl')}</button>
+            </div>
+            {photoUrlError && (
+              <div style={{ marginTop: 4, fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--tomato-deep)' }}>
+                {t('extrasStep.photoUrlError')}
+              </div>
+            )}
+          </>
         )}
       </label>
 

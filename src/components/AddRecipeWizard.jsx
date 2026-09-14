@@ -70,6 +70,13 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     }
   }
 
+  // Pasted straight from e.g. a Google Images result — stored as a link rather
+  // than uploaded, so nothing needs downloading to the device first.
+  const handlePhotoUrlPaste = (url) => {
+    setPhotoFile(null)
+    setPhotoPreview(url)
+  }
+
   const addCurrentVariant = () => {
     if (!variantLabel.trim()) return
     setVariants(prev => [...prev, {
@@ -114,8 +121,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         if (uploadError) throw uploadError
         const { data: urlData } = supabase.storage.from('recipe-photos').getPublicUrl(path)
         photo_url = urlData.publicUrl
-      } else if (photoPreview === null) {
-        photo_url = null // photo was explicitly removed
+      } else {
+        // No file to upload: photoPreview is either null (removed), an
+        // unchanged existing photo_url, or a freshly pasted external link.
+        photo_url = photoPreview
       }
 
       const payload = {
@@ -188,7 +197,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             subcategory={subcategory} setSubcategory={setSubcategory}
             existingCategories={existingCategories}
             existingSubcategories={existingSubcategories}
-            photoPreview={photoPreview} onPhotoChange={handlePhotoChange}
+            photoPreview={photoPreview} onPhotoChange={handlePhotoChange} onPhotoUrlPaste={handlePhotoUrlPaste}
             notes={notes} setNotes={setNotes}
             tags={tags} setTags={setTags} existingTags={existingTags}
           />
