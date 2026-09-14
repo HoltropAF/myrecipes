@@ -16,7 +16,7 @@ const readAssignments = notes => {
   try { return JSON.parse(notes.slice(WEEK_PREFIX.length))?.assignments || {} } catch { return {} }
 }
 
-export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null, cookStats = {}, collections = [], collectionRecipeMap = {} }) {
+export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null, cookStats = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
   const { t, lang } = useT()
   const [weekStart, setWeekStart] = useState(startOfWeek)
   const [groups, setGroups] = useState(() => isGuest ? (demoMealGroups || []) : [])
@@ -121,7 +121,7 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
 
   return <div style={{ padding: '0 20px 100px' }}>
     <h1 style={titleStyle}>{t('mealPrep.title')}</h1>
-    <DopamineShelf recipes={recipes} cookStats={cookStats} collections={collections} collectionRecipeMap={collectionRecipeMap} onSelect={onSelectRecipe} onCreateCollection={null} isGuest={isGuest} />
+    <DopamineShelf recipes={recipes} cookStats={cookStats} collections={collections} collectionRecipeMap={collectionRecipeMap} onSelect={onSelectRecipe} onCreateCollection={null} isGuest={isGuest} onCollectionsChanged={onCollectionsChanged} />
 
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
       <button aria-label={t('mealPrep.previousWeek')} onClick={() => setWeekStart(addDays(weekStart, -7))} style={arrowStyle}>‹</button>
