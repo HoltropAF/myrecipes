@@ -37,6 +37,22 @@ function appRoute(patch) {
 // until their own fetch resolved.
 const recipeCacheKey = (userId) => `${RECIPE_CACHE_PREFIX}_${userId}`
 
+const resolveTheme = (theme) => theme === 'auto'
+  ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  : theme
+
+// Mirrors CSS's color-mix(in srgb, hexA weightA%, hexB) so the status-bar
+// color can match a color-mix() background defined in CSS without duplicating
+// the mix as a separate hardcoded value that would drift out of sync.
+const hexToRgb = (hex) => {
+  const n = parseInt(hex.replace('#', ''), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const blendHex = (hexA, weightA, hexB) => {
+  const [a, b] = [hexToRgb(hexA), hexToRgb(hexB)]
+  return '#' + a.map((v, i) => Math.round(v * weightA + b[i] * (1 - weightA)).toString(16).padStart(2, '0')).join('')
+}
+
 function readCachedRecipes(userId) {
   if (!userId) return []
   try {
@@ -247,17 +263,7 @@ function AppInner({ setLanguage }) {
 
   // Apply the resolved theme (auto = follow system) to the document root
   useEffect(() => {
-    const apply = () => {
-      const resolved = theme === 'auto'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : theme
-      document.documentElement.setAttribute('data-theme', resolved)
-      // Status bar / notification tray color, kept in sync with --card since
-      // that's the background every header in the app actually uses — not
-      // the accent color, and not something the palette picker changes.
-      const meta = document.querySelector('meta[name="theme-color"]')
-      if (meta) meta.content = resolved === 'dark' ? '#2a221c' : '#fffdf9'
-    }
+    const apply = () => document.documentElement.setAttribute('data-theme', resolveTheme(theme))
     apply()
     if (theme === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
@@ -269,6 +275,22 @@ function AppInner({ setLanguage }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-palette', palette)
   }, [palette])
+
+  // Status bar / notification tray color. Most screens sit on the plain
+  // --card background, but Home has its own full-bleed "landscape" banner
+  // (home-view.css) whose top band is color-mix(--tomato-deep 78%, --charcoal)
+  // — a single static color can't be right for both, so this recomputes
+  // whenever the theme, palette, or current screen changes.
+  useEffect(() => {
+    const style = getComputedStyle(document.documentElement)
+    const card = style.getPropertyValue('--card').trim()
+    const onHomeBanner = !selectedRecipe && activeTab === 'home'
+    const color = onHomeBanner
+      ? blendHex(style.getPropertyValue('--tomato-deep').trim(), 0.78, style.getPropertyValue('--charcoal').trim())
+      : card
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta && color) meta.content = color
+  }, [theme, palette, activeTab, selectedRecipe])
 
   const openRecipe = (recipe) => {
     try { sessionStorage.setItem('mr_open_recipe_v1', recipe.id) } catch { /* unavailable */ }
