@@ -156,7 +156,19 @@ export default function DecideCard({ recipes, cookStats = {}, onSelect, homeComp
                 </div> : <div className="decide-meal-picker__accepted">
                   <p>Lovely. What would you like to do?</p>
                   <button onClick={addCompactSuggestionToList} disabled={addingToList || addedToList}>{addedToList ? '✓ Added to shopping list' : addingToList ? 'Adding…' : 'Add ingredients to shopping list'}</button>
-                  <button className="is-secondary" onClick={() => { closeCompactPicker(); onSelect(compactSuggestion) }}>Open recipe</button>
+                  <button
+                    className="is-secondary"
+                    onClick={() => {
+                      const recipe = compactSuggestion
+                      closeCompactPicker()
+                      // Closing this useBackLayer-managed picker calls
+                      // history.back() asynchronously to consume its history
+                      // entry; opening the recipe pushes its own entry
+                      // synchronously, so without this delay the deferred
+                      // back() pops the recipe's entry right back off.
+                      setTimeout(() => onSelect(recipe), 0)
+                    }}
+                  >Open recipe</button>
                   <button className="is-link" onClick={() => handleCompactChoice(compactMealType, compactSuggestion.id)}>Actually, show another</button>
                 </div>}
               </>}

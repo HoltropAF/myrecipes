@@ -7,6 +7,16 @@ export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
   const [open, setOpen] = useState(false)
   useBackLayer(open, () => setOpen(false), 'quick-actions')
 
+  // Closing this menu (useBackLayer) calls history.back() asynchronously to
+  // consume its history entry. Both actions open their own useBackLayer
+  // sheet, which pushes a new entry synchronously — without the delay, the
+  // deferred back() lands afterward and immediately pops that entry back
+  // off, so the wizard/quick-log sheet flashes open then vanishes.
+  const runAfterClose = (action) => {
+    setOpen(false)
+    setTimeout(action, 0)
+  }
+
   return (
     <>
       {open && (
@@ -22,8 +32,8 @@ export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
       }}>
         {open && (
           <>
-            <MenuItem label={t('fab.logCook')} icon="📝" onClick={() => { setOpen(false); onLogCook() }} />
-            <MenuItem label={t('fab.addRecipe')} icon="🍳" onClick={() => { setOpen(false); onAddRecipe() }} />
+            <MenuItem label={t('fab.logCook')} icon="📝" onClick={() => runAfterClose(onLogCook)} />
+            <MenuItem label={t('fab.addRecipe')} icon="🍳" onClick={() => runAfterClose(onAddRecipe)} />
           </>
         )}
 

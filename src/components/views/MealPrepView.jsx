@@ -76,7 +76,11 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
 
   const startPlanning = async recipe => {
     setRecipePickerOpen(false)
-    setPickerRecipe(recipe)
+    // Closing this useBackLayer-managed picker calls history.back()
+    // asynchronously to consume its history entry; opening the day picker
+    // (also useBackLayer) pushes its own entry synchronously, so without
+    // this delay the deferred back() pops that entry right back off.
+    setTimeout(() => setPickerRecipe(recipe), 0)
     if (isGuest) {
       const backlog = groups.find(group => group.notes === PLANNER_BACKLOG_NOTE)
       if (!(backlog?.recipe_ids || []).includes(recipe.id)) {
