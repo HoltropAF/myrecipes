@@ -11,6 +11,8 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
   const [logCount, setLogCount] = useState(() => isGuest ? DEMO_COOK_LOG.filter(entry => entry.recipe_id === recipe.id).length : 0)
   const isLogged = logCount > 0
   const allergens = recipe.allergen_tags || []
+  const activeVariantPhoto = activeVariant !== 'main' ? (variants || []).find(v => v.id === activeVariant)?.photo_url : null
+  const photoUrl = activeVariantPhoto || recipe.photo_url
   useBackLayer(!!record, () => setRecord(null), 'recipe-record')
 
   useEffect(() => {
@@ -24,9 +26,9 @@ export default function InfoTab({ recipe, variants, activeVariant, onVariantChan
 
   return (
     <div>
-      {recipe.photo_url ? (
+      {photoUrl ? (
         <div style={{ position: 'relative', marginBottom: 12 }}>
-          <img src={recipe.photo_url} alt="" style={{ display: 'block', width: '100%', height: 185, borderRadius: 12, objectFit: 'cover' }} />
+          <img src={photoUrl} alt="" style={{ display: 'block', width: '100%', height: 185, borderRadius: 12, objectFit: 'cover' }} />
           {isLogged && <LoggedStamp />}
         </div>
       ) : (

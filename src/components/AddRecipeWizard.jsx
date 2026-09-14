@@ -13,6 +13,24 @@ const MAX_PHOTO_BYTES = 8 * 1024 * 1024 // 8 MB
 
 const emptyGroup = () => ({ group: null, items: [] })
 
+// The bucket is public and served from our own domain, so only accept real
+// raster images. An unchecked extension also let junk (or an SVG carrying
+// script) through under a trusted-looking URL.
+const ALLOWED_PHOTO_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }
+
+async function uploadPhoto(file, userId, t, suffix = '') {
+  const ext = ALLOWED_PHOTO_TYPES[file.type]
+  if (!ext) throw new Error(t('wizard.photoTypeError'))
+  if (file.size > MAX_PHOTO_BYTES) throw new Error(t('wizard.photoSizeError'))
+  const path = `${userId}/${Date.now()}${suffix}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from('recipe-photos')
+    .upload(path, file, { contentType: file.type, upsert: false })
+  if (uploadError) throw uploadError
+  const { data: urlData } = supabase.storage.from('recipe-photos').getPublicUrl(path)
+  return urlData.publicUrl
+}
+
 export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingSubcategories = {}, existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
   const { t } = useT()
   const isEditing = !!existingRecipe
@@ -58,6 +76,8 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [variantIngredientPaste, setVariantIngredientPaste] = useState('')
   const [variantStepGroups, setVariantStepGroups] = useState([{ group: t('stepsStep.commonSections')[0], items: [] }])
   const [variantStepPaste, setVariantStepPaste] = useState('')
+  const [variantPhotoFile, setVariantPhotoFile] = useState(null)
+  const [variantPhotoPreview, setVariantPhotoPreview] = useState(null)
 
   const step = STEPS[stepIndex]
   const goNext = () => setStepIndex(i => Math.min(i + 1, STEPS.length - 1))
@@ -81,6 +101,22 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
     setPhotoPreview(url)
   }
 
+  const handleVariantPhotoChange = (file) => {
+    setVariantPhotoFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => setVariantPhotoPreview(reader.result)
+      reader.readAsDataURL(file)
+    } else {
+      setVariantPhotoPreview(null)
+    }
+  }
+
+  const handleVariantPhotoUrlPaste = (url) => {
+    setVariantPhotoFile(null)
+    setVariantPhotoPreview(url)
+  }
+
   const addCurrentVariant = () => {
     if (!variantLabel.trim()) return
     setVariants(prev => [...prev, {
@@ -92,10 +128,16 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       steps: variantStepGroups
         .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
         .filter(g => g.items.length > 0),
+      // photoFile is stripped and uploaded (or dropped if it's a pasted link
+      // already) in handleSave — it can't be stored as JSON as-is.
+      photoFile: variantPhotoFile,
+      photo_url: variantPhotoFile ? null : variantPhotoPreview,
     }])
     setVariantLabel('')
     setVariantIngredientGroups([emptyGroup()])
     setVariantStepGroups([{ group: t('stepsStep.commonSections')[0], items: [] }])
+    setVariantPhotoFile(null)
+    setVariantPhotoPreview(null)
   }
 
   const removeVariant = (id) => setVariants(prev => prev.filter(v => v.id !== id))
@@ -110,25 +152,22 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
       let photo_url = existingRecipe?.photo_url || null
       if (photoFile) {
-        // The bucket is public and served from our own domain, so only accept
-        // real raster images. An unchecked extension also let junk (or an SVG
-        // carrying script) through under a trusted-looking URL.
-        const ALLOWED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }
-        const ext = ALLOWED[photoFile.type]
-        if (!ext) throw new Error(t('wizard.photoTypeError'))
-        if (photoFile.size > MAX_PHOTO_BYTES) throw new Error(t('wizard.photoSizeError'))
-
-        const path = `${user_id}/${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('recipe-photos')
-          .upload(path, photoFile, { contentType: photoFile.type, upsert: false })
-        if (uploadError) throw uploadError
-        const { data: urlData } = supabase.storage.from('recipe-photos').getPublicUrl(path)
-        photo_url = urlData.publicUrl
+        photo_url = await uploadPhoto(photoFile, user_id, t)
       } else {
         // No file to upload: photoPreview is either null (removed), an
         // unchanged existing photo_url, or a freshly pasted external link.
         photo_url = photoPreview
+      }
+
+      // Each variant may carry its own photo, uploaded (or kept as a pasted
+      // link) the same way as the recipe's own photo.
+      const finalVariants = []
+      for (const variant of variants) {
+        const { photoFile: variantFile, ...rest } = variant
+        finalVariants.push({
+          ...rest,
+          photo_url: variantFile ? await uploadPhoto(variantFile, user_id, t, `-variant-${variant.id}`) : rest.photo_url,
+        })
       }
 
       const payload = {
@@ -145,7 +184,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         steps: stepGroups
           .map(g => ({ ...g, items: g.items.filter(item => item.content.trim().length > 0) }))
           .filter(g => g.items.length > 0),
-        variants,
+        variants: finalVariants,
         notes: notes.trim() || null,
         tags,
         photo_url,
@@ -224,6 +263,9 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             savedVariants={variants}
             onAddVariant={addCurrentVariant}
             onRemoveVariant={removeVariant}
+            photoPreview={variantPhotoPreview}
+            onPhotoChange={handleVariantPhotoChange}
+            onPhotoUrlPaste={handleVariantPhotoUrlPaste}
           />
         )}
 
