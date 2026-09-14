@@ -45,8 +45,11 @@ export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
   }
 
   const handleLink = async () => {
+    const { data: userData } = await supabase.auth.getUser()
+    const user_id = userData?.user?.id
+    if (!user_id) throw new Error('Not signed in')
     const { data: group, error: groupError } = await supabase.from('recipe_groups')
-      .insert({ name: combinedName.trim() })
+      .insert({ name: combinedName.trim(), user_id })
       .select('id')
       .single()
     if (groupError) throw groupError
