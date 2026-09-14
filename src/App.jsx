@@ -185,6 +185,7 @@ function AppInner({ setLanguage }) {
   })
   const [prefillCategory, setPrefillCategory] = useState(null)
   const [collections, setCollections] = useState([])
+  const [recipeGroups, setRecipeGroups] = useState([])
   const [collectionRecipeMap, setCollectionRecipeMap] = useState({})
   const [showAllergenDisclaimer, setShowAllergenDisclaimer] = useState(() => {
     try { return localStorage.getItem('mr_allergen_disclaimer_seen_v1') !== 'true' } catch { return true }
@@ -380,13 +381,15 @@ function AppInner({ setLanguage }) {
       setCookCounts(buildCookStats(DEMO_COOK_LOG))
       return
     }
-    const [{ data, error }, { data: logData }, { data: tagData }] = await Promise.all([
+    const [{ data, error }, { data: logData }, { data: tagData }, { data: groupData }] = await Promise.all([
       supabase.from('recipes').select('*').order('created_at', { ascending: false }),
       // cooked_date and thumbs come along so cards can show "last cooked" and
       // Stats can surface loved-but-forgotten recipes, without a second query.
       supabase.from('cook_log').select('recipe_id, cooked_date, thumbs'),
       supabase.from('recipe_computed_tags').select('recipe_id, allergen_tags, is_vegan, is_vegetarian, is_pescatarian_or_better'),
+      supabase.from('recipe_groups').select('id, name'),
     ])
+    if (Array.isArray(groupData)) setRecipeGroups(groupData)
     // A failed fetch (offline, expired refresh token, 5xx) yields data === null.
     // Keep whatever is already on screen and in the cache rather than replacing
     // the cookbook with an empty list and destroying the offline copy.
@@ -773,6 +776,7 @@ function AppInner({ setLanguage }) {
             onCollectionsChanged={loadCollections}
             isGuest={isGuest}
             onRecipesChanged={loadRecipes}
+            recipeGroups={isGuest ? [] : recipeGroups}
           />
         )}
         {activeTab === 'shopping' && (

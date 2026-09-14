@@ -2,14 +2,16 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 
-// Combines several standalone recipes into one, with every recipe but the
-// chosen "base" becoming a variant of it (same shape the wizard's own
-// variant step already produces: {id, label, ingredients, steps, photo_url}).
-// The base recipe row is updated in place and keeps its id; the others are
-// deleted after their cook_log history is moved over, so past cooks of a
-// merged-away recipe still show up under the combined one.
+// Two ways to combine recipes, picked at the top of this sheet:
+//  - merge: destructive but simple. One recipe survives, the rest become its
+//    variants ({id, label, ingredients, steps, photo_url}, same shape the
+//    wizard's own variant step produces) and are deleted as standalone rows.
+//  - link: reversible. Every recipe stays exactly as it is; they're just
+//    tagged with a shared recipe_groups row so the list can optionally
+//    collapse them into one card. Unlinking just clears group_id again.
 export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
   const { t } = useT()
+  const [mode, setMode] = useState('merge')
   const [baseId, setBaseId] = useState(recipes[0]?.id)
   const [combinedName, setCombinedName] = useState(recipes[0]?.title || '')
   const [labels, setLabels] = useState(() => Object.fromEntries(recipes.map(r => [r.id, r.title])))
@@ -18,32 +20,49 @@ export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
 
   const base = recipes.find(r => r.id === baseId)
   const others = recipes.filter(r => r.id !== baseId)
-  const canMerge = combinedName.trim().length > 0 && !saving
+  const canConfirm = combinedName.trim().length > 0 && !saving
 
   const handleMerge = async () => {
-    if (!canMerge || !base) return
+    if (!base) return
+    const newVariants = others.map((r, i) => ({
+      id: `var_${Date.now()}_${i}`,
+      label: (labels[r.id] || r.title).trim() || r.title,
+      ingredients: r.ingredients || [],
+      steps: r.steps || [],
+      photo_url: r.photo_url || null,
+    }))
+
+    const { error: updateError } = await supabase.from('recipes')
+      .update({ title: combinedName.trim(), variants: [...(base.variants || []), ...newVariants] })
+      .eq('id', base.id)
+    if (updateError) throw updateError
+
+    for (const r of others) {
+      await supabase.from('cook_log').update({ recipe_id: base.id }).eq('recipe_id', r.id)
+      const { error: deleteError } = await supabase.from('recipes').delete().eq('id', r.id)
+      if (deleteError) throw deleteError
+    }
+  }
+
+  const handleLink = async () => {
+    const { data: group, error: groupError } = await supabase.from('recipe_groups')
+      .insert({ name: combinedName.trim() })
+      .select('id')
+      .single()
+    if (groupError) throw groupError
+    const { error: linkError } = await supabase.from('recipes')
+      .update({ group_id: group.id })
+      .in('id', recipes.map(r => r.id))
+    if (linkError) throw linkError
+  }
+
+  const handleConfirm = async () => {
+    if (!canConfirm) return
     setSaving(true)
     setError('')
     try {
-      const newVariants = others.map((r, i) => ({
-        id: `var_${Date.now()}_${i}`,
-        label: (labels[r.id] || r.title).trim() || r.title,
-        ingredients: r.ingredients || [],
-        steps: r.steps || [],
-        photo_url: r.photo_url || null,
-      }))
-
-      const { error: updateError } = await supabase.from('recipes')
-        .update({ title: combinedName.trim(), variants: [...(base.variants || []), ...newVariants] })
-        .eq('id', base.id)
-      if (updateError) throw updateError
-
-      for (const r of others) {
-        await supabase.from('cook_log').update({ recipe_id: base.id }).eq('recipe_id', r.id)
-        const { error: deleteError } = await supabase.from('recipes').delete().eq('id', r.id)
-        if (deleteError) throw deleteError
-      }
-
+      if (mode === 'merge') await handleMerge()
+      else await handleLink()
       await onMerged?.()
     } catch (err) {
       setError(err.message || t('mergeRecipes.error'))
@@ -60,10 +79,15 @@ export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
           </h2>
           <button onClick={onClose} aria-label={t('mergeRecipes.close')} style={closeButtonStyle}>×</button>
         </div>
-        <p style={hintStyle}>{t('mergeRecipes.description')}</p>
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          <ModeButton active={mode === 'merge'} onClick={() => setMode('merge')}>{t('mergeRecipes.modeMerge')}</ModeButton>
+          <ModeButton active={mode === 'link'} onClick={() => setMode('link')}>{t('mergeRecipes.modeLink')}</ModeButton>
+        </div>
+        <p style={hintStyle}>{mode === 'merge' ? t('mergeRecipes.description') : t('mergeRecipes.linkDescription')}</p>
 
         <label style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 }}>
-          <span style={labelTextStyle}>{t('mergeRecipes.nameLabel')}</span>
+          <span style={labelTextStyle}>{mode === 'merge' ? t('mergeRecipes.nameLabel') : t('mergeRecipes.groupNameLabel')}</span>
           <input
             type="text" value={combinedName} onChange={e => setCombinedName(e.target.value)}
             placeholder={t('mergeRecipes.namePlaceholder')}
@@ -71,42 +95,73 @@ export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
           />
         </label>
 
-        <div style={{ ...labelTextStyle, marginBottom: 8 }}>{t('mergeRecipes.pickBase')}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-          {recipes.map(r => {
-            const isBase = r.id === baseId
-            return (
-              <div key={r.id} style={{ ...rowStyle, borderColor: isBase ? 'var(--tomato)' : 'var(--line)' }}>
-                <button type="button" onClick={() => setBaseId(r.id)} style={radioStyle(isBase)} aria-label={t('mergeRecipes.useAsBase')}>
-                  {isBase && <span style={radioDotStyle} />}
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.title}
+        {mode === 'merge' ? (
+          <>
+            <div style={{ ...labelTextStyle, marginBottom: 8 }}>{t('mergeRecipes.pickBase')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+              {recipes.map(r => {
+                const isBase = r.id === baseId
+                return (
+                  <div key={r.id} style={{ ...rowStyle, borderColor: isBase ? 'var(--tomato)' : 'var(--line)' }}>
+                    <button type="button" onClick={() => setBaseId(r.id)} style={radioStyle(isBase)} aria-label={t('mergeRecipes.useAsBase')}>
+                      {isBase && <span style={radioDotStyle} />}
+                    </button>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.title}
+                      </div>
+                      {isBase ? (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--sage)', marginTop: 2 }}>{t('mergeRecipes.becomesMain')}</div>
+                      ) : (
+                        <input
+                          type="text" value={labels[r.id] ?? r.title}
+                          onChange={e => setLabels(prev => ({ ...prev, [r.id]: e.target.value }))}
+                          placeholder={t('mergeRecipes.variantLabelPlaceholder')}
+                          style={{ ...inputStyle, marginTop: 5, padding: '6px 9px', fontSize: 13 }}
+                        />
+                      )}
+                    </div>
                   </div>
-                  {isBase ? (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--sage)', marginTop: 2 }}>{t('mergeRecipes.becomesMain')}</div>
-                  ) : (
-                    <input
-                      type="text" value={labels[r.id] ?? r.title}
-                      onChange={e => setLabels(prev => ({ ...prev, [r.id]: e.target.value }))}
-                      placeholder={t('mergeRecipes.variantLabelPlaceholder')}
-                      style={{ ...inputStyle, marginTop: 5, padding: '6px 9px', fontSize: 13 }}
-                    />
-                  )}
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+            {recipes.map(r => (
+              <div key={r.id} style={rowStyle}>
+                <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r.title}
                 </div>
               </div>
-            )
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', margin: '4px 0 10px' }}>{error}</div>}
 
-        <button onClick={handleMerge} disabled={!canMerge} style={{ ...confirmButtonStyle, opacity: canMerge ? 1 : 0.5, cursor: canMerge ? 'pointer' : 'default' }}>
-          {saving ? t('mergeRecipes.merging') : t('mergeRecipes.confirmBtn')(recipes.length)}
+        <button onClick={handleConfirm} disabled={!canConfirm} style={{ ...confirmButtonStyle, opacity: canConfirm ? 1 : 0.5, cursor: canConfirm ? 'pointer' : 'default' }}>
+          {saving
+            ? t('mergeRecipes.merging')
+            : mode === 'merge' ? t('mergeRecipes.confirmBtn')(recipes.length) : t('mergeRecipes.confirmLinkBtn')(recipes.length)}
         </button>
       </section>
     </div>
+  )
+}
+
+function ModeButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button" onClick={onClick}
+      style={{
+        flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+        border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,
+        background: active ? 'var(--tomato)' : 'var(--card)',
+        color: active ? '#fffdf9' : 'var(--charcoal)',
+        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,
+      }}
+    >{children}</button>
   )
 }
 

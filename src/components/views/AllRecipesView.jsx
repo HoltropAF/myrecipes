@@ -22,7 +22,7 @@ const relativeLabels = (t) => ({
   years: (n) => t('relative.years')(n),
 })
 
-export default function AllRecipesView({ recipes, loading, onSelect, onAdd, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged }) {
+export default function AllRecipesView({ recipes, loading, onSelect, onAdd, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged, recipeGroups = [] }) {
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
@@ -36,8 +36,11 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
   const [mergeMode, setMergeMode] = useState(false)
   const [mergeSelectedIds, setMergeSelectedIds] = useState(new Set())
   const [showMergeSheet, setShowMergeSheet] = useState(false)
+  const [groupedView, setGroupedView] = useState(false)
+  const [openGroupId, setOpenGroupId] = useState(null)
   useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
   useBackLayer(showMergeSheet, () => setShowMergeSheet(false), 'merge-recipes')
+  useBackLayer(!!openGroupId, () => setOpenGroupId(null), 'group-members')
 
   const toggleMergeMode = () => {
     setMergeMode(v => !v)
@@ -111,6 +114,26 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
     ? filtered.filter(r => (collectionRecipeMap[activeCollection] || new Set()).has(r.id))
     : filtered
 
+  // Grouping is purely a display arrangement — recipes are always fully
+  // independent rows; this just clusters ones sharing a group_id into one
+  // card. Skipped while merge-mode's own selection UI is active.
+  const showGrouped = groupedView && !mergeMode
+  const displayItems = useMemo(() => {
+    if (!showGrouped) return visibleRecipes.map(r => ({ type: 'recipe', recipe: r }))
+    const groupMap = new Map(recipeGroups.map(g => [g.id, g]))
+    const seenGroups = new Set()
+    const items = []
+    for (const r of visibleRecipes) {
+      const group = r.group_id && groupMap.get(r.group_id)
+      if (!group) { items.push({ type: 'recipe', recipe: r }); continue }
+      if (seenGroups.has(group.id)) continue
+      seenGroups.add(group.id)
+      items.push({ type: 'group', group, members: visibleRecipes.filter(x => x.group_id === group.id) })
+    }
+    return items
+  }, [visibleRecipes, showGrouped, recipeGroups])
+  const openGroup = openGroupId ? displayItems.find(item => item.type === 'group' && item.group.id === openGroupId) : null
+
   const translatedMealTypes = MEAL_TYPES.map(m => ({ ...m, label: t(`mealTypes.${m.key}`) }))
   const translatedMainIngredients = MAIN_INGREDIENTS.map(m => ({ ...m, label: t(`mainIngredients.${m.key}`) }))
   const translatedDietTags = DIET_TAGS.map(d => ({ ...d, label: t(`diet.${d.key}`) }))
@@ -163,6 +186,11 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         {!isGuest && (
           <button onClick={toggleMergeMode} aria-pressed={mergeMode} style={{ ...toolbarButtonStyle, background: mergeMode ? 'var(--tomato)' : 'var(--card)', color: mergeMode ? '#fffdf9' : 'var(--charcoal-soft)' }}>
             <span>{mergeMode ? t('recipesView.cancelMerge') : t('recipesView.mergeBtn')}</span>
+          </button>
+        )}
+        {!isGuest && (
+          <button onClick={() => setGroupedView(v => !v)} aria-pressed={groupedView} style={{ ...toolbarButtonStyle, background: groupedView ? 'var(--tomato)' : 'var(--card)', color: groupedView ? '#fffdf9' : 'var(--charcoal-soft)' }}>
+            <span>{t('recipesView.groupedBtn')}</span>
           </button>
         )}
       </div>
@@ -229,13 +257,15 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         <Empty>{query || activeFilterCount > 0 || activeCollection ? t('recipesView.noMatch') : t('recipesView.noRecipes')}</Empty>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {visibleRecipes.map(r => (
+          {displayItems.map(item => item.type === 'group' ? (
+            <GroupCard key={`group-${item.group.id}`} group={item.group} members={item.members} onOpen={() => setOpenGroupId(item.group.id)} />
+          ) : (
             <RecipeCard
-              key={r.id} recipe={r}
-              onClick={() => mergeMode ? toggleMergeSelected(r.id) : onSelect(r)}
+              key={item.recipe.id} recipe={item.recipe}
+              onClick={() => mergeMode ? toggleMergeSelected(item.recipe.id) : onSelect(item.recipe)}
               highlightIngredient={searchMode === 'ingredient' ? query : null}
-              compactMode={compactMode} cookStat={cookCounts[r.id]}
-              mergeMode={mergeMode} mergeSelected={mergeSelectedIds.has(r.id)}
+              compactMode={compactMode} cookStat={cookCounts[item.recipe.id]}
+              mergeMode={mergeMode} mergeSelected={mergeSelectedIds.has(item.recipe.id)}
             />
           ))}
         </div>
@@ -257,6 +287,16 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
             setMergeSelectedIds(new Set())
             await onRecipesChanged?.()
           }}
+        />
+      )}
+
+      {openGroup && (
+        <GroupMembersSheet
+          group={openGroup.group}
+          members={openGroup.members}
+          onClose={() => setOpenGroupId(null)}
+          onOpenRecipe={recipe => { setOpenGroupId(null); onSelect(recipe) }}
+          onUngrouped={async () => { setOpenGroupId(null); await onRecipesChanged?.() }}
         />
       )}
     </div>
@@ -400,6 +440,83 @@ export function RecipeCard({ recipe: r, onClick, highlightIngredient, compactMod
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function GroupCard({ group, members, onOpen }) {
+  const { t } = useT()
+  const photoMembers = members.filter(m => m.photo_url).slice(0, 3)
+  return (
+    <div onClick={onOpen} style={{
+      background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
+      display: 'flex', gap: 12, alignItems: 'center',
+    }}>
+      <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
+        {photoMembers.length > 0 ? photoMembers.map((m, i) => (
+          <img key={m.id} src={m.photo_url} alt="" style={{
+            position: 'absolute', width: 40, height: 40, borderRadius: 8, objectFit: 'cover',
+            border: '2px solid var(--card)', left: i * 6, top: i * 6, zIndex: photoMembers.length - i,
+          }} />
+        )) : (
+          <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--parchment-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🍽</div>
+        )}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, color: 'var(--charcoal)' }}>{group.name}</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 4 }}>
+          {t('recipesView.groupCount')(members.length)}
+        </div>
+      </div>
+      <span style={{ color: 'var(--tomato-deep)', fontSize: 20 }}>&gt;</span>
+    </div>
+  )
+}
+
+function GroupMembersSheet({ group, members, onClose, onOpenRecipe, onUngrouped }) {
+  const { t } = useT()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleUngroup = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const { error: updateError } = await supabase.from('recipes').update({ group_id: null }).in('id', members.map(m => m.id))
+      if (updateError) throw updateError
+      await supabase.from('recipe_groups').delete().eq('id', group.id)
+      await onUngrouped?.()
+    } catch (err) {
+      setError(err.message || t('recipesView.ungroupError'))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div onMouseDown={e => e.target === e.currentTarget && onClose()} style={sheetBackdropStyle}>
+      <section style={sheetStyle} role="dialog" aria-modal="true" aria-labelledby="group-members-title">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <h2 id="group-members-title" style={{ margin: 0, flex: 1, fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--tomato-deep)' }}>{group.name}</h2>
+          <button onClick={onClose} aria-label={t('recipesView.closeFilters')} style={iconButtonStyle}><CloseIcon /></button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+          {members.map(m => (
+            <button key={m.id} onClick={() => onOpenRecipe(m)} style={groupMemberButtonStyle}>
+              {m.photo_url ? (
+                <img src={m.photo_url} alt="" style={{ width: 46, height: 46, borderRadius: 8, objectFit: 'cover' }} />
+              ) : (
+                <span style={{ width: 46, height: 46, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--parchment-dim)', fontSize: 20 }}>🍽</span>
+              )}
+              <b style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{m.title}</b>
+              <span style={{ color: 'var(--tomato-deep)', fontSize: 20 }}>&gt;</span>
+            </button>
+          ))}
+        </div>
+        {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
+        <button onClick={handleUngroup} disabled={busy} style={{ ...ungroupButtonStyle, opacity: busy ? 0.6 : 1 }}>
+          {busy ? t('recipesView.ungrouping') : t('recipesView.ungroupBtn')}
+        </button>
+      </section>
     </div>
   )
 }
@@ -559,3 +676,5 @@ const mergeFabStyle = {
   zIndex: 90, padding: '13px 22px', borderRadius: 99, border: 0, background: 'var(--tomato)', color: '#fffdf9',
   fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 8px 24px rgba(42,36,32,0.28)',
 }
+const groupMemberButtonStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 7, border: '1px solid var(--line)', borderRadius: 10, background: 'var(--parchment)', color: 'var(--charcoal)', cursor: 'pointer', boxSizing: 'border-box' }
+const ungroupButtonStyle = { width: '100%', minHeight: 44, border: '1px solid var(--tomato)', borderRadius: 10, background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
