@@ -11,6 +11,7 @@ import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import './settings-view.css'
 import { useBackLayer } from '../../lib/useBackLayer'
 import { ALWAYS_STOCKED, getAlwaysStocked, saveAlwaysStocked } from '../../lib/aisles'
+import TemplateImportCard from '../TemplateImportCard'
 
 // Sentinel key for recipes with no category, so they can be selected in the
 // PDF filter alongside real category names.
@@ -34,7 +35,7 @@ const SEARCH_INDEX = [
   { section: 'tags',       key: 'settings.manageAllergenTags',   extra: 'allergens allergy gluten dairy nuts allergenen lactose noten' },
   { section: 'backup',     key: 'settings.fullBackup',           extra: 'backup export json download reservekopie' },
   { section: 'backup',     key: 'settings.printableCookbook',    extra: 'pdf print cookbook printen kookboek' },
-  { section: 'backup',     key: 'settings.importBackup',         extra: 'import restore merge replace herstellen importeren' },
+  { section: 'backup',     key: 'settings.importBackup',         extra: 'import restore merge replace herstellen importeren template sjabloon upload recipes' },
   { section: 'backup',     key: 'settings.storageLabel',         extra: 'storage cache space offline opslag ruimte wissen' },
   { section: 'general',    key: 'settings.instanceLabel',        extra: 'instance version build supabase project versie' },
   { section: 'general',    key: 'settings.checkForUpdates',      extra: 'update upgrade new version bijwerken update versie nieuw' },
@@ -274,6 +275,7 @@ export default function SettingsView({
             </div>
 
             <SectionLabel>{t('settings.restoreLabel')}</SectionLabel>
+            <TemplateImportCard existingRecipes={recipes} onImported={onRecipesChanged} />
             <ImportBackupCard
               existingRecipes={recipes}
               onImported={onRecipesChanged}
