@@ -9,6 +9,8 @@ export default function ExtrasStep({
   existingCategories, existingSubcategories = {},
   photoPreview, onPhotoChange, onPhotoUrlPaste,
   notes, setNotes, tags, setTags, existingTags,
+  fridgeStorage, setFridgeStorage, freezerFriendly, setFreezerFriendly,
+  reheatInstructions, setReheatInstructions, prepAhead, setPrepAhead,
 }) {
   const { t } = useT()
   const [photoUrlDraft, setPhotoUrlDraft] = useState('')
@@ -145,6 +147,55 @@ export default function ExtrasStep({
       <label style={{ ...labelStyle, marginTop: 18 }}>
         <span style={labelTextStyle}>{t('extrasStep.tagsLabel')}</span>
         <TagPicker tags={tags} setTags={setTags} existingTags={existingTags} />
+      </label>
+
+      <div style={{ ...labelTextStyle, marginTop: 22, marginBottom: 6, fontWeight: 700 }}>
+        {t('extrasStep.storageHeading')}
+      </div>
+
+      <label style={{ ...labelStyle, marginBottom: 14 }}>
+        <span style={labelTextStyle}>{t('extrasStep.fridgeStorageLabel')}</span>
+        <input
+          type="text" value={fridgeStorage} onChange={e => setFridgeStorage(e.target.value)}
+          placeholder={t('extrasStep.fridgeStoragePlaceholder')}
+          style={inputStyle}
+        />
+      </label>
+
+      <div style={{ ...labelStyle, marginBottom: 14 }}>
+        <span style={labelTextStyle}>{t('extrasStep.freezerLabel')}</span>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          {[[true, 'freezerYes'], [false, 'freezerNo'], [null, 'freezerUnknown']].map(([value, key]) => (
+            <button
+              key={key} type="button" onClick={() => setFreezerFriendly(value)}
+              style={{
+                flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+                border: `1px solid ${freezerFriendly === value ? 'var(--tomato)' : 'var(--line)'}`,
+                background: freezerFriendly === value ? 'var(--tomato)' : 'var(--card)',
+                color: freezerFriendly === value ? 'var(--card)' : 'var(--charcoal)',
+                fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
+              }}
+            >{t(`extrasStep.${key}`)}</button>
+          ))}
+        </div>
+      </div>
+
+      <label style={{ ...labelStyle, marginBottom: 14 }}>
+        <span style={labelTextStyle}>{t('extrasStep.reheatLabel')}</span>
+        <input
+          type="text" value={reheatInstructions} onChange={e => setReheatInstructions(e.target.value)}
+          placeholder={t('extrasStep.reheatPlaceholder')}
+          style={inputStyle}
+        />
+      </label>
+
+      <label style={labelStyle}>
+        <span style={labelTextStyle}>{t('extrasStep.prepAheadLabel')}</span>
+        <input
+          type="text" value={prepAhead} onChange={e => setPrepAhead(e.target.value)}
+          placeholder={t('extrasStep.prepAheadPlaceholder')}
+          style={inputStyle}
+        />
       </label>
     </div>
   )

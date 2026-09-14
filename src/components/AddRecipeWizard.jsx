@@ -46,6 +46,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
   const [photoPreview, setPhotoPreview] = useState(existingRecipe?.photo_url || null)
   const [notes, setNotes] = useState(existingRecipe?.notes || '')
   const [tags, setTags] = useState(existingRecipe?.tags || [])
+  const [fridgeStorage, setFridgeStorage] = useState(existingRecipe?.fridge_storage || '')
+  const [freezerFriendly, setFreezerFriendly] = useState(existingRecipe?.freezer_friendly ?? null)
+  const [reheatInstructions, setReheatInstructions] = useState(existingRecipe?.reheat_instructions || '')
+  const [prepAhead, setPrepAhead] = useState(existingRecipe?.prep_ahead || '')
 
   // Variants — support multiple (existing recipes like Gyoza/Tiramisu have several)
   const [variants, setVariants] = useState(existingRecipe?.variants || [])
@@ -145,6 +149,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
         notes: notes.trim() || null,
         tags,
         photo_url,
+        fridge_storage: fridgeStorage.trim() || null,
+        freezer_friendly: freezerFriendly,
+        reheat_instructions: reheatInstructions.trim() || null,
+        prep_ahead: prepAhead.trim() || null,
       }
 
       let data, saveError
@@ -200,6 +208,10 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             photoPreview={photoPreview} onPhotoChange={handlePhotoChange} onPhotoUrlPaste={handlePhotoUrlPaste}
             notes={notes} setNotes={setNotes}
             tags={tags} setTags={setTags} existingTags={existingTags}
+            fridgeStorage={fridgeStorage} setFridgeStorage={setFridgeStorage}
+            freezerFriendly={freezerFriendly} setFreezerFriendly={setFreezerFriendly}
+            reheatInstructions={reheatInstructions} setReheatInstructions={setReheatInstructions}
+            prepAhead={prepAhead} setPrepAhead={setPrepAhead}
           />
         )}
         {step === 'variant' && (
