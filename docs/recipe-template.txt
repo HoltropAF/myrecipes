@@ -1,7 +1,8 @@
-RECIPE TEMPLATE
-Fill in one block per recipe. Repeat the whole block for more recipes.
-Required: Name, Ingredients, Steps. Other fields can be left blank.
-Upload this file from Settings > Restore to import your recipes.
+# RECIPE TEMPLATE
+# Fill in one block per recipe. Repeat the whole block for more recipes.
+# Required: Name, Ingredients, Steps. Other fields can be left blank.
+# Upload this file from Settings > Restore to import your recipes.
+# Lines starting with # are instructions - delete them or leave them, they're ignored either way.
 
 --- RECIPE ---
 Name:
@@ -14,22 +15,19 @@ Tags (separate with commas):
 Source (link or description):
 
 INGREDIENTS
-One ingredient per line: amount | unit | name | optional note
-Use a decimal for fractions, for example 0.5. Leave unknown amounts blank.
-Example: 200 | g | pasta | dry weight
-Example: | | salt | to taste
-Use [Section name] to group ingredients if needed.
+# One ingredient per line: amount | unit | name | optional note
+# Use a decimal for fractions, for example 0.5. Leave unknown amounts blank.
+# Example: 200 | g | pasta | dry weight
+# Example: | | salt | to taste
+# Use [Section name] to group ingredients if needed.
 
 STEPS
-One numbered instruction per step.
-Include temperatures and timings in the instruction.
-1.
-2.
-3.
+# One numbered instruction per step, for example: 1. Boil the water.
+# Include temperatures and timings in the instruction.
 
 NOTES
-Preparation, storage, reheating, or serving notes:
+# Preparation, storage, reheating, or serving notes.
 
 VARIATIONS (optional)
-Name and changes to ingredients or steps:
+# Name and changes to ingredients or steps.
 --- END RECIPE ---
