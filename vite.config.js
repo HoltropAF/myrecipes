@@ -19,7 +19,7 @@ export default defineConfig({
         name: 'myrecipes',
         short_name: 'myrecipes',
         description: 'Your personal recipe book',
-        theme_color: '#c1432f',
+        theme_color: '#fffdf9',
         background_color: '#fdf8f0',
         display: 'standalone',
         start_url: '/',
