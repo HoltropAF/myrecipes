@@ -8,7 +8,7 @@ export default function VariantStep({
   variantLabel, setVariantLabel,
   groups, setGroups, paste, setPaste,
   stepGroups, setStepGroups, stepPaste, setStepPaste,
-  savedVariants = [], onAddVariant, onRemoveVariant,
+  savedVariants = [], onAddVariant, onRemoveVariant, onUpdateVariantPhoto,
   photoPreview, onPhotoChange, onPhotoUrlPaste,
 }) {
   const [photoUrlDraft, setPhotoUrlDraft] = useState('')
@@ -64,8 +64,21 @@ export default function VariantStep({
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
               background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
             }}>
-              {v.photo_url && (
-                <img src={v.photo_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              {onUpdateVariantPhoto && (
+                <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}>
+                  {v.photo_url ? (
+                    <img src={v.photo_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 8, border: '1px dashed var(--line)',
+                      display: 'grid', placeItems: 'center', fontSize: 16, color: 'var(--charcoal-soft)',
+                    }}>+</div>
+                  )}
+                  <input
+                    type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => onUpdateVariantPhoto(v.id, e.target.files?.[0] || null)}
+                  />
+                </label>
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--charcoal)' }}>{v.label}</div>

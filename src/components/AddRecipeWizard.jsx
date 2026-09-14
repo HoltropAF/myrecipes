@@ -142,6 +142,20 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
 
   const removeVariant = (id) => setVariants(prev => prev.filter(v => v.id !== id))
 
+  // Sets or replaces the photo on an already-saved variant, in place — the
+  // compose form's photo picker only covers a variant while it's being built.
+  const updateVariantPhoto = (variantId, file) => {
+    if (!file) {
+      setVariants(prev => prev.map(v => v.id === variantId ? { ...v, photoFile: null, photo_url: null } : v))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setVariants(prev => prev.map(v => v.id === variantId ? { ...v, photoFile: file, photo_url: reader.result } : v))
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setError(null)
@@ -263,6 +277,7 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
             savedVariants={variants}
             onAddVariant={addCurrentVariant}
             onRemoveVariant={removeVariant}
+            onUpdateVariantPhoto={updateVariantPhoto}
             photoPreview={variantPhotoPreview}
             onPhotoChange={handleVariantPhotoChange}
             onPhotoUrlPaste={handleVariantPhotoUrlPaste}
