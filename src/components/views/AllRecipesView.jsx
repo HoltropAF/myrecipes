@@ -167,7 +167,10 @@ export default function AllRecipesView({ recipes, loading, onSelect, onAdd, sear
         )}
       </div>
       {mergeMode && (
-        <div style={{ ...emptyStyle, borderStyle: 'solid', textAlign: 'left', padding: '10px 12px', marginBottom: 10 }}>
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--charcoal-soft)', lineHeight: 1.5,
+          border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, background: 'var(--card)',
+        }}>
           {t('recipesView.mergeHint')}
         </div>
       )}
