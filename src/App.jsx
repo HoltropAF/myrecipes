@@ -278,15 +278,18 @@ function AppInner({ setLanguage }) {
 
   // Status bar / notification tray color. Most screens sit on the plain
   // --card background, but Home has its own full-bleed "landscape" banner
-  // (home-view.css) whose top band is color-mix(--tomato-deep 78%, --charcoal)
-  // — a single static color can't be right for both, so this recomputes
-  // whenever the theme, palette, or current screen changes.
+  // (home-view.css) whose top band is --home-dark — a color-mix that uses a
+  // *different* base color and ratio per theme (light blends --tomato-deep
+  // with --charcoal at 78%; dark blends it with a fixed near-black at 55%,
+  // since --charcoal itself flips to a light text color in dark mode). A
+  // single static color, or one formula for both themes, can't be right.
   useEffect(() => {
     const style = getComputedStyle(document.documentElement)
     const card = style.getPropertyValue('--card').trim()
     const onHomeBanner = !selectedRecipe && activeTab === 'home'
+    const tomatoDeep = style.getPropertyValue('--tomato-deep').trim()
     const color = onHomeBanner
-      ? blendHex(style.getPropertyValue('--tomato-deep').trim(), 0.78, style.getPropertyValue('--charcoal').trim())
+      ? (resolveTheme(theme) === 'dark' ? blendHex(tomatoDeep, 0.55, '#171719') : blendHex(tomatoDeep, 0.78, style.getPropertyValue('--charcoal').trim()))
       : card
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta && color) meta.content = color
