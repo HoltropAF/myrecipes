@@ -11,7 +11,7 @@ import { useT } from '../lib/i18n'
 //    collapse them into one card. Unlinking just clears group_id again.
 export default function MergeRecipesSheet({ recipes, onClose, onMerged }) {
   const { t } = useT()
-  const [mode, setMode] = useState('merge')
+  const [mode, setMode] = useState('link')
   const [baseId, setBaseId] = useState(recipes[0]?.id)
   const [combinedName, setCombinedName] = useState(recipes[0]?.title || '')
   const [labels, setLabels] = useState(() => Object.fromEntries(recipes.map(r => [r.id, r.title])))
