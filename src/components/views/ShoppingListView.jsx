@@ -5,12 +5,23 @@ import { classifyAisle, isAlwaysStocked, AISLE_ORDER } from '../../lib/aisles'
 import LoadingGyoza from '../LoadingGyoza'
 import SwipeToDelete from '../SwipeToDelete'
 import { useT } from '../../lib/i18n'
+import { createCheckedItemGrace } from '../../lib/checkedItemGrace'
 
 const GROUPING_KEY = 'mr_shopping_grouping_v1'
+const AUTO_HIDE_KEY = 'mr_shopping_auto_hide_v1'
+const readAutoHide = () => {
+  try { return localStorage.getItem(AUTO_HIDE_KEY) === 'true' } catch { return false }
+}
 
-export default function ShoppingListView({ userId, isGuest = false, recipes = [] }) {
-  const { t } = useT()
-  const [items, setItems] = useState([])
+export default function ShoppingListView({ userId, isGuest = false, recipes = [], demoItems = [] }) {
+  const { t, lang } = useT()
+  const nl = lang === 'nl'
+  const [autoHide, setAutoHide] = useState(readAutoHide)
+  const [hideChecked, setHideChecked] = useState(autoHide)
+  const [graceIds, setGraceIds] = useState(new Set())
+  const [checkGrace] = useState(() => createCheckedItemGrace(setGraceIds))
+  useEffect(() => () => checkGrace.dispose(), [checkGrace])
+  const [items, setItems] = useState(() => isGuest ? demoItems.map(item => ({ ...item })) : [])
   const [loaded, setLoaded] = useState(false)
   const [manualInput, setManualInput] = useState('')
   // Remembered because it's a standing preference about how you shop, not a
@@ -63,6 +74,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
   const clearChecked = async () => {
     const checkedIds = items.filter(i => i.checked).map(i => i.id)
     if (checkedIds.length === 0) return
+    checkGrace.cancel(checkedIds)
     setItems(prev => prev.filter(i => !i.checked))
     if (isGuest) return
     await supabase.from('shopping_list').delete().in('id', checkedIds)
@@ -70,6 +82,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
 
   // Delete a whole merged row in one request rather than one per underlying id.
   const removeGroup = async (ids) => {
+    checkGrace.cancel(ids)
     setItems(prev => prev.filter(i => !ids.includes(i.id)))
     if (isGuest) return
     await supabase.from('shopping_list').delete().in('id', ids)
@@ -80,6 +93,10 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
   const setGroupChecked = async (ids, checked) => {
     const affected = items.filter(i => ids.includes(i.id) && !!i.checked !== checked)
     if (affected.length === 0) return
+    if (checked && (autoHide || hideChecked)) {
+      checkGrace.begin(ids)
+      if (autoHide) setHideChecked(true)
+    } else checkGrace.cancel(ids)
     setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, checked } : i))
     if (isGuest) return
     await supabase.from('shopping_list').update({ checked }).in('id', affected.map(i => i.id))
@@ -168,6 +185,9 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
   const recipeTitle = (id) => recipes.find(r => r.id === id)?.title || null
 
   const checkedCount = items.filter(i => i.checked).length
+  const visibleSections = sections
+    .map(section => ({ ...section, rows: hideChecked ? section.rows.filter(row => !row.checked || row.ids.some(id => graceIds.has(id))) : section.rows }))
+    .filter(section => section.rows.length > 0)
 
   return (
     <div style={{ padding: '0 20px 100px' }}>
@@ -191,21 +211,31 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
         }}>{t('shopping.addBtn')}</button>
       </div>
 
-      {!loading && mergedList.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+      {!loading && (
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 4, marginBottom: 14 }}>
           {['aisle', 'recipe', 'alpha'].map(mode => (
             <button
               key={mode}
               onClick={() => changeGrouping(mode)}
               style={{
-                padding: '5px 12px', borderRadius: 99, cursor: 'pointer',
+                minHeight: 44, padding: '5px 8px', borderRadius: 99, cursor: 'pointer', whiteSpace: 'nowrap',
                 border: `1px solid ${grouping === mode ? 'var(--tomato)' : 'var(--line)'}`,
                 background: grouping === mode ? 'var(--tomato)' : 'var(--card)',
                 color: grouping === mode ? 'var(--card)' : 'var(--charcoal-soft)',
-                fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+                fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600,
               }}
             >{t(`shopping.grouping.${mode}`)}</button>
           ))}
+          <label title={nl ? 'Aangevinkte items na 3 seconden automatisch verbergen' : 'Automatically hide checked items after 3 seconds'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, padding: '5px 6px', marginLeft: 'auto', border: '1px solid var(--line)', borderRadius: 99, background: 'var(--card)', fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--charcoal-soft)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+            <input type="checkbox" checked={autoHide} aria-label={nl ? 'Aangevinkte items na 3 seconden automatisch verbergen' : 'Automatically hide checked items after 3 seconds'} onChange={e => {
+              const enabled = e.target.checked
+              setAutoHide(enabled); setHideChecked(enabled)
+              if (enabled) checkGrace.begin(items.filter(item => item.checked).map(item => item.id))
+              else checkGrace.cancel(items.map(item => item.id))
+              try { localStorage.setItem(AUTO_HIDE_KEY, String(enabled)) } catch { /* preference remains for this visit */ }
+            }} style={{ width: 16, height: 16, margin: 0, flexShrink: 0, accentColor: 'var(--sage)' }} />
+            Auto-hide
+          </label>
         </div>
       )}
 
@@ -215,7 +245,13 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
         <Empty>{t('shopping.emptyState')}</Empty>
       ) : (
         <>
-          {sections.map(section => (
+          {checkedCount > 0 && <button type="button" onClick={() => setHideChecked(value => !value)} aria-pressed={hideChecked} style={{ ...checkedActionStyle, marginBottom: 14 }}>
+            {nl
+              ? `${checkedCount} aangevinkte item${checkedCount === 1 ? '' : 's'} ${hideChecked ? 'tonen' : 'verbergen'}`
+              : `${hideChecked ? 'Show' : 'Hide'} ${checkedCount} checked item${checkedCount === 1 ? '' : 's'}`}
+          </button>}
+          {hideChecked && visibleSections.length === 0 && <div role="status"><Empty>{nl ? 'Alles is aangevinkt. Toon de items om ze terug te zetten.' : 'Everything is checked. Show the items to bring them back.'}</Empty></div>}
+          {visibleSections.map(section => (
             <div key={section.key} style={{ marginBottom: 14 }}>
               {section.label && (
                 <div style={{
@@ -242,6 +278,7 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
                         borderBottom: i < section.rows.length - 1 ? '1px solid var(--line)' : 'none',
                       }}>
                         <button
+                          type="button" role="checkbox" aria-checked={g.checked} aria-label={g.displayName}
                           onClick={() => setGroupChecked(g.ids, !g.checked)}
                           style={{
                             width: 22, height: 22, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
@@ -283,10 +320,9 @@ export default function ShoppingListView({ userId, isGuest = false, recipes = []
           ))}
 
           {checkedCount > 0 && (
-            <button onClick={clearChecked} style={{
-              width: '100%', padding: '11px 0', borderRadius: 9, border: '1px solid var(--line)',
-              background: 'none', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-            }}>{t('shopping.clearChecked')(checkedCount)}</button>
+            <button type="button" onClick={clearChecked} style={{ ...checkedActionStyle, color: 'var(--tomato-deep)' }}>
+              {nl ? 'Alle aangevinkte items verwijderen' : 'Remove all checked items'}
+            </button>
           )}
         </>
       )}
@@ -308,3 +344,4 @@ const optionalBadgeStyle = {
   background: 'color-mix(in srgb, var(--tomato) 8%, var(--card))',
   color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 600,
 }
+const checkedActionStyle = { width: '100%', minHeight: 44, padding: '11px 12px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }

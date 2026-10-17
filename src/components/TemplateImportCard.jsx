@@ -12,6 +12,7 @@ export default function TemplateImportCard({ existingRecipes, onImported }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [pasted, setPasted] = useState('')
   const input = useRef(null)
   const lock = useRef(false)
   const entries = parsed ? markTemplateDuplicates(parsed.recipes, existingRecipes) : []
@@ -63,6 +64,15 @@ export default function TemplateImportCard({ existingRecipes, onImported }) {
           />
         </label>
       </div>
+
+      <label style={{ ...hintStyle, display: 'block', marginTop: 12 }}>
+        {nl ? 'Of plak het ingevulde receptsjabloon' : 'Or paste the completed recipe template'}
+        <textarea value={pasted} onChange={e => { setPasted(e.target.value); setParsed(null); setError(''); setMessage('') }} disabled={busy} maxLength={500000}
+          rows={8} style={{ width: '100%', boxSizing: 'border-box', marginTop: 6 }} />
+      </label>
+      <button type="button" disabled={busy || !pasted.trim()} onClick={() => readFile(new Blob([pasted]))} style={secondaryBtnStyle}>
+        {nl ? 'Geplakt recept bekijken' : 'Preview pasted recipe'}
+      </button>
 
       {error && <div role="alert" style={errorTextStyle}>{error}</div>}
       {message && <div role="status" style={doneStyle}>{message}</div>}

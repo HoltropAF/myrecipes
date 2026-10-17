@@ -22,8 +22,8 @@ const relativeLabels = (t) => ({
   years: (n) => t('relative.years')(n),
 })
 
-export default function AllRecipesView({ recipes, loading, onSelect, searchMode = 'title', compactMode = false, onCompactModeChange, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, isGuest = false, onRecipesChanged, recipeGroups = [], groupedView = false, onGroupedViewChange }) {
-  const { t } = useT()
+export default function AllRecipesView({ recipes, loading, onSelect, searchMode = 'title', compactMode = false, cookCounts = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onRecipesChanged, recipeGroups = [], groupedView = false, onGroupedViewChange, mergeMode = false, onMergeModeChange }) {
+  const { t, lang } = useT()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [mealTypeFilter, setMealTypeFilter] = useState(null)
@@ -32,19 +32,16 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
   const [showFilters, setShowFilters] = useState(false)
   const [wishlistOnly, setWishlistOnly] = useState(false)
   const [activeCollection, setActiveCollection] = useState(null)
-  const [mergeMode, setMergeMode] = useState(false)
   const [mergeSelectedIds, setMergeSelectedIds] = useState(new Set())
   const [showMergeSheet, setShowMergeSheet] = useState(false)
   const [openGroupId, setOpenGroupId] = useState(null)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
   useBackLayer(showFilters, () => setShowFilters(false), 'recipe-filters')
   useBackLayer(showMergeSheet, () => setShowMergeSheet(false), 'merge-recipes')
   useBackLayer(!!openGroupId, () => setOpenGroupId(null), 'group-members')
 
   const toggleMergeMode = () => {
-    setMergeMode(v => !v)
+    onMergeModeChange?.(!mergeMode)
     setMergeSelectedIds(new Set())
-    setShowMoreMenu(false)
   }
   const toggleMergeSelected = (id) => {
     setMergeSelectedIds(prev => {
@@ -135,7 +132,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
   const translatedDietTags = DIET_TAGS.map(d => ({ ...d, label: t(`diet.${d.key}`) }))
 
   return (
-    <div style={{ padding: '0 20px 100px' }}>
+    <div style={{ padding: mergeMode ? '0 20px 180px' : '0 20px 100px' }}>
       <div style={{ marginBottom: 14 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', margin: 0 }}>{t('recipesView.title')}</h1>
       </div>
@@ -175,39 +172,10 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
           <option value="last-cooked">{t('recipesView.sortLastCooked')}</option>
           <option value="time">{t('recipesView.sortTime')}</option>
         </select>
-        <button onClick={() => onCompactModeChange?.(!compactMode)} aria-pressed={compactMode} style={{ ...toolbarButtonStyle, background: compactMode ? 'var(--tomato)' : 'var(--card)', color: compactMode ? '#fffdf9' : 'var(--charcoal-soft)' }}>
-          <RowsIcon /> <span>{t('recipesView.compact')}</span>
+        <button type="button" onClick={() => onGroupedViewChange?.(!groupedView)} aria-label={lang === 'nl' ? 'Gegroepeerde weergave' : 'Grouped view'} title={groupedView ? (lang === 'nl' ? 'Recepten apart tonen' : 'Show recipes separately') : (lang === 'nl' ? 'Recepten gegroepeerd tonen' : 'Show recipes grouped')} aria-pressed={groupedView} disabled={mergeMode}
+          style={{ ...toolbarButtonStyle, opacity: mergeMode ? 0.5 : 1, background: groupedView ? 'var(--tomato)' : 'var(--card)', color: groupedView ? '#fffdf9' : 'var(--charcoal-soft)' }}>
+          <GroupViewIcon grouped={groupedView} />
         </button>
-        {!isGuest && (
-          mergeMode ? (
-            <button onClick={toggleMergeMode} style={{ ...toolbarButtonStyle, background: 'var(--tomato)', color: '#fffdf9' }}>
-              <span>{t('recipesView.cancelMerge')}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowMoreMenu(v => !v)} aria-expanded={showMoreMenu} aria-label={t('recipesView.moreBtn')}
-              style={{ ...toolbarButtonStyle, width: 36, justifyContent: 'center', padding: 0, background: (groupedView || showMoreMenu) ? 'var(--tomato)' : 'var(--card)', color: (groupedView || showMoreMenu) ? '#fffdf9' : 'var(--charcoal-soft)' }}
-            ><MoreIcon /></button>
-          )
-        )}
-
-        {showMoreMenu && (
-          <>
-            <div onClick={() => setShowMoreMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 95 }} />
-            <div style={moreMenuStyle}>
-              <button
-                onClick={() => { onGroupedViewChange?.(!groupedView); setShowMoreMenu(false) }}
-                style={{ ...moreMenuItemStyle, borderTop: 'none' }}
-              >
-                <span>{t('recipesView.groupedBtn')}</span>
-                {groupedView && <span style={{ color: 'var(--tomato-deep)', fontWeight: 700 }}>✓</span>}
-              </button>
-              <button onClick={toggleMergeMode} style={moreMenuItemStyle}>
-                <span>{t('recipesView.mergeBtn')}</span>
-              </button>
-            </div>
-          </>
-        )}
       </div>
       {mergeMode && (
         <div style={{
@@ -301,10 +269,21 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
         </div>
       )}
 
-      {mergeMode && mergeSelectedIds.size >= 2 && (
-        <button onClick={() => setShowMergeSheet(true)} style={mergeFabStyle}>
-          {t('recipesView.mergeSelected')(mergeSelectedIds.size)}
-        </button>
+      {mergeMode && (
+        <div role="group" aria-label={lang === 'nl' ? 'Receptselectie' : 'Recipe selection'} style={selectionBarStyle}>
+          <div role="status" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--charcoal-soft)', marginBottom: 8 }}>
+            {mergeSelectedIds.size < 2
+              ? (lang === 'nl' ? 'Selecteer minstens 2 recepten' : 'Select at least 2 recipes')
+              : (lang === 'nl' ? `${mergeSelectedIds.size} recepten geselecteerd` : `${mergeSelectedIds.size} recipes selected`)}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={toggleMergeMode} style={selectionCancelStyle}>{t('recipesView.cancelMerge')}</button>
+            <button type="button" disabled={mergeSelectedIds.size < 2} onClick={() => setShowMergeSheet(true)}
+              style={{ ...selectionConfirmStyle, opacity: mergeSelectedIds.size < 2 ? 0.5 : 1, cursor: mergeSelectedIds.size < 2 ? 'default' : 'pointer' }}>
+              {lang === 'nl' ? 'Groeperen / samenvoegen' : 'Group or merge'} ({mergeSelectedIds.size})
+            </button>
+          </div>
+        </div>
       )}
 
       {showMergeSheet && (
@@ -313,7 +292,7 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
           onClose={() => setShowMergeSheet(false)}
           onMerged={async () => {
             setShowMergeSheet(false)
-            setMergeMode(false)
+            onMergeModeChange?.(false)
             setMergeSelectedIds(new Set())
             await onRecipesChanged?.()
           }}
@@ -345,10 +324,9 @@ export default function AllRecipesView({ recipes, loading, onSelect, searchMode 
 
 function SearchIcon() { return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> }
 function FilterIcon() { return <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg> }
-function RowsIcon() { return <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg> }
+function GroupViewIcon({ grouped }) { return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{grouped ? <><rect x="4" y="8" width="16" height="12" rx="2" /><path d="M6 4h12M5 6h14" /></> : <><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="16" rx="1.5" /></>}</svg> }
 function CloseIcon() { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18"/></svg> }
 function HeartIcon({ filled }) { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg> }
-function MoreIcon() { return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg> }
 function MergeCheckbox({ selected }) {
   return (
     <span style={{
@@ -773,18 +751,18 @@ function Empty({ children }) {
 const iconButtonStyle = { width: 34, height: 34, border: 0, borderRadius: 99, background: 'transparent', color: 'var(--charcoal-soft)', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }
 const filterButtonStyle = { minHeight: 38, padding: '0 11px', border: 0, borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
 const sortSelectStyle = { minWidth: 0, flex: 1, height: 36, padding: '0 10px', borderRadius: 99, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--charcoal-soft)', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600 }
-const toolbarButtonStyle = { height: 36, padding: '0 11px', borderRadius: 99, border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }
-const moreMenuStyle = { position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 96, minWidth: 180, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 8px 24px rgba(42,36,32,0.18)', overflow: 'hidden' }
-const moreMenuItemStyle = { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', border: 0, borderTop: '1px solid var(--line)', background: 'none', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const toolbarButtonStyle = { width: 44, height: 44, padding: 0, borderRadius: 99, border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }
 const sheetBackdropStyle = { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(38, 25, 22, 0.38)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingTop: 40 }
 const sheetStyle = { width: '100%', maxWidth: 480, maxHeight: '82dvh', overflowY: 'auto', boxSizing: 'border-box', background: 'var(--card)', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(18px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(55, 23, 18, 0.18)' }
 const clearButtonStyle = { flex: 1, minHeight: 44, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
 const showButtonStyle = { flex: 1.5, minHeight: 44, borderRadius: 12, border: 0, background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, cursor: 'pointer' }
-const mergeFabStyle = {
-  position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(78px + env(safe-area-inset-bottom))',
-  zIndex: 90, padding: '13px 22px', borderRadius: 99, border: 0, background: 'var(--tomato)', color: '#fffdf9',
-  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 8px 24px rgba(42,36,32,0.28)',
+const selectionBarStyle = {
+  position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(78px + env(safe-area-inset-bottom, 0px))',
+  width: 'calc(100% - 32px)', maxWidth: 448, boxSizing: 'border-box', zIndex: 90,
+  padding: 12, borderRadius: 14, border: '1px solid var(--line)', background: 'var(--card)', boxShadow: '0 8px 24px rgba(42,36,32,0.18)',
 }
+const selectionCancelStyle = { minHeight: 46, padding: '8px 14px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--parchment)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0 }
+const selectionConfirmStyle = { flex: 1, minWidth: 0, minHeight: 46, padding: '8px 10px', borderRadius: 9, border: 0, background: 'var(--tomato)', color: '#fffdf9', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13 }
 const groupMemberButtonStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 7, border: '1px solid var(--line)', borderRadius: 10, background: 'var(--parchment)', color: 'var(--charcoal)', cursor: 'pointer', boxSizing: 'border-box' }
 const ungroupButtonStyle = { width: '100%', minHeight: 44, border: '1px solid var(--tomato)', borderRadius: 10, background: 'none', color: 'var(--tomato-deep)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
 const groupSearchInputStyle = { width: '100%', boxSizing: 'border-box', minHeight: 42, padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--parchment)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)', fontSize: 14 }

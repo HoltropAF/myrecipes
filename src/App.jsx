@@ -135,6 +135,7 @@ import FirstRunWizard from './components/FirstRunWizard'
 
 // Lazy-load heavy views and overlays that aren't needed on the initial screen
 const AddRecipeWizard  = lazy(() => import('./components/AddRecipeWizard'))
+const RecipeImportScreen = lazy(() => import('./components/RecipeImportScreen'))
 const RecipeDetail     = lazy(() => import('./components/RecipeDetail'))
 const QuickLogCook     = lazy(() => import('./components/QuickLogCook'))
 const ShoppingListView = lazy(() => import('./components/views/ShoppingListView'))
@@ -172,6 +173,7 @@ function AppInner({ setLanguage }) {
   const [activeTab, setActiveTab] = useState(readLastAppTab)
   const [unitSystem, setUnitSystem] = useState('metric')
   const [showQuickLog, setShowQuickLog] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [theme, setTheme] = useState('auto') // 'light' | 'dark' | 'auto'
   const [palette, setPalette] = useState(() => {
     try { return localStorage.getItem('mr_palette_v1') || 'blush' } catch { return 'blush' }
@@ -185,6 +187,7 @@ function AppInner({ setLanguage }) {
   // there resets on every trip back from a recipe. Doesn't need to survive
   // a full reload the way compactMode does, just this mount/unmount cycle.
   const [groupedView, setGroupedView] = useState(false)
+  const [mergeMode, setMergeMode] = useState(false)
   const [homeIcon, setHomeIcon] = useState(() => {
     try { return localStorage.getItem('mr_home_icon_v1') === 'cookbook' ? 'cookbook' : 'compass' } catch { return 'compass' }
   })
@@ -332,6 +335,7 @@ function AppInner({ setLanguage }) {
   useBackLayer(!!selectedRecipe, closeRecipe, 'recipe')
   useBackLayer(showWizard, closeWizard, 'wizard')
   useBackLayer(showQuickLog, () => setShowQuickLog(false), 'quick-log')
+  useBackLayer(showImport, () => setShowImport(false), 'recipe-import')
   useBackLayer(showFirstRun, () => setShowFirstRun(false), 'first-run')
   useBackLayer(showAllergenDisclaimer, () => setShowAllergenDisclaimer(false), 'allergen-note')
 
@@ -591,6 +595,10 @@ function AppInner({ setLanguage }) {
 
   if (showWizard && isGuest) return null
 
+  if (showImport && !isGuest) {
+    return <LazyScreen><RecipeImportScreen recipes={recipes} onImported={loadRecipes} onClose={() => setShowImport(false)} /></LazyScreen>
+  }
+
   if (showWizard) {
     return (
       <LazyScreen>
@@ -762,7 +770,7 @@ function AppInner({ setLanguage }) {
       )}
       <PullToRefresh onRefresh={loadRecipes} style={{ flex: 1, minHeight: 0, overflowY: activeTab === 'home' ? 'hidden' : 'auto', paddingTop: 20 }}>
         {activeTab === 'home' && (
-          <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => navigateTab('stats')} isGuest={isGuest} />
+          <HomeView recipes={recipes} cookStats={cookCounts} onSelectRecipe={openRecipe} onAddRecipe={openWizard} onImportRecipe={() => setShowImport(true)} onLogCook={() => setShowQuickLog(true)} onOpenStats={() => navigateTab('stats')} isGuest={isGuest} />
         )}
         {activeTab === 'recipes' && (
           <AllRecipesView
@@ -775,6 +783,8 @@ function AppInner({ setLanguage }) {
             compactMode={compactMode}
             onCompactModeChange={value => { setCompactMode(value); savePreferences({ compact_mode: value }) }}
             groupedView={groupedView}
+            mergeMode={mergeMode}
+            onMergeModeChange={setMergeMode}
             onGroupedViewChange={setGroupedView}
             cookCounts={cookCounts}
             collections={isGuest ? [] : collections}
@@ -850,7 +860,7 @@ function AppInner({ setLanguage }) {
           )
         )}
       </PullToRefresh>
-      {!isGuest && activeTab !== 'home' && <FloatingActionButton onAddRecipe={openWizard} onLogCook={() => setShowQuickLog(true)} />}
+      {!isGuest && activeTab !== 'home' && !(activeTab === 'recipes' && mergeMode) && <FloatingActionButton onAddRecipe={openWizard} onImportRecipe={() => setShowImport(true)} onGroupRecipes={() => { navigateTab('recipes'); setMergeMode(true) }} onLogCook={() => setShowQuickLog(true)} />}
       <BottomNav active={activeTab} onChange={navigateTab} homeIcon={homeIcon} />
 
       {showQuickLog && !isGuest && (

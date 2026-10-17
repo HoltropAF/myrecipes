@@ -9,7 +9,7 @@ export default function IngredientsTab({
   checkedIngredients, onToggleChecked, onAddToShoppingList, addedToList,
   recipeNotes = '', swappedIngredients, onSwappedIngredientsChange,
 }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [collapsedGroups, setCollapsedGroups] = useState({})
   const [showSwaps, setShowSwaps] = useState(true)
   const toggleGroup = (gi) => setCollapsedGroups(prev => ({ ...prev, [gi]: !prev[gi] }))
@@ -17,9 +17,9 @@ export default function IngredientsTab({
   return (
     <div>
       {/* Servings adjuster — first thing on this tab so scaling happens before reading amounts */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: 7, marginBottom: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 7, marginBottom: 12 }}>
       {baseServings && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '7px 9px' }}>
+        <div style={{ ...controlSurfaceStyle, display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--charcoal-soft)' }}>{t('ingredientsTab.servings')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
             <StepperBtn onClick={() => onServingsChange(s => Math.max(1, (s || baseServings) - 1))}>−</StepperBtn>
@@ -28,7 +28,7 @@ export default function IngredientsTab({
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 5, marginLeft: 'auto', maxWidth: '100%' }}>
         {/halloumi/i.test(recipeNotes || '') && (
         <button onClick={() => setShowSwaps(value => !value)} style={compactControlStyle}>
           {showSwaps ? 'Hide swaps' : 'Show swaps'}
@@ -37,11 +37,12 @@ export default function IngredientsTab({
         {variants.length > 0 && (
           <select
             value={activeVariant}
+            aria-label={lang === 'nl' ? 'Receptvariant' : 'Recipe variant'}
             onChange={e => onVariantChange(e.target.value)}
             style={{
-              maxWidth: 116, padding: '0 7px', borderRadius: 8, border: '1px solid var(--line)',
-              background: 'var(--card)', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)',
-              fontWeight: 700, fontSize: 10, cursor: 'pointer',
+              ...controlSurfaceStyle, maxWidth: 148, minWidth: 116,
+              color: 'var(--charcoal-soft)', fontFamily: 'var(--font-mono)',
+              fontWeight: 400, fontSize: 12, cursor: 'pointer',
             }}
           >
             <option value="main">{t('ingredientsTab.original')}</option>
@@ -159,3 +160,4 @@ function EmptyRow({ children }) {
 }
 
 const compactControlStyle = { padding: '0 7px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--tomato-deep)', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }
+const controlSurfaceStyle = { minHeight: 44, boxSizing: 'border-box', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '7px 9px' }

@@ -6,8 +6,8 @@ import { supabase } from '../../lib/supabase'
 import { useBackLayer } from '../../lib/useBackLayer'
 import './home-view.css'
 
-export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddRecipe, onLogCook, onOpenStats, isGuest }) {
-  const { t } = useT()
+export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddRecipe, onImportRecipe, onLogCook, onOpenStats, isGuest }) {
+  const { t, lang } = useT()
   const [reportOpen, setReportOpen] = useState(false)
   useBackLayer(reportOpen, () => setReportOpen(false), 'feedback')
   return (
@@ -23,6 +23,7 @@ export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddReci
         <div className="recipe-home__bell"><DecideCard recipes={recipes} cookStats={cookStats} onSelect={onSelectRecipe} homeCompact isGuest={isGuest} /></div>
         {!isGuest && <>
           <HomeRow icon={<RecipeAddIcon />} label={t('fab.addRecipe')} hint={t('home.addRecipeHint', 'Save a new recipe')} onClick={onAddRecipe} />
+          <HomeRow icon={<RecipeAddIcon />} label={lang === 'nl' ? 'Recept importeren' : 'Import recipe'} hint={lang === 'nl' ? 'Van een website of video' : 'From a website or video'} onClick={onImportRecipe} />
           <HomeRow icon={<LogIcon />} label={t('fab.logCook')} hint={t('home.logHint', 'Remember what you made')} onClick={onLogCook} />
         </>}
         <HomeRow icon={<StatsIcon />} label={t('home.stats', 'Kitchen stats')} hint={t('home.statsHint', 'Favourites and forgotten gems')} onClick={onOpenStats} />

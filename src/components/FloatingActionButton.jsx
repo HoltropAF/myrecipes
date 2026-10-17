@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useT } from '../lib/i18n'
 import { useBackLayer } from '../lib/useBackLayer'
 
-export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
-  const { t } = useT()
+export default function FloatingActionButton({ onAddRecipe, onImportRecipe, onGroupRecipes, onLogCook }) {
+  const { t, lang } = useT()
   const [open, setOpen] = useState(false)
   useBackLayer(open, () => setOpen(false), 'quick-actions')
 
@@ -34,6 +34,8 @@ export default function FloatingActionButton({ onAddRecipe, onLogCook }) {
           <>
             <MenuItem label={t('fab.logCook')} icon="📝" onClick={() => runAfterClose(onLogCook)} />
             <MenuItem label={t('fab.addRecipe')} icon="🍳" onClick={() => runAfterClose(onAddRecipe)} />
+            <MenuItem label={lang === 'nl' ? 'Recept importeren' : 'Import recipe'} icon="📥" onClick={() => runAfterClose(onImportRecipe)} />
+            {onGroupRecipes && <MenuItem label={lang === 'nl' ? 'Recepten groeperen of samenvoegen' : 'Group or merge recipes'} icon="🗂" onClick={() => runAfterClose(onGroupRecipes)} />}
           </>
         )}
 

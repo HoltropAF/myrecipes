@@ -1,9 +1,13 @@
+import './meal-prep.css'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/i18n'
 import DopamineShelf from '../DopamineShelf'
 import { useBackLayer } from '../../lib/useBackLayer'
 import { PLANNER_BACKLOG_NAME, PLANNER_BACKLOG_NOTE, rememberRecipesForPlanning } from '../../lib/mealPlanning'
+import { assignmentDates, mealOnDay, readDayNotes } from '../../lib/mealAssignments'
+import MealDayPicker from '../MealDayPicker'
+import MealNotePicker from '../MealNotePicker'
 
 const WEEK_PREFIX = 'myrecipes-week-v1:'
 const dateKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -16,16 +20,19 @@ const readAssignments = notes => {
   try { return JSON.parse(notes.slice(WEEK_PREFIX.length))?.assignments || {} } catch { return {} }
 }
 
-export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null, cookStats = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
+export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false, demoMealGroups = null, demoShoppingRecipeIds = [], cookStats = {}, collections = [], collectionRecipeMap = {}, onCollectionsChanged }) {
   const { t, lang } = useT()
   const [weekStart, setWeekStart] = useState(startOfWeek)
+  const [focusedDayIndex, setFocusedDayIndex] = useState(() => (new Date().getDay() + 6) % 7)
   const [groups, setGroups] = useState(() => isGuest ? (demoMealGroups || []) : [])
-  const [shoppingIds, setShoppingIds] = useState(new Set())
+  const [shoppingIds, setShoppingIds] = useState(() => new Set(isGuest ? demoShoppingRecipeIds : []))
   const [pickerRecipe, setPickerRecipe] = useState(null)
+  const [pickerDay, setPickerDay] = useState(null)
   const [recipePickerOpen, setRecipePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   useBackLayer(!!pickerRecipe, () => setPickerRecipe(null), 'day-picker')
+  useBackLayer(!!pickerDay, () => setPickerDay(null), 'meal-note')
   useBackLayer(recipePickerOpen, () => setRecipePickerOpen(false), 'recipe-picker')
 
   useEffect(() => {
@@ -59,6 +66,7 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
   const weekGroup = groups.find(group => group.name === weekName(weekStart) && isPlannerWeek(group))
   const assignments = useMemo(() => readAssignments(weekGroup?.notes), [weekGroup?.notes])
+  const dayNotes = useMemo(() => readDayNotes(weekGroup?.notes), [weekGroup?.notes])
   const recipesById = useMemo(() => new Map(recipes.map(recipe => [recipe.id, recipe])), [recipes])
   const assignedAnywhereIds = useMemo(() => {
     const ids = new Set()
@@ -73,6 +81,8 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
   const waiting = useMemo(() => [...new Set([...shoppingIds, ...plannedIds])]
     .filter(id => !assignedAnywhereIds.has(id) && recipesById.has(id)).map(id => recipesById.get(id)),
   [shoppingIds, plannedIds, assignedAnywhereIds, recipesById])
+  const shoppingToPlan = recipes.filter(recipe => shoppingIds.has(recipe.id) && !assignmentDates(assignments[recipe.id]).length)
+  const otherWaiting = waiting.filter(recipe => !shoppingToPlan.some(shoppingRecipe => shoppingRecipe.id === recipe.id))
 
   const startPlanning = async recipe => {
     setRecipePickerOpen(false)
@@ -92,17 +102,15 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
     await rememberForLater([recipe.id], groups, setGroups)
   }
 
-  const saveAssignment = async (recipe, day) => {
+  const saveWeek = async (next, nextDayNotes = dayNotes) => {
     if (saving) return
     setSaving(true); setError('')
-    const next = { ...assignments }
-    if (day) next[recipe.id] = dateKey(day); else delete next[recipe.id]
     const recipe_ids = Object.keys(next)
-    const notes = `${WEEK_PREFIX}${JSON.stringify({ assignments: next })}`
+    const notes = `${WEEK_PREFIX}${JSON.stringify({ assignments: next, dayNotes: nextDayNotes })}`
     if (isGuest) {
       const row = { ...(weekGroup || { id: `guest-week-${dateKey(weekStart)}`, name: weekName(weekStart) }), recipe_ids, notes }
       setGroups(old => weekGroup ? old.map(group => group.id === weekGroup.id ? row : group) : [row, ...old])
-      setPickerRecipe(null); setSaving(false); return
+      setPickerRecipe(null); setPickerDay(null); setSaving(false); return
     }
     let result
     if (weekGroup) {
@@ -112,60 +120,72 @@ export default function MealPrepView({ recipes, onSelectRecipe, isGuest = false,
       if (!user) { setError(t('mealPrep.saveError')); setSaving(false); return }
       result = await supabase.from('meal_groups').insert({ user_id: user.id, name: weekName(weekStart), recipe_ids, notes }).select('id, user_id, name, notes, recipe_ids, created_at').single()
     }
-    if (result.error) setError(t('mealPrep.saveError'))
+    if (result.error) { setError(t('mealPrep.saveError')); setSaving(false); return }
     else setGroups(old => weekGroup ? old.map(group => group.id === weekGroup.id ? result.data : group) : [result.data, ...old])
-    setPickerRecipe(null); setSaving(false)
+    setPickerRecipe(null); setPickerDay(null); setSaving(false)
+  }
+
+  const saveAssignment = (recipe, selectedDates) => {
+    const next = { ...assignments }, dates = assignmentDates(selectedDates)
+    if (dates.length) next[recipe.id] = dates; else delete next[recipe.id]
+    return saveWeek(next)
   }
 
   const today = dateKey(new Date())
-  const scheduled = days.flatMap(day => Object.entries(assignments)
-    .filter(([, value]) => value === dateKey(day))
-    .map(([id]) => ({ day, recipe: recipesById.get(id) }))).filter(item => item.recipe)
+  const scheduled = days.flatMap(day => [...Object.entries(assignments)
+    .filter(([, value]) => assignmentDates(value).includes(dateKey(day)))
+    .map(([id]) => ({ day, recipe: recipesById.get(id), leftover: mealOnDay(assignments, id, dateKey(day)).leftover })),
+    ...(dayNotes[dateKey(day)] ? [{ day, note: dayNotes[dateKey(day)] }] : [])]).filter(item => item.recipe || item.note)
   const weekLabel = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+  const focusedDay = days[focusedDayIndex]
+  const focusedMeals = scheduled.filter(item => dateKey(item.day) === dateKey(focusedDay))
 
-  return <div style={{ padding: '0 20px 100px' }}>
-    <h1 style={titleStyle}>{t('mealPrep.title')}</h1>
-    <DopamineShelf recipes={recipes} cookStats={cookStats} collections={collections} collectionRecipeMap={collectionRecipeMap} onSelect={onSelectRecipe} onCreateCollection={null} isGuest={isGuest} onCollectionsChanged={onCollectionsChanged} />
-
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-      <button aria-label={t('mealPrep.previousWeek')} onClick={() => setWeekStart(addDays(weekStart, -7))} style={arrowStyle}>‹</button>
-      <div style={{ flex: 1, textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 650, fontSize: 17 }}>{t('mealPrep.thisWeek')}</div>
-        <div style={monoStyle}>{weekLabel}</div>
-      </div>
-      <button aria-label={t('mealPrep.nextWeek')} onClick={() => setWeekStart(addDays(weekStart, 7))} style={arrowStyle}>›</button>
+  return <div className="meal-planner">
+    <div className="meal-planner__hero">
+    <header className="meal-planner__heading"><div><span className="meal-planner__eyebrow">{t('mealPrep.title')}</span><h1>{lang === 'nl' ? 'Een dag tegelijk.' : 'One day at a time.'}</h1><p>{lang === 'nl' ? 'Een klein plan. Een rustigere week.' : 'A small plan. A calmer week.'}</p></div></header>
+    <div className="meal-planner__week">
+      <button type="button" className="meal-planner__arrow" aria-label={t('mealPrep.previousWeek')} onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
+      <div><strong>{dateKey(weekStart) === dateKey(startOfWeek()) ? t('mealPrep.thisWeek') : (lang === 'nl' ? 'Weekmenu' : 'Your week')}</strong><small>{weekLabel}</small></div>
+      <button type="button" className="meal-planner__arrow" aria-label={t('mealPrep.nextWeek')} onClick={() => setWeekStart(addDays(weekStart, 7))}>›</button>
     </div>
-
-    <button onClick={() => setRecipePickerOpen(true)} style={addRecipeButtonStyle}><span>＋</span><span><b>Add a recipe</b><small>Search your cookbook and choose a day</small></span></button>
-
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 14 }}>
-      {days.map(day => {
-        const key = dateKey(day); const hasMeal = Object.values(assignments).includes(key); const isToday = key === today
-        return <div key={key} style={{ padding: '7px 0 6px', borderRadius: 9, textAlign: 'center', border: `1px solid ${isToday ? 'var(--tomato)' : 'var(--line)'}`, background: hasMeal ? 'var(--sage-light)' : 'var(--card)' }}>
-          <div style={{ ...monoStyle, fontSize: 8.5, color: isToday ? 'var(--tomato-deep)' : 'var(--charcoal-soft)', textTransform: 'uppercase' }}>{day.toLocaleDateString(undefined, { weekday: 'narrow' })}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, marginTop: 2 }}>{day.getDate()}</div>
+    <div className="meal-planner__day-strip" aria-label={lang === 'nl' ? 'Kies een dag' : 'Choose a day'}>{days.map((day, index) => <button type="button" key={dateKey(day)} aria-pressed={focusedDayIndex === index} onClick={() => setFocusedDayIndex(index)}><span>{day.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { weekday: 'narrow' })}</span><strong>{day.getDate()}</strong><i aria-hidden="true" style={{ opacity: scheduled.some(item => dateKey(item.day) === dateKey(day)) ? 1 : 0 }} /></button>)}</div>
+    </div>
+    <div className="meal-planner__actions"><button type="button" onClick={() => setRecipePickerOpen(true)}>＋ {lang === 'nl' ? 'Recept toevoegen' : 'Add a recipe'}</button><button type="button" onClick={() => { setError(''); setPickerDay(focusedDay) }}>＋ {lang === 'nl' ? 'Ander plan' : 'Other plan'}</button></div>
+    {error && <div role="alert" className="meal-planner__error">{error}</div>}
+    <div className="meal-planner__focus-label">{focusedDay.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+    <section className="meal-planner__focus">
+      {focusedMeals.length ? focusedMeals.map(({ recipe, leftover, note }) => <div key={recipe?.id || 'note'} className="meal-planner__focus-meal">
+        <span className="meal-planner__eyebrow">{note ? (lang === 'nl' ? 'ANDER PLAN' : 'OTHER PLAN') : leftover ? (lang === 'nl' ? 'RESTJES · NIET OPNIEUW KOKEN' : 'LEFTOVERS · NO COOKING') : (lang === 'nl' ? 'VANDAAG KOKEN' : 'COOK TODAY')}</span>
+        <h2>{note || recipe.title}</h2>
+        <p>{note ? (lang === 'nl' ? 'Een avond buiten de keuken.' : 'A night away from the kitchen.') : leftover ? (lang === 'nl' ? 'Het eten is al geregeld.' : 'Dinner is already taken care of.') : (lang === 'nl' ? 'Maak genoeg voor je geplande dagen.' : 'Make enough for your planned days.')}</p>
+        <div className="meal-planner__focus-buttons">{recipe && <button type="button" onClick={() => onSelectRecipe?.(recipe)}>{lang === 'nl' ? 'Recept bekijken' : 'View recipe'}</button>}<button type="button" onClick={() => { setError(''); if (recipe) setPickerRecipe(recipe); else setPickerDay(focusedDay) }}>{lang === 'nl' ? 'Plan wijzigen' : 'Change this plan'}</button></div>
+      </div>) : <div className="meal-planner__focus-meal"><span className="meal-planner__eyebrow">{lang === 'nl' ? 'NOG NIETS GEPLAND' : 'NOT PLANNED'}</span><h2>{lang === 'nl' ? 'Ruimte voor iets lekkers.' : 'Room for something good.'}</h2><p>{lang === 'nl' ? 'Kies een recept of maak een ander plan.' : 'Choose a recipe or add another plan.'}</p><button type="button" onClick={() => { setError(''); setPickerDay(focusedDay) }}>{lang === 'nl' ? 'Deze dag plannen' : 'Plan this day'}</button></div>}
+    </section>
+    <details className="meal-planner__fold"><summary>{lang === 'nl' ? 'De rest van je week' : 'The rest of your week'}</summary>
+    <div className="meal-planner__agenda">{days.filter(day => dateKey(day) !== dateKey(focusedDay)).map(day => {
+      const key = dateKey(day), meals = scheduled.filter(item => dateKey(item.day) === key), isToday = key === today
+      const openDay = () => { setError(''); setPickerDay(day) }
+      return <section key={key} className={`meal-planner__day${isToday ? ' meal-planner__day--today' : ''}`} aria-label={day.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' })}>
+        <button type="button" className="meal-planner__date" onClick={openDay} aria-label={lang === 'nl' ? `Plan voor ${day.toLocaleDateString('nl-NL')}` : `Plan for ${day.toLocaleDateString('en-GB')}`}><small>{day.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { weekday: 'short' })}</small><strong>{day.getDate()}</strong></button>
+        <div className="meal-planner__day-content">
+          {isToday && <div className="meal-planner__day-label">{lang === 'nl' ? 'VANDAAG' : 'TODAY'}</div>}
+          {!meals.length ? <button type="button" className="meal-planner__empty-day" onClick={openDay}><span>{lang === 'nl' ? 'Nog niets gepland' : 'Leave a little room'}</span><span aria-hidden="true">＋</span></button> : <>
+            {meals.map(({ recipe, leftover, note }) => note ? <button key="note" type="button" className="meal-planner__note" onClick={openDay}><span aria-hidden="true">↗</span><span><strong>{note}</strong><small>{lang === 'nl' ? 'ANDER PLAN · WIJZIGEN' : 'OTHER PLAN · TAP TO EDIT'}</small></span></button> : <div key={recipe.id} className={`meal-planner__meal${leftover ? ' meal-planner__meal--leftover' : ''}`}><span className="meal-planner__meal-type">{leftover ? (lang === 'nl' ? 'RESTJES · NIET OPNIEUW KOKEN' : 'LEFTOVERS · NO COOKING') : (lang === 'nl' ? 'VANDAAG KOKEN' : 'COOK TODAY')}</span><RecipeCard recipe={recipe} shopping={shoppingIds.has(recipe.id)} onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => setPickerRecipe(recipe)} t={t} /></div>)}
+            {!dayNotes[key] && <div className="meal-planner__day-label"><span /><button type="button" onClick={openDay}>{lang === 'nl' ? '＋ Ander plan' : '＋ Other plan'}</button></div>}
+          </>}
         </div>
-      })}
-    </div>
-
-    {error && <div role="alert" style={{ fontSize: 12.5, color: 'var(--tomato-deep)', marginBottom: 10 }}>{error}</div>}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-      {scheduled.map(({ day, recipe }) => <div key={recipe.id} style={{ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr)', gap: 8, alignItems: 'center' }}>
-        <div style={{ ...monoStyle, fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>{day.toLocaleDateString(undefined, { weekday: 'short' })}<div style={{ fontFamily: 'var(--font-display)', color: 'var(--charcoal)', fontSize: 16, fontWeight: 650 }}>{day.getDate()}</div></div>
-        <RecipeCard recipe={recipe} shopping={shoppingIds.has(recipe.id)} onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => setPickerRecipe(recipe)} t={t} />
-      </div>)}
-      {!scheduled.length && <div style={emptyStyle}>{t('mealPrep.emptyWeek')}</div>}
-    </div>
-
-    <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 8 }}>
-      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 650, margin: 0 }}>{t('mealPrep.waiting')}</h2>
-      <span style={{ ...monoStyle, marginLeft: 'auto' }}>{waiting.length}</span>
-    </div>
-    <div style={{ border: '1px dashed var(--line)', borderRadius: 12, padding: waiting.length ? '4px 12px' : 14, background: 'var(--card)' }}>
-      {!waiting.length ? <div style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--charcoal-soft)' }}>{t('mealPrep.nothingWaiting')}</div> : waiting.map((recipe, index) =>
-        <div key={recipe.id} style={{ padding: '9px 0', borderTop: index ? '1px solid var(--line)' : 'none' }}><RecipeCard compact recipe={recipe} shopping={shoppingIds.has(recipe.id)} onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => setPickerRecipe(recipe)} t={t} /></div>)}
-    </div>
-    {pickerRecipe && <DayPicker recipe={pickerRecipe} days={days} assignedDate={assignments[pickerRecipe.id]} saving={saving} onChoose={day => saveAssignment(pickerRecipe, day)} onClose={() => setPickerRecipe(null)} t={t} />}
+      </section>
+    })}</div>
+    </details>
+    {shoppingToPlan.length > 0 && <details className="meal-planner__inbox"><summary><span><strong>{lang === 'nl' ? 'Van je boodschappenlijst' : 'From your shopping list'}</strong><small>{lang === 'nl' ? 'Deze recepten zijn klaar om in te plannen' : 'These recipes are ready to plan'}</small></span><b className="meal-planner__count">{shoppingToPlan.length}</b></summary><div className="meal-planner__inbox-items">{shoppingToPlan.map(recipe => <div className="meal-planner__inbox-item" key={recipe.id}><RecipeCard compact recipe={recipe} shopping onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => startPlanning(recipe)} t={t} /></div>)}</div></details>}
+    <details className="meal-planner__fold"><summary>{t('mealPrep.waiting')} <span>{otherWaiting.length}</span></summary><div className="meal-planner__fold-body">{!otherWaiting.length ? <p style={monoStyle}>{t('mealPrep.nothingWaiting')}</p> : otherWaiting.map(recipe => <div className="meal-planner__waiting-row" key={recipe.id}><RecipeCard compact recipe={recipe} shopping={shoppingIds.has(recipe.id)} onOpen={() => onSelectRecipe?.(recipe)} onPlan={() => setPickerRecipe(recipe)} t={t} /></div>)}</div></details>
+    <details className="meal-planner__fold"><summary>{lang === 'nl' ? 'Inspiratie & favorieten' : 'Inspiration & favourites'}</summary><div className="meal-planner__fold-body"><DopamineShelf recipes={recipes} cookStats={cookStats} collections={collections} collectionRecipeMap={collectionRecipeMap} onSelect={onSelectRecipe} onCreateCollection={null} isGuest={isGuest} onCollectionsChanged={onCollectionsChanged} /></div></details>
+    {pickerRecipe && <MealDayPicker recipe={pickerRecipe} days={days} assignedDate={assignments[pickerRecipe.id]} initialDate={dateKey(focusedDay)} saving={saving} onChoose={selected => saveAssignment(pickerRecipe, selected)} onClose={() => setPickerRecipe(null)} error={error} />}
+    {pickerDay && <MealNotePicker key={dateKey(pickerDay)} day={pickerDay} days={days} onDayChange={setPickerDay} value={dayNotes[dateKey(pickerDay)] || ''} saving={saving} error={error} onClose={() => setPickerDay(null)} onSave={text => {
+      const nextNotes = { ...dayNotes }
+      if (text) nextNotes[dateKey(pickerDay)] = text; else delete nextNotes[dateKey(pickerDay)]
+      return saveWeek(assignments, nextNotes)
+    }} />}
     {recipePickerOpen && <RecipePicker recipes={recipes} plannedIds={plannedIds} onChoose={startPlanning} onClose={() => setRecipePickerOpen(false)} />}
   </div>
 }
@@ -208,23 +228,10 @@ function RecipeCard({ recipe, shopping, compact, onOpen, onPlan, t }) {
 
 const Badge = ({ children }) => <span style={{ padding: '3px 6px', borderRadius: 99, background: 'color-mix(in srgb, var(--mustard) 16%, var(--card))', fontFamily: 'var(--font-mono)', fontSize: 8.5, fontWeight: 650 }}>{children}</span>
 
-function DayPicker({ recipe, days, assignedDate, saving, onChoose, onClose, t }) {
-  return <div onMouseDown={event => event.target === event.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(42,36,32,.58)', display: 'flex', alignItems: 'flex-end' }}>
-    <div style={{ width: '100%', maxHeight: '72dvh', overflowY: 'auto', padding: '18px 20px 32px', borderRadius: '18px 18px 0 0', background: 'var(--card)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 15 }}><div style={{ minWidth: 0, flex: 1 }}><div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 650 }}>{t('mealPrep.chooseDay')}</div><div style={{ fontSize: 12.5, color: 'var(--charcoal-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.title}</div></div><button onClick={onClose} aria-label={t('mealPrep.close')} style={{ border: 0, background: 'none', color: 'var(--charcoal-soft)', fontSize: 22, cursor: 'pointer' }}>×</button></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{days.map(day => { const key = dateKey(day); const selected = assignedDate === key; return <button key={key} onClick={() => onChoose(day)} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 13px', borderRadius: 10, border: `1px solid ${selected ? 'var(--tomato)' : 'var(--line)'}`, background: selected ? 'color-mix(in srgb, var(--tomato) 8%, var(--card))' : 'var(--parchment)', color: 'var(--charcoal)', cursor: saving ? 'default' : 'pointer', textAlign: 'left' }}><span style={{ ...monoStyle, width: 34, textTransform: 'uppercase', color: selected ? 'var(--tomato-deep)' : 'var(--charcoal-soft)' }}>{day.toLocaleDateString(undefined, { weekday: 'short' })}</span><span style={{ fontSize: 14, fontWeight: 600 }}>{day.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</span>{selected && <span style={{ marginLeft: 'auto', color: 'var(--tomato-deep)' }}>✓</span>}</button> })}</div>
-      {assignedDate && <button onClick={() => onChoose(null)} disabled={saving} style={{ width: '100%', marginTop: 10, padding: 10, border: 0, background: 'none', color: 'var(--tomato-deep)', fontWeight: 650, cursor: 'pointer' }}>{t('mealPrep.removeFromWeek')}</button>}
-    </div>
-  </div>
-}
-
 const FoodIcon = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 11h16M5 11a7 7 0 0 1 14 0M3 11h18v2H3zM12 4V2M6 17h12M8 13l-2 4M16 13l2 4" /></svg>
-const titleStyle = { fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--tomato-deep)', marginBottom: 16 }
 const monoStyle = { fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--charcoal-soft)', marginTop: 2 }
-const arrowStyle = { width: 36, height: 36, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--tomato-deep)', fontSize: 22, cursor: 'pointer', display: 'grid', placeItems: 'center' }
 const emptyStyle = { padding: 16, border: '1px dashed var(--line)', borderRadius: 12, textAlign: 'center', background: 'var(--card)', fontSize: 13, color: 'var(--charcoal-soft)', lineHeight: 1.5 }
 const planButtonStyle = { border: '1px solid var(--tomato)', borderRadius: 8, padding: '6px 9px', background: 'none', color: 'var(--tomato-deep)', fontWeight: 650, fontSize: 11.5, cursor: 'pointer', flexShrink: 0 }
-const addRecipeButtonStyle = { width: '100%', minHeight: 54, display: 'flex', alignItems: 'center', gap: 11, marginBottom: 14, padding: '8px 13px', border: '1px solid var(--tomato)', borderRadius: 11, background: 'color-mix(in srgb,var(--tomato) 9%,var(--card))', color: 'var(--tomato-deep)', textAlign: 'left', cursor: 'pointer' }
 const sheetBackdropStyle = { position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end', background: 'rgba(42,36,32,.58)' }
 const pickerSheetStyle = { width: '100%', maxHeight: '78dvh', overflowY: 'auto', boxSizing: 'border-box', padding: '18px 20px 32px', borderRadius: '18px 18px 0 0', background: 'var(--card)' }
 const closeButtonStyle = { width: 34, height: 34, border: 0, background: 'none', color: 'var(--charcoal-soft)', fontSize: 23, cursor: 'pointer' }
