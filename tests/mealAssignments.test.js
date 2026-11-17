@@ -1,3 +1,5 @@
+// Tests for reading planned days and day notes from meal_groups rows.
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { assignmentDates, mealOnDay, readDayNotes } from '../src/lib/mealAssignments.js'

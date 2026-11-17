@@ -1,3 +1,5 @@
+// Wizard step 4 (optional): photo, category, time, servings, tags and source.
+
 import { useState } from 'react'
 import TagPicker from '../TagPicker'
 import { titleStyle, labelStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'

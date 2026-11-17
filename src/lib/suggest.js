@@ -1,3 +1,5 @@
+// Picks a recipe to cook right now, from the time of day and the cook log.
+
 import { significantIngredients, covers } from './fridgeMatch'
 import { daysBetween, toLocalISO } from './dateUtils'
 

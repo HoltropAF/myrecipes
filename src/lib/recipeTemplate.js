@@ -1,3 +1,6 @@
+// Reads and writes the plain-text recipe template (docs/recipe-template.txt):
+// parses filled-in templates into recipe rows, flags duplicates and saves them.
+
 const fields = {
   Name: 'title', 'Short description': 'tagline', Servings: 'servings',
   'Total time (minutes)': 'total_minutes', Category: 'category', Subcategory: 'subcategory',

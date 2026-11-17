@@ -1,3 +1,6 @@
+// The Recipes tab: cookbook, list and grid views with search, filters,
+// collections and linked recipe groups.
+
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'
 import { CATEGORY_ICONS } from '../../lib/categories'

@@ -1,3 +1,6 @@
+// The Plan tab: a week of meals, the planner inbox, and recipes waiting on the
+// shopping list.
+
 import './meal-prep.css'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'

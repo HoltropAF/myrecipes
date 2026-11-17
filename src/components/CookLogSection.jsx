@@ -1,3 +1,5 @@
+// The Log tab on a recipe: past cooks with rating and notes, plus the form to add one.
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'

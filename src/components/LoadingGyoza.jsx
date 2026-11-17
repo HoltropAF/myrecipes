@@ -1,3 +1,5 @@
+// The spinning-gyoza loading indicator.
+
 export default function LoadingGyoza({ label = 'loading…' }) {
   return (
     <div style={{ textAlign: 'center', padding: '40px 0' }}>

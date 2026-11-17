@@ -1,3 +1,5 @@
+// "What can I make?": type what is in your fridge, get recipes ranked by match.
+
 import { useState, useMemo } from 'react'
 import { useT } from '../lib/i18n'
 import { rankByFridge, parseHaveList } from '../lib/fridgeMatch'

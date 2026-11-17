@@ -1,3 +1,5 @@
+// Lint rules: recommended JS plus React hooks and fast-refresh checks.
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

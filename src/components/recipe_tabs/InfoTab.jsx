@@ -1,3 +1,5 @@
+// Info tab of a recipe: description, time, servings, tags, allergens and cook stats.
+
 import { useEffect, useState } from 'react'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 import { useT } from '../../lib/i18n'

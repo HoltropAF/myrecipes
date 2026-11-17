@@ -1,3 +1,6 @@
+// The Settings tab: language, theme, units, ingredient dictionary, backup and
+// restore, PDF cookbook, and app/storage info.
+
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'

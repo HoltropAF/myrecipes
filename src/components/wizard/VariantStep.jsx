@@ -1,3 +1,5 @@
+// Wizard step 5 (optional): a variant of the recipe with its own ingredients and steps.
+
 import { useState } from 'react'
 import { parseIngredientBlock } from '../../lib/ingredientParser'
 import { parseStepBlock } from '../../lib/stepParser'

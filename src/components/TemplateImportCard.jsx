@@ -1,3 +1,6 @@
+// Reads one or more filled-in recipe templates, previews them, skips duplicates
+// and saves the rest.
+
 import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'

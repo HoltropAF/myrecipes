@@ -1,3 +1,6 @@
+// The Home tab: "what am I making tonight", shortcuts and the feedback form
+// (saved to app_feedback).
+
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import DecideCard from '../DecideCard'

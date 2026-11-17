@@ -1,3 +1,6 @@
+// Import screen: paste a link to get an AI prompt, or paste/upload a filled-in
+// recipe template.
+
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
 import { recipeImportPrompt } from '../lib/recipeImportPrompt'

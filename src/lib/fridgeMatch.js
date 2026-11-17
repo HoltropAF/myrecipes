@@ -1,3 +1,5 @@
+// "What can I make?": ranks recipes by how many of their ingredients you have.
+
 import { normalizeName } from './ingredientParser'
 import { isAlwaysStocked } from './aisles'
 

@@ -1,3 +1,5 @@
+// Scrollable category chips above the recipe list.
+
 import { useState, useMemo, useRef } from 'react'
 import { useT } from '../../lib/i18n'
 import { CATEGORY_ORDER } from '../../lib/categories'

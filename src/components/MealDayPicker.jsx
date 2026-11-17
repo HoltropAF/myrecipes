@@ -1,3 +1,5 @@
+// Sheet for choosing which day(s) of the week a recipe is planned for.
+
 import { useState } from 'react'
 import { assignmentDates } from '../lib/mealAssignments'
 import { useT } from '../lib/i18n'

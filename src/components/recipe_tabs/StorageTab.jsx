@@ -1,3 +1,5 @@
+// Storage tab: fridge and freezer life and reheating notes for a recipe.
+
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 

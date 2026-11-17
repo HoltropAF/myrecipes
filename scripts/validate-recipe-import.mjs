@@ -1,3 +1,6 @@
+// Checks a filled-in recipe template from the command line:
+// node scripts/validate-recipe-import.mjs <file.txt>
+
 import { readFile } from 'node:fs/promises'
 import { parseRecipeTemplate } from '../src/lib/recipeTemplate.js'
 

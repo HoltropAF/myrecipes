@@ -1,3 +1,6 @@
+// Small helpers for reading which day(s) a planned recipe is assigned to,
+// coping with both the old one-date and the newer several-days format.
+
 // Older plans contain one date string per recipe. New plans can hold several days.
 export function assignmentDates(value) {
   const values = Array.isArray(value) ? value : [value]

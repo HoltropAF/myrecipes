@@ -1,3 +1,6 @@
+// The planner's "Recipes to plan" inbox: a hidden meal_groups row that remembers
+// recipes you put on the shopping list until you give them a day.
+
 import { supabase } from './supabase'
 
 export const PLANNER_BACKLOG_NAME = 'Recipes to plan'

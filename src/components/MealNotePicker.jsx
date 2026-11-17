@@ -1,3 +1,5 @@
+// Sheet for adding a free-text note to a day in the meal plan ("eating out").
+
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
 

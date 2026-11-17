@@ -1,3 +1,5 @@
+// Small toast with an Undo button that disappears after a few seconds.
+
 import { useEffect, useRef } from 'react'
 import { useT } from '../lib/i18n'
 

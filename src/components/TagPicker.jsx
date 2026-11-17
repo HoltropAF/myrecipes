@@ -1,3 +1,5 @@
+// Chip-style picker for free tags, suggesting tags used on other recipes.
+
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
 

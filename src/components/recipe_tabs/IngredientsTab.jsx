@@ -1,3 +1,5 @@
+// Ingredients tab: scaled amounts, metric/US conversion and tick-off boxes.
+
 import { useState } from 'react'
 import { scaleAmount } from '../../lib/ingredientParser'
 import { convertIngredient, formatConvertedAmount } from '../../lib/unitConverter'

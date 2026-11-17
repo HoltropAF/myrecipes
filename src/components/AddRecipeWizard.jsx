@@ -1,3 +1,6 @@
+// The five-step add/edit recipe wizard (title, ingredients, steps, extras,
+// variant). Saves to the recipes table and uploads the photo to recipe-photos.
+
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'

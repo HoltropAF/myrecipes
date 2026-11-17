@@ -1,3 +1,5 @@
+// Tests for the shopping list's per-item undo grace period.
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCheckedItemGrace } from '../src/lib/checkedItemGrace.js'

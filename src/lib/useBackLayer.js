@@ -1,3 +1,6 @@
+// Hook that turns an open sheet or screen into a browser-history entry, so the
+// Android back gesture closes the top layer instead of leaving the app.
+
 import { useEffect, useRef } from 'react'
 
 let layerSequence = 0

@@ -1,3 +1,5 @@
+// The Stats tab: what you cook, how often, and your favourites, from cook_log.
+
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import LoadingGyoza from '../LoadingGyoza'

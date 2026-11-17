@@ -1,3 +1,5 @@
+// Sign-in screen: email magic link (Supabase Auth) or "look around" guest mode.
+
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'

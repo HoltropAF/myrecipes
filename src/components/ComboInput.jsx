@@ -1,3 +1,5 @@
+// Text input with a drop-down of suggestions (used for units and ingredients).
+
 import { useState } from 'react'
 
 export default function ComboInput({ value, onChange, suggestions = [], placeholder }) {

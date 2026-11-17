@@ -1,3 +1,6 @@
+// Vite build config: React plugin, build date stamp and the PWA (manifest and
+// service worker caching).
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'

@@ -1,3 +1,5 @@
+// First-time setup after sign-in: language, units and optionally a few demo recipes.
+
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { DEMO_RECIPES } from '../lib/demoData'

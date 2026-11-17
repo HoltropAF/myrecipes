@@ -1,3 +1,5 @@
+// Tests for the recipe template parser, duplicate detection and AI import prompt.
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { parseRecipeTemplate, markTemplateDuplicates, saveTemplateRecipes } from '../src/lib/recipeTemplate.js'

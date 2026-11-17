@@ -1,3 +1,7 @@
+// The single Supabase client the whole app shares. URL and anon key come from
+// VITE_ env variables; they are public by design, row-level security keeps
+// each person's data private.
+
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL

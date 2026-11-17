@@ -1,3 +1,5 @@
+// Wizard step 1: recipe name and short description.
+
 import { titleStyle, labelStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'
 import { useT } from '../../lib/i18n'
 

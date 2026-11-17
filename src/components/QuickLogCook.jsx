@@ -1,3 +1,5 @@
+// Quick "I cooked this" sheet: pick a recipe, rate it and save to cook_log.
+
 import { useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'

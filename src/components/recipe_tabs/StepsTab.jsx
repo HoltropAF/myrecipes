@@ -1,3 +1,5 @@
+// Steps tab: the method as a numbered list, with a button into cooking mode.
+
 import { convertStepTemperatures } from '../../lib/unitConverter'
 import { useT } from '../../lib/i18n'
 

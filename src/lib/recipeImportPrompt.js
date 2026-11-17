@@ -1,3 +1,6 @@
+// Builds the copy-and-paste prompt for importing a recipe from a website or
+// video with an AI chatbot. Only accepts plain http(s) links.
+
 export function recipeImportPrompt(source, template) {
   let url
   try { url = new URL(source.trim()) } catch { throw new Error('Enter a valid website or video URL.') }

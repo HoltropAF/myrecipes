@@ -1,3 +1,5 @@
+// The bottom navigation bar with the app's five tabs.
+
 import { useT } from '../lib/i18n'
 import { useCompact } from '../lib/useCompact'
 

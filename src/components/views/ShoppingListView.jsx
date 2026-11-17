@@ -1,3 +1,6 @@
+// The List tab: shopping list grouped by supermarket aisle, with merging of
+// duplicate items and a grace period before checked items vanish.
+
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { normalizeName, formatAmount } from '../../lib/ingredientParser'

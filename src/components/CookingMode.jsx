@@ -1,3 +1,6 @@
+// Full-screen, step-by-step cooking mode with timers, temperature conversion
+// and a wake lock so the screen stays on.
+
 import { useState, useMemo, useCallback } from 'react'
 import { convertStepTemperatures } from '../lib/unitConverter'
 import { useT } from '../lib/i18n'

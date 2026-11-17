@@ -1,3 +1,5 @@
+// Wizard step 2: ingredients, typed row by row or pasted as a block and parsed.
+
 import { useState, useRef, useEffect } from 'react'
 import { parseIngredientBlock } from '../../lib/ingredientParser'
 import ComboInput from '../ComboInput'

@@ -1,3 +1,6 @@
+// A single recipe: photo header, binder tabs (Info, Ingredients, Steps, Log,
+// Storage), scaling, units, collections and adding to the shopping list.
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { scaleAmount } from '../lib/ingredientParser'

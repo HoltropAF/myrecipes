@@ -1,3 +1,5 @@
+// The round + button and its menu: add, import, group recipes, log a cook.
+
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
 import { useBackLayer } from '../lib/useBackLayer'

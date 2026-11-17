@@ -1,3 +1,5 @@
+// Wizard step 3: the method, typed or pasted and split into numbered steps.
+
 import { useState } from 'react'
 import { parseStepBlock } from '../../lib/stepParser'
 import ComboInput from '../ComboInput'

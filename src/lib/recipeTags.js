@@ -1,3 +1,6 @@
+// Tag vocabularies: main ingredients, meal types, diets and allergen labels,
+// matched with Dutch and English patterns.
+
 // Main proteins / key ingredients worth filtering or grouping recipes by.
 export const MAIN_INGREDIENTS = [
   { key: 'kip', label: 'Chicken', match: /kipfilet|chicken breast|chicken fillet|\bkip\b|\bchicken\b/i },

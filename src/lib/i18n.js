@@ -1,3 +1,6 @@
+// English and Dutch translations. useT() returns t(key, fallback) for the
+// current language, which App provides through LanguageContext.
+
 import { createContext, useContext } from 'react'
 
 export const LanguageContext = createContext('en')
