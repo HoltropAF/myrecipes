@@ -26,3 +26,6 @@ dist-ssr
 
 # Local agent config (subagent definitions, permissions)
 .claude/
+
+# Personal recipe import files and images (kept locally, never committed)
+imports/
