@@ -465,6 +465,7 @@
     <h1 data-t="s8_h1"></h1>
     <div class="why" data-t-html="s8_why"></div>
     <div id="install-body"></div>
+    <div class="callout"><div data-t-html="s8_lock"></div></div>
     <div class="actions" id="install-actions"></div>
   </section>
 
@@ -546,6 +547,7 @@ const T = {
 
     s8_h1:          'Install on your phone',
     s8_why:         'myrecipes is a PWA — it can be added to your home screen and opens fullscreen like a native app, with no browser bar.',
+    s8_lock:        '<strong>One last safety step.</strong> After you have signed in once, lock the shared allergen list so only you can change it. In the Supabase SQL Editor, run:<br><code>insert into dictionary_editors (user_id) select id from auth.users order by created_at limit 1;</code><br>Until you do, anyone with an account on your copy can change which ingredients count as allergens.',
     ios_step1:      (url) => `Open <strong>${url}</strong> in <strong>Safari</strong> — the install option doesn\'t appear in other browsers on iPhone.`,
     ios_step2:      'Tap the <strong>Share</strong> button at the bottom of the screen <span class="share-icon">⎙</span> (a box with an upward arrow).',
     ios_step3:      'Scroll down in the sheet that appears and tap <strong>Add to Home Screen</strong>.',
@@ -640,6 +642,7 @@ const T = {
 
     s8_h1:          'Installeer op je telefoon',
     s8_why:         'myrecipes is een PWA — je kunt hem aan je beginscherm toevoegen en hij opent volledig scherm zoals een native app, zonder browserbalk.',
+    s8_lock:        '<strong>Nog één veiligheidsstap.</strong> Vergrendel na je eerste keer inloggen de gedeelde allergenenlijst, zodat alleen jij die kunt wijzigen. Voer in de Supabase SQL Editor uit:<br><code>insert into dictionary_editors (user_id) select id from auth.users order by created_at limit 1;</code><br>Tot je dat doet, kan iedereen met een account op jouw kopie aanpassen welke ingrediënten als allergeen gelden.',
     ios_step1:      (url) => `Open <strong>${url}</strong> in <strong>Safari</strong> — de installatieoptie verschijnt niet in andere browsers op iPhone.`,
     ios_step2:      'Tik op de <strong>Deel</strong>-knop onderaan het scherm <span class="share-icon">⎙</span> (een vak met een pijl omhoog).',
     ios_step3:      'Scroll omlaag in het menu dat verschijnt en tik op <strong>Zet op beginscherm</strong>.',

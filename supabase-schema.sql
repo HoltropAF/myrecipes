@@ -281,7 +281,10 @@ end;
 $$;
 
 create or replace function recompute_recipe_tags_trigger() returns trigger
-language plpgsql as $$
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
   perform recompute_recipe_tags(NEW.id);
   return NEW;
@@ -325,7 +328,9 @@ grant execute on function can_edit_dictionary() to authenticated;
 -- Raised as an error (rather than letting row level security silently skip the
 -- row) so the app can tell the person why their change did not stick.
 create or replace function guard_dictionary_edit() returns trigger
-language plpgsql as $$
+language plpgsql
+set search_path = public
+as $$
 begin
   if not can_edit_dictionary() then
     raise exception 'Only dictionary editors can change or remove existing entries'
@@ -514,9 +519,12 @@ create policy "Users can read their own feedback" on app_feedback
 -- A public bucket: photos load from a long, unguessable URL without signing in.
 -- Uploads go into a folder named after the user's id, and only that user can
 -- add, replace or delete files in it.
-insert into storage.buckets (id, name, public)
-values ('recipe-photos', 'recipe-photos', true)
-on conflict (id) do nothing;
+-- Same limits the app checks before uploading (8 MB, raster images), enforced here
+-- too so nobody can store other files in the public bucket through the API.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('recipe-photos', 'recipe-photos', true, 8388608, array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do update set file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Users upload their own recipe photos" on storage.objects;
 create policy "Users upload their own recipe photos" on storage.objects
@@ -902,3 +910,17 @@ on conflict (canonical_name) do nothing;
 -- Fill in tags for any recipe that has none yet (an upgraded older copy).
 select recompute_recipe_tags(id) from recipes
 where id not in (select recipe_id from recipe_computed_tags);
+
+-- ============================================================
+-- LOCK DOWN INTERNAL FUNCTIONS
+-- ============================================================
+-- The recompute functions run with owner rights and are only meant for the
+-- triggers above. Without this, anyone could call them through /rest/v1/rpc.
+revoke execute on function recompute_recipe_tags(uuid) from public, anon, authenticated;
+revoke execute on function recompute_recipe_tags_for_word(text, uuid) from public, anon, authenticated;
+revoke execute on function recompute_recipe_tags_trigger() from public, anon, authenticated;
+revoke execute on function recompute_tags_on_dictionary_change() from public, anon, authenticated;
+revoke execute on function recompute_tags_on_my_word_change() from public, anon, authenticated;
+revoke execute on function guard_dictionary_edit() from public, anon, authenticated;
+revoke execute on function can_edit_dictionary() from public, anon;
+grant execute on function can_edit_dictionary() to authenticated;

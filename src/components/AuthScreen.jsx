@@ -15,7 +15,9 @@ export default function AuthScreen({ onGuest }) {
     e.preventDefault()
     setLoading(true)
     setStatus(null)
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    // Send the link back to this app's own address. Supabase only accepts it when the
+    // address is in Authentication → URL Configuration; otherwise it uses the Site URL.
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
     setLoading(false)
     // A sleeping or unreachable Supabase project answers with no status or a 5xx;
     // say so in plain words instead of showing a raw fetch error.
