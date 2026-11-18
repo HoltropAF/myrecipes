@@ -191,6 +191,7 @@ function IngredientRow({ item, onChange, onRemove }) {
   const [showTagEditor, setShowTagEditor] = useState(false)
   const [tagRow, setTagRow] = useState(null) // { id, canonical_name, tags } or null if not found yet
   const [tagBusy, setTagBusy] = useState(false)
+  const [tagNotice, setTagNotice] = useState('')
 
   const openTagEditor = async () => {
     const name = (item.name || '').trim().toLowerCase()
@@ -212,8 +213,10 @@ function IngredientRow({ item, onChange, onRemove }) {
     const has = (tagRow.tags || []).includes(key)
     const nextTags = has ? tagRow.tags.filter(x => x !== key) : [...(tagRow.tags || []), key]
     if (tagRow.id) {
-      await supabase.from('ingredient_tags').update({ tags: nextTags, reviewed: true }).eq('id', tagRow.id)
-      setTagRow(prev => ({ ...prev, tags: nextTags, reviewed: true }))
+      const { error } = await supabase.from('ingredient_tags').update({ tags: nextTags, reviewed: true }).eq('id', tagRow.id)
+      // Only dictionary editors may change an existing word; leave it as it was.
+      if (error) setTagNotice(error.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError'))
+      else { setTagNotice(''); setTagRow(prev => ({ ...prev, tags: nextTags, reviewed: true })) }
     } else {
       const { data } = await supabase
         .from('ingredient_tags')
@@ -229,8 +232,9 @@ function IngredientRow({ item, onChange, onRemove }) {
     if (!tagRow) return
     setTagBusy(true)
     if (tagRow.id) {
-      await supabase.from('ingredient_tags').update({ tags: [], reviewed: true }).eq('id', tagRow.id)
-      setTagRow(prev => ({ ...prev, tags: [], reviewed: true }))
+      const { error } = await supabase.from('ingredient_tags').update({ tags: [], reviewed: true }).eq('id', tagRow.id)
+      if (error) setTagNotice(error.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError'))
+      else { setTagNotice(''); setTagRow(prev => ({ ...prev, tags: [], reviewed: true })) }
     } else {
       const { data } = await supabase
         .from('ingredient_tags')
@@ -382,6 +386,9 @@ function IngredientRow({ item, onChange, onRemove }) {
                   )
                 })}
               </div>
+              {tagNotice && (
+                <div style={{ fontSize: 11, color: 'var(--tomato-deep)', marginTop: 6 }}>{tagNotice}</div>
+              )}
             </div>
           )}
         </div>

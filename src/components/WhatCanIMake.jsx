@@ -4,9 +4,9 @@ import { useState, useMemo } from 'react'
 import { useT } from '../lib/i18n'
 import { rankByFridge, parseHaveList } from '../lib/fridgeMatch'
 
-export default function WhatCanIMake({ recipes, onSelect }) {
+export default function WhatCanIMake({ recipes, onSelect, defaultOpen = false }) {
   const { t } = useT()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [input, setInput] = useState('')
 
   const haveIngredients = useMemo(() => parseHaveList(input), [input])

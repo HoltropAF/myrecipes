@@ -1186,9 +1186,45 @@ export const DEMO_COOK_LOG = [
   { id: 'log15', recipe_id: 'demo-ramenbowl', cooked_date: day(3), thumbs: 'up', notes: 'Crispy chili-olie erbij, aanrader!', variant_label: null },
 ]
 
-export const DEMO_SHOPPING_LIST = []
+// A filled shopping list, so the List tab shows aisle grouping in guest mode.
+export const DEMO_SHOPPING_LIST = [
+  { id: 'demo-list-1', name: 'eieren', amount: 6, unit: null, recipe_id: 'demo-shakshuka', checked: false },
+  { id: 'demo-list-2', name: 'tomatenblokjes', amount: 400, unit: 'g', recipe_id: 'demo-shakshuka', checked: false },
+  { id: 'demo-list-3', name: 'rode paprika', amount: 1, unit: null, recipe_id: 'demo-shakshuka', checked: false },
+  { id: 'demo-list-4', name: 'rundergehakt', amount: 500, unit: 'g', recipe_id: 'demo-chili', checked: false },
+  { id: 'demo-list-5', name: 'kidneybonen', amount: 1, unit: 'blik', recipe_id: 'demo-chili', checked: false },
+  { id: 'demo-list-6', name: 'ramen noodles', amount: 2, unit: null, recipe_id: 'demo-ramenbowl', checked: false },
+  { id: 'demo-list-7', name: 'bosui', amount: null, unit: null, recipe_id: 'demo-ramenbowl', checked: false },
+  { id: 'demo-list-8', name: 'feta', amount: null, unit: null, recipe_id: null, checked: false },
+  { id: 'demo-list-9', name: 'stokbrood', amount: 1, unit: null, recipe_id: null, checked: true },
+  { id: 'demo-list-10', name: 'havermelk', amount: null, unit: null, recipe_id: null, checked: false },
+]
+
+// This week in the planner, built relative to today so the demo is never empty:
+// the same format MealPrepView writes ("Week of <monday>" + myrecipes-week-v1 notes).
+const localKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const demoWeekDay = (index) => {
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() - (d.getDay() || 7) + 1 + index)
+  return localKey(d)
+}
+const DEMO_WEEK = {
+  id: 'demo-week',
+  name: `Week of ${demoWeekDay(0)}`,
+  recipe_ids: ['demo-shakshuka', 'demo-chili', 'demo-ramenbowl'],
+  notes: 'myrecipes-week-v1:' + JSON.stringify({
+    assignments: {
+      'demo-ramenbowl': [demoWeekDay(0)],
+      'demo-chili': [demoWeekDay(2), demoWeekDay(3)],
+      'demo-shakshuka': [demoWeekDay(5)],
+    },
+    dayNotes: { [demoWeekDay(4)]: 'Eating out', [demoWeekDay(6)]: 'Dinner with friends' },
+  }),
+}
 
 export const DEMO_MEAL_GROUPS = [
+  DEMO_WEEK,
   { id: 'demo-group-1', name: 'Weekend bakdag', notes: 'Twee desserts, één middag', recipe_ids: ['demo-baklava', 'demo-tiramisu'] },
   { id: 'demo-group-2', name: 'Koreaans avondje', notes: null, recipe_ids: ['demo-kimchirice', 'demo-gyoza', 'demo-rabokki'] },
   { id: 'demo-group-3', name: 'Tapas & snacks', notes: null, recipe_ids: ['demo-bruschetta', 'demo-caprese', 'demo-chiliconqueso', 'demo-springrolls'] },

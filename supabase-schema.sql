@@ -298,20 +298,95 @@ create trigger trg_recompute_recipe_tags
   after insert or update of ingredients on recipes
   for each row execute function recompute_recipe_tags_trigger();
 
--- The dictionary is shared across all recipes, so a single change there can
--- affect any of them - recompute everything, not just one row.
-create or replace function recompute_all_recipe_tags() returns trigger
+-- ============================================================
+-- WHO MAY CHANGE THE SHARED DICTIONARY, AND WHAT A CHANGE RECOMPUTES
+-- ============================================================
+-- Anyone signed in may ADD a word to ingredient_tags, but changing or deleting
+-- an existing entry is limited to the people in dictionary_editors. While that
+-- list is empty everyone is an editor, so a new copy works straight away. To
+-- lock it down later, add yourself (your id is under Authentication → Users):
+--   insert into dictionary_editors (user_id) values ('<your user id>');
+-- A dictionary change only recomputes recipes that contain the changed word.
+create table if not exists dictionary_editors (
+  user_id  uuid primary key references auth.users(id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+-- No policies: the list is not readable or writable through the API.
+alter table dictionary_editors enable row level security;
+
+create or replace function can_edit_dictionary() returns boolean
+language sql stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is null
+      or not exists (select 1 from dictionary_editors)
+      or exists (select 1 from dictionary_editors where user_id = auth.uid());
+$$;
+grant execute on function can_edit_dictionary() to authenticated;
+
+-- Raised as an error (rather than letting row level security silently skip the
+-- row) so the app can tell the person why their change did not stick.
+create or replace function guard_dictionary_edit() returns trigger
 language plpgsql as $$
 begin
-  perform recompute_recipe_tags(id) from recipes;
+  if not can_edit_dictionary() then
+    raise exception 'Only dictionary editors can change or remove existing entries'
+      using errcode = '42501';
+  end if;
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+drop trigger if exists trg_guard_dictionary_edit on ingredient_tags;
+create trigger trg_guard_dictionary_edit
+  before update or delete on ingredient_tags
+  for each row execute function guard_dictionary_edit();
+
+-- Recompute the recipes whose ingredient names contain `p_word` as a whole word
+-- (the same match recompute_recipe_tags uses).
+create or replace function recompute_recipe_tags_for_word(p_word text) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_pattern text := '\m' || regexp_replace(lower(p_word), '([.\\+*?()|\[\]{}^$])', '\\\1', 'g') || '\M';
+begin
+  perform recompute_recipe_tags(r.id)
+  from recipes r
+  where exists (
+    select 1
+    from jsonb_array_elements(r.ingredients) grp(value)
+      cross join lateral jsonb_array_elements(grp.value -> 'items') item(value)
+    where lower(item.value ->> 'name') ~ v_pattern
+  );
+end;
+$$;
+
+create or replace function recompute_tags_on_dictionary_change() returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP in ('UPDATE', 'DELETE') then
+    perform recompute_recipe_tags_for_word(OLD.canonical_name);
+  end if;
+  if TG_OP in ('INSERT', 'UPDATE') and (TG_OP = 'INSERT' or NEW.canonical_name <> OLD.canonical_name) then
+    perform recompute_recipe_tags_for_word(NEW.canonical_name);
+  end if;
   return null;
 end;
 $$;
 
 drop trigger if exists trg_recompute_all_on_dictionary_change on ingredient_tags;
-create trigger trg_recompute_all_on_dictionary_change
-  after insert or update or delete on ingredient_tags
-  for each statement execute function recompute_all_recipe_tags();
+drop trigger if exists trg_recompute_on_dictionary_change on ingredient_tags;
+create trigger trg_recompute_on_dictionary_change
+  after insert or update of canonical_name, tags or delete on ingredient_tags
+  for each row execute function recompute_tags_on_dictionary_change();
+
+drop function if exists recompute_all_recipe_tags();
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -787,3 +862,7 @@ insert into ingredient_tags (canonical_name, tags, substitutes, reviewed) select
 ('zwarte peper', '{}', '[]')
 ) as v(name, tags, subs)
 on conflict (canonical_name) do nothing;
+
+-- Fill in tags for any recipe that has none yet (an upgraded older copy).
+select recompute_recipe_tags(id) from recipes
+where id not in (select recipe_id from recipe_computed_tags);

@@ -415,6 +415,8 @@ const en = {
     loadingLabel: 'loading recipes…',
   },
   whatCanIMake: {
+    homeLabel: 'What can I make?',
+    homeHint: "Type what's in your fridge",
     makeableNow: 'Makeable now',
     missingOne: 'Missing one thing',
     missingTwo: 'Missing two',
@@ -499,6 +501,7 @@ const en = {
     reviewCleared: 'Nothing left to review. Nice.',
     reviewDone: 'Done',
     tagSaveError: 'Could not save that change — check your connection and try again.',
+    tagEditorOnly: 'Only dictionary editors can change or remove existing words. You can still add new ones.',
     searchPlaceholder: 'Search settings…',
     homeIconLabel: 'Home button',
     homeIconChoice: 'Choose an icon',
@@ -1048,6 +1051,8 @@ const nl = {
     loadingLabel: 'recepten laden…',
   },
   whatCanIMake: {
+    homeLabel: 'Wat kan ik maken?',
+    homeHint: 'Typ wat er in je koelkast ligt',
     makeableNow: 'Nu te maken',
     missingOne: 'Mist één ding',
     missingTwo: 'Mist er twee',
@@ -1132,6 +1137,7 @@ const nl = {
     reviewCleared: 'Niets meer na te kijken. Mooi.',
     reviewDone: 'Klaar',
     tagSaveError: 'Kon die wijziging niet opslaan — controleer je verbinding.',
+    tagEditorOnly: 'Alleen woordenlijst-beheerders kunnen bestaande woorden wijzigen of verwijderen. Nieuwe woorden toevoegen kan wel.',
     searchPlaceholder: 'Zoek in instellingen…',
     homeIconLabel: 'Homeknop',
     homeIconChoice: 'Kies een icoon',

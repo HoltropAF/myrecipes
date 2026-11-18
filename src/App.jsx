@@ -128,7 +128,7 @@ function readStoredSession() {
   } catch { return undefined }
 }
 import { LanguageContext, useT } from './lib/i18n'
-import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS } from './lib/demoData'
+import { DEMO_RECIPES, DEMO_COOK_LOG, DEMO_MEAL_GROUPS, DEMO_SHOPPING_LIST } from './lib/demoData'
 import AuthScreen from './components/AuthScreen'
 import BottomNav from './components/BottomNav'
 import FloatingActionButton from './components/FloatingActionButton'
@@ -802,7 +802,7 @@ function AppInner({ setLanguage }) {
         )}
         {activeTab === 'shopping' && (
           <LazyScreen>
-            <ShoppingListView userId={session?.user?.id} isGuest={isGuest} recipes={recipes} />
+            <ShoppingListView userId={session?.user?.id} isGuest={isGuest} recipes={recipes} demoItems={isGuest ? DEMO_SHOPPING_LIST : []} />
           </LazyScreen>
         )}
         {activeTab === 'stats' && (
@@ -817,6 +817,7 @@ function AppInner({ setLanguage }) {
               onSelectRecipe={openRecipe}
               isGuest={isGuest}
               demoMealGroups={isGuest ? DEMO_MEAL_GROUPS : null}
+              demoShoppingRecipeIds={isGuest ? [...new Set(DEMO_SHOPPING_LIST.map(item => item.recipe_id).filter(Boolean))] : []}
               cookStats={cookCounts}
               collections={isGuest ? [] : collections}
               collectionRecipeMap={isGuest ? {} : collectionRecipeMap}

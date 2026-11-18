@@ -1049,7 +1049,7 @@ function IngredientAllergenSection() {
       .from('ingredient_tags')
       .update({ tags: nextTags, reviewed: true })
       .eq('id', row.id)
-    if (error) setTagError(t('settings.tagSaveError'))
+    if (error) setTagError(tagErrorMessage(error, t))
     else {
       setTagError(null)
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: nextTags, reviewed: true } : r))
@@ -1063,7 +1063,7 @@ function IngredientAllergenSection() {
       .from('ingredient_tags')
       .update({ tags: [], reviewed: true })
       .eq('id', row.id)
-    if (error) setTagError(t('settings.tagSaveError'))
+    if (error) setTagError(tagErrorMessage(error, t))
     else {
       setTagError(null)
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: [], reviewed: true } : r))
@@ -1087,7 +1087,7 @@ function IngredientAllergenSection() {
       .from('ingredient_tags')
       .update({ tags, reviewed: true })
       .eq('id', row.id)
-    if (error) setTagError(t('settings.tagSaveError'))
+    if (error) setTagError(tagErrorMessage(error, t))
     else {
       setTagError(null)
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags, reviewed: true } : r))
@@ -1098,7 +1098,9 @@ function IngredientAllergenSection() {
   const deleteRow = async (row) => {
     setBusyId(row.id)
     const { error } = await supabase.from('ingredient_tags').delete().eq('id', row.id)
-    if (!error) {
+    if (error) setTagError(tagErrorMessage(error, t))
+    else {
+      setTagError(null)
       setRows(prev => prev.filter(r => r.id !== row.id))
     }
     setBusyId(null)
@@ -1398,4 +1400,11 @@ const smallToggleBtnStyle = {
   padding: '6px 12px', borderRadius: 99, border: '1px solid var(--line)',
   background: 'var(--parchment-dim)', color: 'var(--charcoal)', fontFamily: 'var(--font-body)',
   fontSize: 12, fontWeight: 600, cursor: 'pointer',
+}
+
+// The database refuses edits to existing dictionary words from anyone who is not
+// a dictionary editor (error code 42501, see supabase-schema.sql). Say so,
+// instead of the generic "check your connection".
+function tagErrorMessage(error, t) {
+  return error?.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError')
 }

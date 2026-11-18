@@ -1,9 +1,10 @@
-// The Home tab: "what am I making tonight", shortcuts and the feedback form
+// The Home tab: "what am I making tonight", "what can I make?", shortcuts and the feedback form
 // (saved to app_feedback).
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import DecideCard from '../DecideCard'
+import WhatCanIMake from '../WhatCanIMake'
 import { useT } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
 import { useBackLayer } from '../../lib/useBackLayer'
@@ -12,7 +13,9 @@ import './home-view.css'
 export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddRecipe, onImportRecipe, onLogCook, onOpenStats, isGuest }) {
   const { t, lang } = useT()
   const [reportOpen, setReportOpen] = useState(false)
+  const [fridgeOpen, setFridgeOpen] = useState(false)
   useBackLayer(reportOpen, () => setReportOpen(false), 'feedback')
+  useBackLayer(fridgeOpen, () => setFridgeOpen(false), 'fridge')
   return (
     <div className="recipe-home">
       <div className="recipe-home__landscape" aria-hidden="true"><i /><i /><i /></div>
@@ -29,10 +32,30 @@ export default function HomeView({ recipes, cookStats, onSelectRecipe, onAddReci
           <HomeRow icon={<RecipeAddIcon />} label={lang === 'nl' ? 'Recept importeren' : 'Import recipe'} hint={lang === 'nl' ? 'Van een website of video' : 'From a website or video'} onClick={onImportRecipe} />
           <HomeRow icon={<LogIcon />} label={t('fab.logCook')} hint={t('home.logHint', 'Remember what you made')} onClick={onLogCook} />
         </>}
+        <HomeRow icon={<FridgeIcon />} label={t('whatCanIMake.homeLabel', 'What can I make?')} hint={t('whatCanIMake.homeHint', "Type what's in your fridge")} onClick={() => setFridgeOpen(true)} />
         <HomeRow icon={<StatsIcon />} label={t('home.stats', 'Kitchen stats')} hint={t('home.statsHint', 'Favourites and forgotten gems')} onClick={onOpenStats} />
         {!isGuest && <HomeRow className="recipe-home__row--report" icon={<ReportIcon />} label="Report something" hint="Save a bug or idea for later" onClick={() => setReportOpen(true)} />}
       </section>
       {reportOpen && createPortal(<FeedbackSheet onClose={() => setReportOpen(false)} />, document.body)}
+      {fridgeOpen && createPortal(
+        <div className="feedback-sheet" role="presentation" onMouseDown={event => event.target === event.currentTarget && setFridgeOpen(false)}>
+          <div className="feedback-sheet__panel" style={{ maxHeight: '82dvh', overflowY: 'auto' }}>
+            <button className="feedback-sheet__close" type="button" onClick={() => setFridgeOpen(false)} aria-label="Close">×</button>
+            <div style={{ height: 22 }} />
+            <WhatCanIMake
+              recipes={recipes}
+              defaultOpen
+              onSelect={recipe => {
+                setFridgeOpen(false)
+                // Same history race as DecideCard: let the sheet's deferred
+                // history.back() run before the recipe pushes its own entry.
+                setTimeout(() => onSelectRecipe(recipe), 0)
+              }}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
@@ -104,5 +127,6 @@ function FeedbackSheet({ onClose }) {
 export function DinnerBellIcon({ size = 24 }) { return <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 22h20M9 21c.4-6 3-9.5 7-10 4 .5 6.6 4 7 10M14 8h4M16 8V5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/><path d="M4.5 24.5h23" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg> }
 function RecipeAddIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h10a2 2 0 0 1 2 2v16H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.8"/><path d="M9 9h6M12 6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> }
 function LogIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> }
+function FridgeIcon() { return <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM6 10h12M9 6v2M9 13v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function StatsIcon() { return <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> }
 function ReportIcon() { return <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14v12H9l-4 4V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M12 7v4m0 2.5v.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> }

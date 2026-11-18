@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>myrecipes — Setup</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,7 +24,7 @@
       min-height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       font-size: 16px;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
@@ -327,7 +325,7 @@
     </div>
   </section>
 
-  <!-- ══ Step 2: GitHub fork ══════════════════════════════════════════════ -->
+  <!-- ══ Step 2: GitHub account ══════════════════════════════════════════════ -->
   <section class="step" id="step-2">
     <div class="step-icon">🐙</div>
     <h1 data-t="s2_h1"></h1>
@@ -335,7 +333,7 @@
     <p data-t-html="s2_p1"></p>
     <p data-t-html="s2_p2"></p>
     <div class="actions">
-      <a class="btn btn-primary btn-full" href="https://github.com/HoltropAF/myrecipes/fork" target="_blank" rel="noopener" data-t="s2_btn1"></a>
+      <a class="btn btn-primary btn-full" href="https://github.com/signup" target="_blank" rel="noopener" data-t="s2_btn1"></a>
       <button type="button" class="btn btn-secondary btn-full" onclick="goTo(3)" data-t="s2_btn2"></button>
       <button type="button" class="btn btn-secondary btn-full" onclick="goBack()" data-t="back_btn"></button>
       <button type="button" class="btn-start-over" onclick="startOver()" data-t="start_over" title="Start over"></button>
@@ -487,12 +485,12 @@ const T = {
     s1_note:          'This is a personal hobby project, not an official product. If something doesn\'t work, the easiest way to reach me is to <a href="https://github.com/HoltropAF/myrecipes/issues/new" target="_blank" rel="noopener">open an issue on GitHub ↗</a> — you\'ll need a GitHub account, which you\'re creating in step 2 anyway.',
     s1_btn:           'Let\'s go →',
 
-    s2_h1:   'Fork the project on GitHub',
-    s2_why:  'GitHub hosts the code. You need your own copy (a "fork") so Vercel can deploy it under your account — and so any changes you make stay yours.',
-    s2_p1:   '<strong>1.</strong> No GitHub account yet? <a href="https://github.com/signup" target="_blank" rel="noopener">Sign up here ↗</a> — then come back.',
-    s2_p2:   '<strong>2.</strong> Click the button below. GitHub will show a confirmation page — just click <strong>Create fork</strong>.',
-    s2_btn1: 'Fork on GitHub ↗',
-    s2_btn2: 'I\'ve forked it — next →',
+    s2_h1:   'Get a GitHub account',
+    s2_why:  'GitHub keeps the code. In step 6 Vercel puts your own copy of it in your GitHub account and publishes it, so all you need now is an account. You never have to do anything on GitHub itself.',
+    s2_p1:   'Already have a GitHub account? Then skip ahead.',
+    s2_p2:   'Otherwise, sign up with the button below: enter your email, a password and a username, and confirm with the code GitHub emails you. Then come back here.',
+    s2_btn1: 'Sign up on GitHub ↗',
+    s2_btn2: 'I have an account — next →',
 
     s3_h1:   'Create your Supabase project',
     s3_why:  'Supabase is your database and login system. It stores all your recipes and handles magic-link sign-in. It\'s free and takes about 2 minutes to set up.',
@@ -526,8 +524,8 @@ const T = {
     err_key:  'Please paste your anon public key before continuing.',
 
     s6_h1:       'Deploy to Vercel',
-    s6_why:      'Vercel puts your app online for free. It takes the code from your GitHub fork and builds it into a live website at a <code>*.vercel.app</code> address.',
-    s6_p1:       '<strong>1.</strong> Click the button below. Vercel will open its import page, already pointed at your fork.',
+    s6_why:      'Vercel puts your app online for free. It copies the code into your GitHub account and builds it into a live website at a <code>*.vercel.app</code> address.',
+    s6_p1:       '<strong>1.</strong> Click the button below and sign in to Vercel with <strong>Continue with GitHub</strong>.',
     s6_muted:    'On that page, Vercel will show a form with two fields — <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong>. Paste the values from the previous step into those fields, then click <strong>Deploy</strong>.',
     s6_btn1:     'Deploy on Vercel ↗',
     s6_callout:  'After clicking Deploy on Vercel\'s page, wait about <strong>60 seconds</strong>. When it finishes, Vercel shows you a URL like <code>myrecipes-xyz.vercel.app</code>. Copy it and paste it below.',
@@ -581,12 +579,12 @@ const T = {
     s1_note:          'Dit is een persoonlijk hobbyproject, geen officieel product. Als er iets niet werkt, kun je dat het makkelijkst melden via <a href="https://github.com/HoltropAF/myrecipes/issues/new" target="_blank" rel="noopener">een issue op GitHub ↗</a> — daarvoor heb je een GitHub-account nodig, die je toch al aanmaakt in stap 2.',
     s1_btn:           'Aan de slag →',
 
-    s2_h1:   'Kopieer het project op GitHub',
-    s2_why:  'GitHub bewaart de code. Je hebt een eigen kopie nodig (een "fork") zodat Vercel het onder jouw account kan deployen — en zodat wijzigingen die jij maakt van jou blijven.',
-    s2_p1:   '<strong>1.</strong> Nog geen GitHub-account? <a href="https://github.com/signup" target="_blank" rel="noopener">Registreer hier ↗</a> — kom dan terug.',
-    s2_p2:   '<strong>2.</strong> Klik op de knop hieronder. GitHub toont een bevestigingspagina — klik gewoon op <strong>Create fork</strong>.',
-    s2_btn1: 'Forken op GitHub ↗',
-    s2_btn2: 'Fork aangemaakt — volgende →',
+    s2_h1:   'Maak een GitHub-account',
+    s2_why:  'GitHub bewaart de code. In stap 6 zet Vercel je eigen kopie in je GitHub-account en zet die online, dus nu heb je alleen een account nodig. Op GitHub zelf hoef je niets te doen.',
+    s2_p1:   'Heb je al een GitHub-account? Ga dan meteen door.',
+    s2_p2:   'Anders registreer je met de knop hieronder: vul je e-mail, een wachtwoord en een gebruikersnaam in en bevestig met de code die GitHub je mailt. Kom daarna hier terug.',
+    s2_btn1: 'Registreren op GitHub ↗',
+    s2_btn2: 'Ik heb een account — volgende →',
 
     s3_h1:   'Maak een Supabase-project aan',
     s3_why:  'Supabase is je database en inlogsysteem. Het slaat al je recepten op en regelt het inloggen via magic link. Gratis, en duurt ongeveer 2 minuten.',
@@ -620,8 +618,8 @@ const T = {
     err_key:  'Plak eerst je anon public sleutel voordat je verdergaat.',
 
     s6_h1:       'Deployen naar Vercel',
-    s6_why:      'Vercel zet je app gratis online. Het neemt de code van je GitHub-fork en bouwt er een live website van op een <code>*.vercel.app</code>-adres.',
-    s6_p1:       '<strong>1.</strong> Klik op de knop hieronder. Vercel opent zijn importpagina, al ingesteld op jouw fork.',
+    s6_why:      'Vercel zet je app gratis online. Het kopieert de code naar je GitHub-account en bouwt er een live website van op een <code>*.vercel.app</code>-adres.',
+    s6_p1:       '<strong>1.</strong> Klik op de knop hieronder en log bij Vercel in met <strong>Continue with GitHub</strong>.',
     s6_muted:    'Op die pagina toont Vercel een formulier met twee velden — <strong>VITE_SUPABASE_URL</strong> en <strong>VITE_SUPABASE_ANON_KEY</strong>. Plak de waarden uit de vorige stap in die velden en klik op <strong>Deploy</strong>.',
     s6_btn1:     'Deployen op Vercel ↗',
     s6_callout:  'Na het klikken op Deploy op de Vercel-pagina, wacht ongeveer <strong>60 seconden</strong>. Als het klaar is toont Vercel een URL zoals <code>myrecipes-xyz.vercel.app</code>. Kopieer die en plak hem hieronder.',
@@ -775,6 +773,8 @@ function onEnterVercelStep() {
     'repository-url': 'https://github.com/HoltropAF/myrecipes',
     'env':            'VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY',
     'envDescription': 'Your Supabase Project URL and anon public key from the previous step',
+    'project-name':    'myrecipes',
+    'repository-name': 'myrecipes',
   });
   document.getElementById('vercel-btn').href = 'https://vercel.com/new/clone?' + params.toString();
 }
