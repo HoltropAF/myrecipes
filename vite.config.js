@@ -43,14 +43,10 @@ export default defineConfig({
         // until the user reloads via that banner.
         skipWaiting: false,
         clientsClaim: false,
+        // Fonts live in public/fonts/ and are precached with the rest of the app.
+        // Demo photos (public/demo/, 3 MB) are deliberately not: they are only
+        // needed in guest mode and are cached by the browser when first shown.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
-          },
-        ],
       },
     }),
   ],
