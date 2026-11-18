@@ -43,6 +43,8 @@ Just curious? Tap **Continue as guest** for a demo cookbook; nothing is saved. T
 
 ## Your own copy
 
+Want full control? Run your own copy. It has its own database and web address, so it keeps working no matter what happens to the shared app, and nobody but you can see the data. Bring your recipes along with a backup from Settings.
+
 myrecipes is open source under the [MIT licence](LICENSE). The [Setup guide](https://github.com/HoltropAF/myrecipes/wiki/Setup-guide) gets you your own version with your own database and web address, no coding needed. Want to change the code or help build it? Head to the [Developer guide](https://github.com/HoltropAF/myrecipes/wiki/Developer-guide).
 
 ## Learn more
