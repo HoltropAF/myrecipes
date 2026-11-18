@@ -5,6 +5,7 @@ import { parseIngredientBlock } from '../../lib/ingredientParser'
 import ComboInput from '../ComboInput'
 import { titleStyle, labelTextStyle, inputStyle } from '../../lib/formStyles'
 import { supabase, escapeLike } from '../../lib/supabase'
+import { lookupWord, saveWordTags, canEditDictionary } from '../../lib/dictionary'
 import { useT } from '../../lib/i18n'
 import { ALLERGEN_LABELS } from '../../lib/recipeTags'
 
@@ -192,59 +193,36 @@ function IngredientRow({ item, onChange, onRemove }) {
   const [tagRow, setTagRow] = useState(null) // { id, canonical_name, tags } or null if not found yet
   const [tagBusy, setTagBusy] = useState(false)
   const [tagNotice, setTagNotice] = useState('')
+  const [tagIsEditor, setTagIsEditor] = useState(false)
 
   const openTagEditor = async () => {
     const name = (item.name || '').trim().toLowerCase()
     if (!name) return
     setShowTagEditor(true)
     setTagBusy(true)
-    const { data } = await supabase
-      .from('ingredient_tags')
-      .select('id, canonical_name, tags, reviewed')
-      .ilike('canonical_name', escapeLike(name))
-      .maybeSingle()
-    setTagRow(data || { id: null, canonical_name: name, tags: [], reviewed: false })
+    const [row, editor] = await Promise.all([lookupWord(name), canEditDictionary()])
+    setTagRow(row)
+    setTagIsEditor(editor)
     setTagBusy(false)
   }
 
-  const toggleTag = async (key) => {
-    if (!tagRow) return
+  // Editors change the shared list; everyone else saves their own tags, which
+  // only affect their own recipes (see src/lib/dictionary.js).
+  const saveTagRow = async (tags) => {
     setTagBusy(true)
+    const { row, error } = await saveWordTags(tagRow, tags, tagIsEditor)
+    if (error) setTagNotice(error.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError'))
+    else { setTagNotice(''); setTagRow(row) }
+    setTagBusy(false)
+  }
+
+  const toggleTag = (key) => {
+    if (!tagRow) return
     const has = (tagRow.tags || []).includes(key)
-    const nextTags = has ? tagRow.tags.filter(x => x !== key) : [...(tagRow.tags || []), key]
-    if (tagRow.id) {
-      const { error } = await supabase.from('ingredient_tags').update({ tags: nextTags, reviewed: true }).eq('id', tagRow.id)
-      // Only dictionary editors may change an existing word; leave it as it was.
-      if (error) setTagNotice(error.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError'))
-      else { setTagNotice(''); setTagRow(prev => ({ ...prev, tags: nextTags, reviewed: true })) }
-    } else {
-      const { data } = await supabase
-        .from('ingredient_tags')
-        .insert({ canonical_name: tagRow.canonical_name, tags: nextTags, reviewed: true })
-        .select('id, canonical_name, tags, reviewed')
-        .single()
-      if (data) setTagRow(data)
-    }
-    setTagBusy(false)
+    return saveTagRow(has ? tagRow.tags.filter(x => x !== key) : [...(tagRow.tags || []), key])
   }
 
-  const markTagRowNone = async () => {
-    if (!tagRow) return
-    setTagBusy(true)
-    if (tagRow.id) {
-      const { error } = await supabase.from('ingredient_tags').update({ tags: [], reviewed: true }).eq('id', tagRow.id)
-      if (error) setTagNotice(error.code === '42501' ? t('settings.tagEditorOnly') : t('settings.tagSaveError'))
-      else { setTagNotice(''); setTagRow(prev => ({ ...prev, tags: [], reviewed: true })) }
-    } else {
-      const { data } = await supabase
-        .from('ingredient_tags')
-        .insert({ canonical_name: tagRow.canonical_name, tags: [], reviewed: true })
-        .select('id, canonical_name, tags, reviewed')
-        .single()
-      if (data) setTagRow(data)
-    }
-    setTagBusy(false)
-  }
+  const markTagRowNone = () => tagRow && saveTagRow([])
 
   const handleNameChange = (value) => {
     onChange({ name: value })
@@ -386,6 +364,11 @@ function IngredientRow({ item, onChange, onRemove }) {
                   )
                 })}
               </div>
+              {!tagIsEditor && (
+                <div style={{ fontSize: 11, color: 'var(--charcoal-soft)', marginTop: 6, lineHeight: 1.4 }}>
+                  {t('settings.dictPersonalShort')}
+                </div>
+              )}
               {tagNotice && (
                 <div style={{ fontSize: 11, color: 'var(--tomato-deep)', marginTop: 6 }}>{tagNotice}</div>
               )}

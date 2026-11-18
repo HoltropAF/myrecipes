@@ -255,19 +255,31 @@ security definer
 set search_path = public
 as $$
 declare
-  v_tags text[];
+  v_owner uuid;
+  v_tags  text[];
 begin
-  -- Whole-word match (\m ... \M) of each dictionary name inside each ingredient
-  -- name, with regex special characters in the dictionary entry escaped.
+  select user_id into v_owner from recipes where id = p_recipe_id;
+
   select coalesce(array_agg(distinct tag.tag), '{}')
   into v_tags
   from recipes r
     cross join lateral jsonb_array_elements(r.ingredients) grp(value)
     cross join lateral jsonb_array_elements(grp.value -> 'items') item(value)
-    join ingredient_tags it on lower(item.value ->> 'name') ~ (
-      '\m' || regexp_replace(it.canonical_name, '([.\\+*?()|\[\]{}^$])', '\\\1', 'g') || '\M'
+    join (
+      select m.canonical_name, m.tags
+      from my_ingredient_tags m
+      where m.user_id = v_owner
+      union all
+      select lower(it.canonical_name), it.tags
+      from ingredient_tags it
+      where not exists (
+        select 1 from my_ingredient_tags m
+        where m.user_id = v_owner and m.canonical_name = lower(it.canonical_name)
+      )
+    ) d on lower(item.value ->> 'name') ~ (
+      '\m' || regexp_replace(d.canonical_name, '([.\\+*?()|\[\]{}^$])', '\\\1', 'g') || '\M'
     )
-    cross join lateral unnest(it.tags) tag(tag)
+    cross join lateral unnest(d.tags) tag(tag)
   where r.id = p_recipe_id;
 
   insert into recipe_computed_tags (recipe_id, allergen_tags, is_vegan, is_vegetarian, is_pescatarian_or_better)
@@ -299,14 +311,16 @@ create trigger trg_recompute_recipe_tags
   for each row execute function recompute_recipe_tags_trigger();
 
 -- ============================================================
--- WHO MAY CHANGE THE SHARED DICTIONARY, AND WHAT A CHANGE RECOMPUTES
+-- WHO MAY CHANGE THE SHARED DICTIONARY, AND PERSONAL WORDS ON TOP OF IT
 -- ============================================================
--- Anyone signed in may ADD a word to ingredient_tags, but changing or deleting
--- an existing entry is limited to the people in dictionary_editors. While that
--- list is empty everyone is an editor, so a new copy works straight away. To
--- lock it down later, add yourself (your id is under Authentication → Users):
+-- The shared ingredient_tags list can only be changed (adding words included)
+-- by the people in dictionary_editors. While that list is empty everyone is an
+-- editor, so a new copy works straight away. To lock it, add yourself (your id
+-- is under Authentication → Users):
 --   insert into dictionary_editors (user_id) values ('<your user id>');
--- A dictionary change only recomputes recipes that contain the changed word.
+-- Everyone else keeps their own words and overrides in my_ingredient_tags,
+-- which only affect the labels on their own recipes. A change only recomputes
+-- the recipes that contain the changed word.
 create table if not exists dictionary_editors (
   user_id  uuid primary key references auth.users(id) on delete cascade,
   added_at timestamptz not null default now()
@@ -340,12 +354,13 @@ $$;
 
 drop trigger if exists trg_guard_dictionary_edit on ingredient_tags;
 create trigger trg_guard_dictionary_edit
-  before update or delete on ingredient_tags
+  before insert or update or delete on ingredient_tags
   for each row execute function guard_dictionary_edit();
 
 -- Recompute the recipes whose ingredient names contain `p_word` as a whole word
 -- (the same match recompute_recipe_tags uses).
-create or replace function recompute_recipe_tags_for_word(p_word text) returns void
+drop function if exists recompute_recipe_tags_for_word(text);
+create or replace function recompute_recipe_tags_for_word(p_word text, p_user uuid default null) returns void
 language plpgsql
 security definer
 set search_path = public
@@ -355,12 +370,13 @@ declare
 begin
   perform recompute_recipe_tags(r.id)
   from recipes r
-  where exists (
-    select 1
-    from jsonb_array_elements(r.ingredients) grp(value)
-      cross join lateral jsonb_array_elements(grp.value -> 'items') item(value)
-    where lower(item.value ->> 'name') ~ v_pattern
-  );
+  where (p_user is null or r.user_id = p_user)
+    and exists (
+      select 1
+      from jsonb_array_elements(r.ingredients) grp(value)
+        cross join lateral jsonb_array_elements(grp.value -> 'items') item(value)
+      where lower(item.value ->> 'name') ~ v_pattern
+    );
 end;
 $$;
 
@@ -387,6 +403,43 @@ create trigger trg_recompute_on_dictionary_change
   for each row execute function recompute_tags_on_dictionary_change();
 
 drop function if exists recompute_all_recipe_tags();
+
+-- Personal words: your own tags for a word, used for your recipes only.
+create table if not exists my_ingredient_tags (
+  user_id        uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  canonical_name text not null check (canonical_name = lower(canonical_name) and length(btrim(canonical_name)) > 0),
+  tags           text[] not null default '{}',
+  updated_at     timestamptz not null default now(),
+  primary key (user_id, canonical_name)
+);
+alter table my_ingredient_tags enable row level security;
+drop policy if exists "Users manage their own ingredient tags" on my_ingredient_tags;
+create policy "Users manage their own ingredient tags" on my_ingredient_tags
+  for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+grant select, insert, update, delete on my_ingredient_tags to authenticated;
+
+-- A change to someone's own word only touches their own recipes.
+create or replace function recompute_tags_on_my_word_change() returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP in ('UPDATE', 'DELETE') then
+    perform recompute_recipe_tags_for_word(OLD.canonical_name, OLD.user_id);
+  end if;
+  if TG_OP = 'INSERT' or (TG_OP = 'UPDATE' and NEW.canonical_name <> OLD.canonical_name) then
+    perform recompute_recipe_tags_for_word(NEW.canonical_name, NEW.user_id);
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_recompute_on_my_word_change on my_ingredient_tags;
+create trigger trg_recompute_on_my_word_change
+  after insert or update of canonical_name, tags or delete on my_ingredient_tags
+  for each row execute function recompute_tags_on_my_word_change();
 
 -- ============================================================
 -- ROW LEVEL SECURITY

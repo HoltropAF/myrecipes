@@ -37,6 +37,9 @@ export async function exportFullBackup(supabase, userId) {
     supabase.from('collection_recipes').select('*'),
     supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ])
+  // Your own allergen words. Optional: a copy that predates them has no such
+  // table, and that must not block the backup.
+  const myWords = await supabase.from('my_ingredient_tags').select('canonical_name, tags')
 
   const failed = [recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, preferences]
     .find(result => result.error)
@@ -55,6 +58,7 @@ export async function exportFullBackup(supabase, userId) {
     collections: collections.data || [],
     collection_recipes: collectionRecipes.data || [],
     preferences: preferences.data || null,
+    my_ingredient_tags: myWords.error ? [] : myWords.data || [],
   }
 
   downloadJSON(`myrecipes-backup-${todayLocalISO()}.json`, backup)

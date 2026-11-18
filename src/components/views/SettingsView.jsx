@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { exportFullBackup, exportCookbookPDF } from '../../lib/exportUtils'
 import { parseBackup, summariseAgainst, importBackup, ImportError, IMPORT_TABLES } from '../../lib/importUtils'
+import { loadDictionary, canEditDictionary, saveWordTags, addWord, removeWord } from '../../lib/dictionary'
 import {
   formatBytes, readLocalStorageUsage, readCachedRecipeCount, readQuotaEstimate,
   clearLocalCaches, clearServiceWorkerCaches, readInstanceInfo,
@@ -707,7 +708,7 @@ function ModeButton({ active, onClick, children }) {
 // One ingredient at a time, with a Confirm. 351 rows in a scrolling list reads
 // as endless; a single card with a count left reads as finite.
 //
-// Mounted with key={row.id} so each ingredient gets a fresh component and the
+// Mounted with key={row.key} so each ingredient gets a fresh component and the
 // draft resets by itself, rather than syncing state in an effect.
 function ReviewCard({ row, allergenKeys, busy, remaining, onConfirm, onSkip, onClose }) {
   const { t } = useT()
@@ -1016,15 +1017,15 @@ function IngredientAllergenSection() {
 
   const allergenKeys = Object.keys(ALLERGEN_LABELS)
 
+  const [isEditor, setIsEditor] = useState(false)
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const { data } = await supabase
-        .from('ingredient_tags')
-        .select('id, canonical_name, tags, reviewed')
-        .order('canonical_name')
+      const [{ rows: loaded }, editor] = await Promise.all([loadDictionary(), canEditDictionary()])
       if (!cancelled) {
-        setRows(data || [])
+        setRows(loaded)
+        setIsEditor(editor)
         setLoading(false)
       }
     })()
@@ -1041,38 +1042,28 @@ function IngredientAllergenSection() {
     return list
   }, [rows, search, onlyUnreviewed])
 
-  const toggleTag = async (row, key) => {
-    setBusyId(row.id)
-    const has = (row.tags || []).includes(key)
-    const nextTags = has ? row.tags.filter(x => x !== key) : [...(row.tags || []), key]
-    const { error } = await supabase
-      .from('ingredient_tags')
-      .update({ tags: nextTags, reviewed: true })
-      .eq('id', row.id)
+  // Editors change the shared list; everyone else saves their own tags, which
+  // only affect their own recipes (see src/lib/dictionary.js).
+  const saveTags = async (row, tags) => {
+    setBusyId(row.key)
+    const { row: saved, error } = await saveWordTags(row, tags, isEditor)
     if (error) setTagError(tagErrorMessage(error, t))
     else {
       setTagError(null)
-      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: nextTags, reviewed: true } : r))
+      setRows(prev => prev.map(r => r.key === row.key ? saved : r))
     }
     setBusyId(null)
   }
 
-  const markNone = async (row) => {
-    setBusyId(row.id)
-    const { error } = await supabase
-      .from('ingredient_tags')
-      .update({ tags: [], reviewed: true })
-      .eq('id', row.id)
-    if (error) setTagError(tagErrorMessage(error, t))
-    else {
-      setTagError(null)
-      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags: [], reviewed: true } : r))
-    }
-    setBusyId(null)
+  const toggleTag = (row, key) => {
+    const has = (row.tags || []).includes(key)
+    return saveTags(row, has ? row.tags.filter(x => x !== key) : [...(row.tags || []), key])
   }
+
+  const markNone = (row) => saveTags(row, [])
 
   const queue = useMemo(
-    () => rows.filter(r => !r.reviewed && !skipped.has(r.id)),
+    () => rows.filter(r => !r.reviewed && !skipped.has(r.key)),
     [rows, skipped]
   )
   const currentReview = queue[0] || null
@@ -1081,27 +1072,15 @@ function IngredientAllergenSection() {
 
   // One write per decision, unlike the inline list where every tag tap is its
   // own round trip — in the queue you set the whole answer, then confirm it.
-  const saveReview = async (row, tags) => {
-    setBusyId(row.id)
-    const { error } = await supabase
-      .from('ingredient_tags')
-      .update({ tags, reviewed: true })
-      .eq('id', row.id)
-    if (error) setTagError(tagErrorMessage(error, t))
-    else {
-      setTagError(null)
-      setRows(prev => prev.map(r => r.id === row.id ? { ...r, tags, reviewed: true } : r))
-    }
-    setBusyId(null)
-  }
+  const saveReview = (row, tags) => saveTags(row, tags)
 
   const deleteRow = async (row) => {
-    setBusyId(row.id)
-    const { error } = await supabase.from('ingredient_tags').delete().eq('id', row.id)
+    setBusyId(row.key)
+    const { row: after, error } = await removeWord(row, isEditor)
     if (error) setTagError(tagErrorMessage(error, t))
     else {
       setTagError(null)
-      setRows(prev => prev.filter(r => r.id !== row.id))
+      setRows(prev => after ? prev.map(r => r.key === row.key ? after : r) : prev.filter(r => r.key !== row.key))
     }
     setBusyId(null)
   }
@@ -1109,18 +1088,16 @@ function IngredientAllergenSection() {
   const addIngredient = async () => {
     const clean = newName.trim().toLowerCase()
     if (!clean || adding) return
-    if (rows.some(r => r.canonical_name.toLowerCase() === clean)) {
+    if (rows.some(r => r.key === clean)) {
       setNewName('')
       return
     }
     setAdding(true)
-    const { data, error } = await supabase
-      .from('ingredient_tags')
-      .insert({ canonical_name: clean, tags: [], reviewed: false })
-      .select('id, canonical_name, tags, reviewed')
-      .single()
-    if (!error && data) {
-      setRows(prev => [...prev, data].sort((a, b) => a.canonical_name.localeCompare(b.canonical_name)))
+    const { row, error } = await addWord(clean, isEditor)
+    if (error) setTagError(tagErrorMessage(error, t))
+    else if (row) {
+      setTagError(null)
+      setRows(prev => [...prev, row].sort((a, b) => a.canonical_name.localeCompare(b.canonical_name)))
       setNewName('')
     }
     setAdding(false)
@@ -1130,6 +1107,15 @@ function IngredientAllergenSection() {
     <>
       <SectionLabel>{t('settings.manageAllergenTags')}</SectionLabel>
       <div style={cardStyle}>
+        {!loading && (
+          <div style={{
+            fontFamily: 'var(--font-body)', fontSize: 12.5, lineHeight: 1.45, color: 'var(--charcoal)',
+            background: isEditor ? 'var(--sage-light)' : 'var(--parchment-dim)', borderRadius: 9,
+            padding: '9px 11px', marginBottom: 10,
+          }}>
+            {isEditor ? t('settings.dictEditorNote') : t('settings.dictPersonalNote')}
+          </div>
+        )}
         <input
           type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder={t('settings.searchIngredients')}
@@ -1171,13 +1157,13 @@ function IngredientAllergenSection() {
 
             {reviewing && currentReview && (
               <ReviewCard
-                key={currentReview.id}
+                key={currentReview.key}
                 row={currentReview}
                 allergenKeys={allergenKeys}
-                busy={busyId === currentReview.id}
+                busy={busyId === currentReview.key}
                 remaining={queue.length}
                 onConfirm={(tags) => saveReview(currentReview, tags)}
-                onSkip={() => setSkipped(prev => new Set(prev).add(currentReview.id))}
+                onSkip={() => setSkipped(prev => new Set(prev).add(currentReview.key))}
                 onClose={() => setReviewing(false)}
               />
             )}
@@ -1233,7 +1219,7 @@ function IngredientAllergenSection() {
           {filtered.map(row => {
             const hasNoTags = (row.tags || []).length === 0
             return (
-              <div key={row.id} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
+              <div key={row.key} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--charcoal)' }}>
                     {row.canonical_name}
@@ -1245,15 +1231,23 @@ function IngredientAllergenSection() {
                       borderRadius: 99, padding: '2px 7px',
                     }}>{t('settings.unreviewed')}</span>
                   )}
-                  <button
-                    onClick={() => deleteRow(row)} disabled={busyId === row.id}
-                    style={{ ...linkBtnStyle, marginLeft: 'auto', color: 'var(--tomato)' }}
-                  >{t('settings.delete')}</button>
+                  {row.mine && (
+                    <span style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em',
+                      color: 'var(--sage)', background: 'var(--sage-light)', borderRadius: 99, padding: '2px 7px',
+                    }}>{row.inShared ? t('settings.dictYourVersion') : t('settings.dictYourWord')}</span>
+                  )}
+                  {(row.mine || isEditor) && (
+                    <button
+                      onClick={() => deleteRow(row)} disabled={busyId === row.key}
+                      style={{ ...linkBtnStyle, marginLeft: 'auto', color: 'var(--tomato)' }}
+                    >{row.mine && row.inShared ? t('settings.dictReset') : t('settings.delete')}</button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <button
                     onClick={() => markNone(row)}
-                    disabled={busyId === row.id}
+                    disabled={busyId === row.key}
                     style={{
                       fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 10px', borderRadius: 99,
                       border: `1px solid ${row.reviewed && hasNoTags ? 'var(--charcoal)' : 'var(--line)'}`,
@@ -1268,7 +1262,7 @@ function IngredientAllergenSection() {
                       <button
                         key={key}
                         onClick={() => toggleTag(row, key)}
-                        disabled={busyId === row.id}
+                        disabled={busyId === row.key}
                         style={{
                           fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 10px', borderRadius: 99,
                           border: `1px solid ${active ? 'var(--tomato)' : 'var(--line)'}`,

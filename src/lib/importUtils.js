@@ -156,5 +156,15 @@ export async function importBackup(supabase, userId, parsed, { mode = 'merge', o
     report.preferencesRestored = !error
   }
 
+  // Your own allergen words: optional like preferences, and always yours.
+  const myWords = Array.isArray(parsed.data.my_ingredient_tags) ? parsed.data.my_ingredient_tags : []
+  const wordRows = myWords
+    .filter(row => row && typeof row.canonical_name === 'string' && row.canonical_name.trim())
+    .map(row => ({ user_id: userId, canonical_name: row.canonical_name.trim().toLowerCase(), tags: Array.isArray(row.tags) ? row.tags : [] }))
+  if (wordRows.length) {
+    const { error } = await supabase.from('my_ingredient_tags').upsert(wordRows, { onConflict: 'user_id,canonical_name' })
+    report.myWordsRestored = error ? 0 : wordRows.length
+  }
+
   return report
 }
