@@ -16,7 +16,9 @@ export default function AuthScreen({ onGuest }) {
     setStatus(null)
     const { error } = await supabase.auth.signInWithOtp({ email })
     setLoading(false)
-    if (error) setStatus({ type: 'error', text: error.message })
+    // A sleeping or unreachable Supabase project answers with no status or a 5xx;
+    // say so in plain words instead of showing a raw fetch error.
+    if (error) setStatus({ type: 'error', text: navigator.onLine && (!error.status || error.status >= 500) ? t('auth.napping') : error.message })
     else setStatus({ type: 'info', text: t('auth.linkSent')(email) })
   }
 

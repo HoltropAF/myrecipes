@@ -174,6 +174,9 @@ function AppInner({ setLanguage }) {
   // True until the first fetch resolves. With a warm cache there is something
   // to read immediately, so the spinner is only for a genuinely empty screen.
   const [recipesLoaded, setRecipesLoaded] = useState(false)
+  // True when Supabase itself doesn't answer while the device is online: a free
+  // project that has gone to sleep, or an outage. Shown as a banner, not an error.
+  const [dbAsleep, setDbAsleep] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [activeTab, setActiveTab] = useState(readLastAppTab)
   const [unitSystem, setUnitSystem] = useState('metric')
@@ -395,7 +398,7 @@ function AppInner({ setLanguage }) {
       setCookCounts(buildCookStats(DEMO_COOK_LOG))
       return
     }
-    const [{ data, error }, { data: logData }, { data: tagData }, { data: groupData }] = await Promise.all([
+    const [{ data, error, status }, { data: logData }, { data: tagData }, { data: groupData }] = await Promise.all([
       supabase.from('recipes').select('*').order('created_at', { ascending: false }),
       // cooked_date and thumbs come along so cards can show "last cooked" and
       // Stats can surface loved-but-forgotten recipes, without a second query.
@@ -408,9 +411,13 @@ function AppInner({ setLanguage }) {
     // Keep whatever is already on screen and in the cache rather than replacing
     // the cookbook with an empty list and destroying the offline copy.
     if (error || !Array.isArray(data)) {
+      // No answer at all (status 0) or a server error, while the device says
+      // it is online, means the database rather than the connection.
+      if (navigator.onLine && (!status || status >= 500)) setDbAsleep(true)
       setRecipesLoaded(true)
       return
     }
+    setDbAsleep(false)
     const tagMap = {}
     for (const row of (tagData || [])) tagMap[row.recipe_id] = row
     const freshRecipes = data.map(r => ({
@@ -713,6 +720,22 @@ function AppInner({ setLanguage }) {
             width: 7, height: 7, borderRadius: 99, background: 'var(--tomato)', flexShrink: 0,
           }} />
           <span>{recipes.length > 0 ? t('app.offlineWithCache')(recipes.length) : t('app.offline')}</span>
+        </div>
+      )}
+
+      {online && dbAsleep && !isGuest && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
+          padding: '8px 16px', background: 'var(--parchment-dim)',
+          borderBottom: '1px solid var(--mustard)', textAlign: 'center',
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--charcoal)',
+        }}>
+          <span aria-hidden="true">💤</span>
+          <span>{t('app.napping')(recipes.length)}</span>
+          <button
+            onClick={() => loadRecipes()}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: 'var(--tomato-deep)', textDecoration: 'underline' }}
+          >{t('app.tryAgain')}</button>
         </div>
       )}
 

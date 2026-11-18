@@ -221,27 +221,9 @@ create index if not exists idx_cook_log_recipe_id        on cook_log(recipe_id);
 create index if not exists idx_meal_groups_user          on meal_groups(user_id);
 create index if not exists app_feedback_user_created_idx on app_feedback(user_id, created_at desc);
 
--- ============================================================
--- VIEWS
--- ============================================================
--- recipe_ingredient_tags: which dictionary entry matched which ingredient, for
--- debugging the allergen labels. Not used by the app itself.
--- `security_invoker = true` matters: without it the view runs with its owner's
--- rights, row level security on `recipes` would not apply, and every user's
--- recipe titles and ingredients would be readable with the public anon key.
-create or replace view recipe_ingredient_tags
-with (security_invoker = true) as
-select
-  r.id                as recipe_id,
-  r.title,
-  item->>'name'       as raw_ingredient,
-  it.canonical_name,
-  it.tags
-from recipes r
-cross join lateral jsonb_array_elements(r.ingredients) as ig
-cross join lateral jsonb_array_elements(ig->'items')   as item
-join ingredient_tags it
-  on lower(item->>'name') ilike '%' || lower(it.canonical_name) || '%';
+-- recipe_ingredient_tags used to be a debugging view here; nothing read it,
+-- so it is removed from older copies too.
+drop view if exists recipe_ingredient_tags;
 
 -- ============================================================
 -- PRECOMPUTED ALLERGEN TAGS

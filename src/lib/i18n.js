@@ -120,9 +120,14 @@ const en = {
     guestBtn: 'Continue as guest',
     guestHint: 'Browse a demo cookbook. Nothing you do is saved.',
     linkSent: (email) => `Link sent to ${email}. Check your inbox and tap it on this device.`,
+    napping: 'Sign-in isn’t answering right now. The recipe database may be napping; try again in a minute.',
   },
   app: {
     offline: 'Offline — changes won’t save until you’re back.',
+    napping: (n) => n > 0
+      ? `The recipe database isn’t answering; it may be napping. Showing ${n} saved recipe${n === 1 ? '' : 's'}, changes won’t save yet.`
+      : 'The recipe database isn’t answering; it may be napping.',
+    tryAgain: 'Try again',
     offlineWithCache: (n) => `Offline — showing ${n} cached recipe${n === 1 ? '' : 's'}. Changes won’t save yet.`,
     undo: 'Undo',
     warmingUp: 'warming up the kitchen…',
@@ -762,9 +767,14 @@ const nl = {
     guestBtn: 'Doorgaan als gast',
     guestHint: 'Bekijk een demo kookboek. Niets wordt opgeslagen.',
     linkSent: (email) => `Link verstuurd naar ${email}. Controleer je inbox en tik erop op dit apparaat.`,
+    napping: 'Inloggen reageert nu even niet. De receptendatabase doet misschien een dutje; probeer het over een minuut opnieuw.',
   },
   app: {
     offline: 'Offline — wijzigingen worden nog niet opgeslagen.',
+    napping: (n) => n > 0
+      ? `De receptendatabase reageert niet; misschien doet hij een dutje. Je ziet ${n} opgeslagen recept${n === 1 ? '' : 'en'}, wijzigingen worden nog niet opgeslagen.`
+      : 'De receptendatabase reageert niet; misschien doet hij een dutje.',
+    tryAgain: 'Opnieuw proberen',
     offlineWithCache: (n) => `Offline — ${n} recept${n === 1 ? '' : 'en'} uit cache. Wijzigingen worden nog niet opgeslagen.`,
     undo: 'Ongedaan maken',
     warmingUp: 'de keuken warmt op…',
