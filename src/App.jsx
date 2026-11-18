@@ -661,6 +661,7 @@ function AppInner({ setLanguage }) {
           collectionRecipeMap={isGuest ? {} : collectionRecipeMap}
           onCollectionsChanged={loadCollections}
           onCookLogged={isGuest ? null : loadRecipes}
+          onFavouriteChanged={(id, value) => setRecipes(prev => prev.map(r => r.id === id ? { ...r, wishlist: value } : r))}
         />
       </LazyScreen>
     )

@@ -32,8 +32,18 @@ function recipeRoute(tab) {
   return `${url.pathname}${url.search}${url.hash}`
 }
 
-export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged }) {
+export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSystem = 'metric', onToggleUnitSystem, isGuest = false, collections = [], collectionRecipeMap = {}, onCollectionsChanged, onCookLogged, onFavouriteChanged }) {
   const { t } = useT()
+  // Favourites are stored in the recipes.wishlist column (its name predates the
+  // feature) and drive the "Favourites only" filter on the Recipes tab.
+  const [favourite, setFavourite] = useState(!!recipe.wishlist)
+  const toggleFavourite = async () => {
+    const next = !favourite
+    setFavourite(next)
+    const { error } = await supabase.from('recipes').update({ wishlist: next }).eq('id', recipe.id)
+    if (error) setFavourite(!next)
+    else onFavouriteChanged?.(recipe.id, next)
+  }
 
   const TABS = [
     { id: 'info',        label: t('recipeTabs.info') },
@@ -167,6 +177,17 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onDelete, unitSy
                   color: 'var(--tomato-deep)', padding: '5px 10px',
                 }}
               >{unitSystem === 'metric' ? 'g / ml' : 'cup / oz'}</button>
+            )}
+            {!isGuest && (
+              <button
+                onClick={toggleFavourite}
+                aria-pressed={favourite}
+                title={favourite ? t('recipeDetail.removeFavourite') : t('recipeDetail.addFavourite')}
+                aria-label={favourite ? t('recipeDetail.removeFavourite') : t('recipeDetail.addFavourite')}
+                style={{ ...navBtnStyle, lineHeight: 0, padding: '4px 6px', color: 'var(--tomato)' }}
+              >
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill={favourite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+              </button>
             )}
             {!isGuest && (
               <button onClick={() => setShowCollectionPicker(true)} title={t('collections.title')} style={{ ...navBtnStyle, fontSize: 18, lineHeight: 1, padding: '4px 6px' }}>

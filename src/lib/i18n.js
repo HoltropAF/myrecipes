@@ -265,6 +265,8 @@ const en = {
   },
   recipeDetail: {
     back: '‹ Back',
+    addFavourite: 'Add to favourites',
+    removeFavourite: 'Remove from favourites',
     edit: 'Edit',
     delete: 'Delete',
   },
@@ -912,6 +914,8 @@ const nl = {
   },
   recipeDetail: {
     back: '‹ Terug',
+    addFavourite: 'Toevoegen aan favorieten',
+    removeFavourite: 'Verwijderen uit favorieten',
     edit: 'Bewerken',
     delete: 'Verwijderen',
   },
