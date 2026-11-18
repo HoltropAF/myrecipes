@@ -41,11 +41,13 @@ All you need is a browser and an email address.
 
 Just curious? Tap **Continue as guest** for a demo cookbook; nothing is saved. To keep the app on your phone, choose **Add to Home screen** from your browser's menu.
 
-## Your own copy
+## How much control do you want?
 
-Want full control? Run your own copy. It has its own database and web address, so it keeps working no matter what happens to the shared app, and nobody but you can see the data. Bring your recipes along with a backup from Settings.
+1. **Just use it.** The [shared app](https://myrecipes-pi.vercel.app/) is looked after for you, from the database to the updates. Sign in and cook.
+2. **Your own copy.** Your own database and web address, so it keeps running whatever happens to the shared app. One click on a Deploy button and about 20 minutes, no coding; you keep your own free database awake.
+3. **Your own fork.** Your own copy that can also pull in updates with one click, and that you can change however you like.
 
-myrecipes is open source under the [MIT licence](LICENSE). The [Setup guide](https://github.com/HoltropAF/myrecipes/wiki/Setup-guide) gets you your own version with your own database and web address, no coding needed. Want to change the code or help build it? Head to the [Developer guide](https://github.com/HoltropAF/myrecipes/wiki/Developer-guide).
+The [Setup guide](https://github.com/HoltropAF/myrecipes/wiki/Setup-guide) walks through levels 2 and 3, and a backup from Settings moves your recipes between them. Want to work on the code or help build it? Head to the [Developer guide](https://github.com/HoltropAF/myrecipes/wiki/Developer-guide). myrecipes is open source under the [MIT licence](LICENSE).
 
 ## Learn more
 
