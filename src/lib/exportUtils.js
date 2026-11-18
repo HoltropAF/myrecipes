@@ -27,7 +27,7 @@ export function downloadJSON(filename, data) {
  */
 export async function exportFullBackup(supabase, userId) {
   const [
-    recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, preferences,
+    recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, recipeGroups, preferences,
   ] = await Promise.all([
     supabase.from('recipes').select('*'),
     supabase.from('cook_log').select('*'),
@@ -35,13 +35,14 @@ export async function exportFullBackup(supabase, userId) {
     supabase.from('meal_groups').select('*'),
     supabase.from('collections').select('*'),
     supabase.from('collection_recipes').select('*'),
+    supabase.from('recipe_groups').select('*'),
     supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ])
   // Your own allergen words. Optional: a copy that predates them has no such
   // table, and that must not block the backup.
   const myWords = await supabase.from('my_ingredient_tags').select('canonical_name, tags')
 
-  const failed = [recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, preferences]
+  const failed = [recipes, cookLog, shoppingList, mealGroups, collections, collectionRecipes, recipeGroups, preferences]
     .find(result => result.error)
   if (failed) {
     throw new Error(`Backup aborted — could not read all data: ${failed.error.message}`)
@@ -50,13 +51,14 @@ export async function exportFullBackup(supabase, userId) {
   const backup = {
     exported_at: new Date().toISOString(),
     app: 'myrecipes',
-    version: 2,
+    version: 3,
     recipes: recipes.data || [],
     cook_log: cookLog.data || [],
     shopping_list: shoppingList.data || [],
     meal_groups: mealGroups.data || [],
     collections: collections.data || [],
     collection_recipes: collectionRecipes.data || [],
+    recipe_groups: recipeGroups.data || [],
     preferences: preferences.data || null,
     my_ingredient_tags: myWords.error ? [] : myWords.data || [],
   }

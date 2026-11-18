@@ -17,17 +17,17 @@
 //    original owner's id, and RLS would reject every row otherwise.
 
 export const IMPORT_TABLES = [
-  'recipes', 'cook_log', 'shopping_list', 'meal_groups', 'collections', 'collection_recipes',
+  'recipes', 'cook_log', 'shopping_list', 'meal_groups', 'collections', 'collection_recipes', 'recipe_groups',
 ]
 
 // Rows are inserted parents-first so foreign keys always resolve.
 const INSERT_ORDER = [
-  'recipes', 'collections', 'collection_recipes', 'cook_log', 'shopping_list', 'meal_groups',
+  'recipe_groups', 'recipes', 'collections', 'collection_recipes', 'cook_log', 'shopping_list', 'meal_groups',
 ]
 
 // collection_recipes is a join table: it has no id and no user_id of its own,
 // and is protected by a policy that checks the parent collection's owner.
-const OWNED_BY_USER = new Set(['recipes', 'cook_log', 'shopping_list', 'meal_groups', 'collections'])
+const OWNED_BY_USER = new Set(['recipes', 'cook_log', 'shopping_list', 'meal_groups', 'collections', 'recipe_groups'])
 
 export class ImportError extends Error {}
 
@@ -83,7 +83,7 @@ export function summariseAgainst(parsed, existingRecipes) {
   return { newCount, sameId, sameTitle, willDelete: existingRecipes.length - sameId }
 }
 
-function prepareRows(table, rows, userId) {
+export function prepareRows(table, rows, userId, groupIds = null) {
   return (rows || [])
     .filter(row => row && typeof row === 'object')
     .map(row => {
@@ -91,6 +91,10 @@ function prepareRows(table, rows, userId) {
       // Never trust a timestamp column the DB owns.
       delete clean.created_at_server
       if (OWNED_BY_USER.has(table)) clean.user_id = userId
+      // Recipes linked to a group that is neither in the file nor in the account
+      // (backups made before groups were exported, version 2 and older) would
+      // fail the foreign key; import them unlinked instead of not at all.
+      if (table === 'recipes' && groupIds && clean.group_id && !groupIds.has(clean.group_id)) clean.group_id = null
       return clean
     })
 }
@@ -116,7 +120,7 @@ export async function importBackup(supabase, userId, parsed, { mode = 'merge', o
     // Children first so nothing is orphaned mid-way. recipes cascades to
     // cook_log and collection_recipes, but being explicit keeps the counts
     // honest and the order obvious.
-    for (const table of ['shopping_list', 'meal_groups', 'cook_log', 'collections', 'recipes']) {
+    for (const table of ['shopping_list', 'meal_groups', 'cook_log', 'collections', 'recipes', 'recipe_groups']) {
       onProgress?.(`clearing ${table}`, 0, 1)
       const { error, count } = await supabase
         .from(table).delete({ count: 'exact' }).eq('user_id', userId)
@@ -125,8 +129,13 @@ export async function importBackup(supabase, userId, parsed, { mode = 'merge', o
     }
   }
 
+  // Groups a recipe may link to: the file's own, plus any already in this
+  // account (after a 'replace' that is none).
+  const groupIds = new Set((parsed.data.recipe_groups || []).map(group => group?.id).filter(Boolean))
+  const { data: existingGroups } = await supabase.from('recipe_groups').select('id')
+  for (const group of existingGroups || []) groupIds.add(group.id)
   for (const table of INSERT_ORDER) {
-    const rows = prepareRows(table, parsed.data[table], userId)
+    const rows = prepareRows(table, parsed.data[table], userId, groupIds)
     report.inserted[table] = 0
     if (rows.length === 0) continue
 

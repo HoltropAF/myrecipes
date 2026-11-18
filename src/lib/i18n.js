@@ -538,7 +538,7 @@ const en = {
     importNew: (n) => `${n} new`,
     importTable: {
       recipes: 'recipes', cook_log: 'cook log entries', shopping_list: 'shopping list items',
-      meal_groups: 'meal plans', collections: 'collections', collection_recipes: 'collection links',
+      meal_groups: 'meal plans', collections: 'collections', collection_recipes: 'collection links', recipe_groups: 'linked recipe groups',
     },
     importMerge: 'Merge',
     importReplace: 'Replace all',
@@ -1180,7 +1180,7 @@ const nl = {
     importNew: (n) => `${n} nieuw`,
     importTable: {
       recipes: 'recepten', cook_log: 'kooklogregels', shopping_list: 'boodschappen',
-      meal_groups: 'maaltijdplannen', collections: 'collecties', collection_recipes: 'collectiekoppelingen',
+      meal_groups: 'maaltijdplannen', collections: 'collecties', collection_recipes: 'collectiekoppelingen', recipe_groups: 'gekoppelde receptgroepen',
     },
     importMerge: 'Samenvoegen',
     importReplace: 'Alles vervangen',
