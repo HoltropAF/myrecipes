@@ -58,7 +58,8 @@ create table if not exists recipes (
   carbs_g               numeric,
   fat_g                 numeric,
   nutrition_is_estimate boolean not null default true,
-  -- Legacy: the wishlist feature was removed in ef8f3fa (2026-06-24).
+  -- Favourite flag: set with the heart on a recipe, read by the Favourites
+  -- only filter. The column name is older than the feature.
   wishlist              boolean not null default false,
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
@@ -99,7 +100,7 @@ create table if not exists user_preferences (
   recipe_view_mode   text default 'folders' check (recipe_view_mode in ('list','folders')),
   recipe_search_mode text default 'title'   check (recipe_search_mode in ('title','ingredient')),
   compact_mode       boolean not null default false,
-  pin_wishlist_first boolean not null default false,  -- legacy, see recipes.wishlist
+  pin_wishlist_first boolean not null default false,  -- legacy, unused by the app
   updated_at         timestamptz not null default now()
 );
 

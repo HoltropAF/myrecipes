@@ -1,4 +1,5 @@
 // Sign-in screen: email magic link (Supabase Auth) or "look around" guest mode.
+// Says so in plain words when the database is asleep or unreachable.
 
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'

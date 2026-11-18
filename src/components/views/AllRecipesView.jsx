@@ -1,5 +1,5 @@
-// The Recipes tab: cookbook, list and grid views with search, filters,
-// collections and linked recipe groups.
+// The Recipes tab: cookbook, list and grid views with search, filters
+// (including Favourites only), collections and linked recipe groups.
 
 import { useState, useMemo } from 'react'
 import LoadingGyoza from '../LoadingGyoza'

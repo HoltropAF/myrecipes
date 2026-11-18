@@ -27,8 +27,8 @@
 - **Cook without the mess**: big-letter cooking mode, timers found in the steps, scaling and metric or US units
 - **Shop smarter**: add a recipe's ingredients to one list, merged and sorted by supermarket aisle
 - **Plan the week**: a calm week planner, with room for "eating out" and leftovers too
-- **Stop deciding**: let the app pick a dinner, or open your Dopamine Menu of sure-fire favourites
-- **Remember what worked**: log each cook with a thumbs up and a note, and see your favourites and forgotten gems
+- **Stop deciding**: let the app pick a dinner, see what you can make from what's in the fridge, or open your Dopamine Menu of sure-fire favourites
+- **Remember what worked**: heart your favourites, log each cook with a thumbs up and a note, and spot forgotten gems
 - **Take it with you**: installs on your phone like an app, in English or Dutch, light or dark
 
 ## Start cooking

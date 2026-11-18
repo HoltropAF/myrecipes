@@ -1,7 +1,8 @@
 // The app shell. Decides between sign-in, guest mode and the signed-in app,
 // loads the recipe list (with an on-device cache for fast starts), keeps the
 // user's preferences, and switches between the five bottom-nav tabs. Most
-// screens are lazy-loaded from components/views/.
+// screens are lazy-loaded from components/views/. Also shows the offline bar,
+// the 💤 bar when the database doesn't answer, and the update banner.
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
