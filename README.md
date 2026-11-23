@@ -23,7 +23,7 @@
 
 ## What it does
 
-- **Keep your cookbook**: type a recipe, paste it in one go, or import it from a website or video with a little AI help
+- **Keep your cookbook**: import a recipe from a website link in one tap, from a video with your own AI chatbot, or type or paste it yourself
 - **Cook without the mess**: big-letter cooking mode, timers found in the steps, scaling and metric or US units
 - **Shop smarter**: add a recipe's ingredients to one list, merged and sorted by supermarket aisle
 - **Plan the week**: a calm week planner, with room for "eating out" and leftovers too
@@ -38,6 +38,8 @@ All you need is a browser and an email address.
 1. Open **[myrecipes-pi.vercel.app](https://myrecipes-pi.vercel.app/)**
 2. Enter your email, tap **Send magic link**, and tap the link in your inbox
 3. Tap **+** to add your first recipe
+
+Don't feel like typing? Tap **Import recipe** and paste a link. Most recipe websites come in with one tap; for videos and Instagram the app hands the work to your own AI chatbot. You always check a preview before it's saved.
 
 Just curious? Tap **Continue as guest** for a demo cookbook; nothing is saved. To keep the app on your phone, choose **Add to Home screen** from your browser's menu.
 
