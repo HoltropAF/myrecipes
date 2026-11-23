@@ -39,8 +39,8 @@ export default function RecipeImportScreen({ recipes, onImported, onClose }) {
       if (res.ok && body.template) {
         setFetched({ template: body.template, key: Date.now() })
         setFetchNote({ ok: true, text: nl
-          ? `Gevonden: ${body.title} (${body.ingredientCount} ingrediënten, ${body.stepCount} stappen). Controleer het hieronder en importeer.`
-          : `Found: ${body.title} (${body.ingredientCount} ingredients, ${body.stepCount} steps). Check it below, then import.` })
+          ? `Gevonden: ${body.title} (${body.ingredientCount} ingrediënten, ${body.stepCount} stappen${body.hasPhoto ? ', met foto' : ''}${body.stepPhotoCount ? `, ${body.stepPhotoCount} stapfoto’s` : ''}). Controleer het hieronder en importeer.`
+          : `Found: ${body.title} (${body.ingredientCount} ingredients, ${body.stepCount} steps${body.hasPhoto ? ', with photo' : ''}${body.stepPhotoCount ? `, ${body.stepPhotoCount} step photos` : ''}). Check it below, then import.` })
       } else setFetchNote({ ok: false, text: fetchMessages[body.error] || fetchMessages.unreachable })
     } catch { setFetchNote({ ok: false, text: fetchMessages.unreachable }) }
     finally { setFetching(false) }

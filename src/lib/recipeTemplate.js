@@ -6,8 +6,12 @@ const fields = {
   'Total time (minutes)': 'total_minutes', Category: 'category', Subcategory: 'subcategory',
   'Tags (separate with commas)': 'tags', 'Source (link or description)': 'source',
   'Fridge storage': 'fridge_storage', 'Freezer friendly (yes/no)': 'freezer_friendly',
-  Reheating: 'reheat_instructions', 'Prep ahead': 'prep_ahead',
+  Reheating: 'reheat_instructions', 'Prep ahead': 'prep_ahead', 'Photo (link)': 'photo_url',
 }
+
+// Photos are links to where the picture already lives (usually the recipe's own
+// website); only plain http(s) links are accepted.
+const isPhotoLink = value => /^https?:\/\/\S+$/i.test(value)
 export const titleKey = title => title.trim().toLocaleLowerCase().replace(/\s+/g, ' ')
 
 // Deliberately strict: an unrecognised line is reported, never silently discarded.
@@ -27,7 +31,7 @@ export function parseRecipeTemplate(text) {
     if (line === '--- RECIPE ---') {
       if (recipe) fail(n, 'Finish the previous recipe with --- END RECIPE ---.')
       recipe = { id: crypto.randomUUID(), title: '', tagline: null, servings: null, total_minutes: null,
-        category: null, subcategory: null, tags: [], source: null, ingredients: [], steps: [], notes: '', variants: [],
+        category: null, subcategory: null, tags: [], source: null, photo_url: null, ingredients: [], steps: [], notes: '', variants: [],
         fridge_storage: null, freezer_friendly: null, reheat_instructions: null, prep_ahead: null }
       section = null; seen = new Set()
       return
@@ -60,6 +64,9 @@ export function parseRecipeTemplate(text) {
         else if (/^y(es)?$/i.test(value)) recipe[key] = true
         else if (/^n(o)?$/i.test(value)) recipe[key] = false
         else fail(n, `${label} must be yes, no, or left blank.`)
+      } else if (key === 'photo_url') {
+        if (value && !isPhotoLink(value)) fail(n, `${label} must be a web link starting with http:// or https://, or blank.`)
+        recipe[key] = value && isPhotoLink(value) ? value : null
       } else recipe[key] = key === 'tags' ? [...new Set(value.split(',').map(s => s.trim()).filter(Boolean))] : value || null
       return
     }
@@ -83,7 +90,12 @@ export function parseRecipeTemplate(text) {
     } else {
       const match = line.match(/^\d+[.)]\s*(.+)$/)
       if (!match) { fail(n, 'Write a numbered instruction, for example 1. Boil the water.'); return }
-      groupFor(key).items.push({ id: crypto.randomUUID(), content: match[1], timer_seconds: null })
+      // Optional step photo: "3. Fold the dough. | photo: https://..."
+      const [content, photo] = match[1].split(/\s*\|\s*photo:\s*/i)
+      if (photo !== undefined && !isPhotoLink(photo.trim())) { fail(n, 'A step photo must be a web link starting with http:// or https://.'); return }
+      const item = { id: crypto.randomUUID(), content: content.trim(), timer_seconds: null }
+      if (photo) item.image_url = photo.trim()
+      groupFor(key).items.push(item)
     }
   })
   if (recipe) errors.push('Finish the last recipe with --- END RECIPE ---.')

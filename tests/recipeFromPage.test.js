@@ -80,3 +80,29 @@ test('durations and text cleaning', () => {
   assert.equal(durationMinutes('45 minutes'), null)
   assert.equal(cleanText('Crème&nbsp;fraîche &#38; <i>dill</i>'), 'Crème fraîche & dill')
 })
+
+test('the dish photo and step photos come along as links', () => {
+  const result = recipeTemplateFromHtml(page({
+    '@type': 'Recipe', name: 'Bread',
+    image: [{ '@type': 'ImageObject', url: '/img/bread.jpg' }, 'https://cdn.example.com/other.jpg'],
+    recipeIngredient: ['500 g flour'],
+    recipeInstructions: [
+      { '@type': 'HowToStep', text: 'Knead.', image: 'https://cdn.example.com/knead.jpg' },
+      { '@type': 'HowToStep', text: 'Bake.' },
+    ],
+  }), 'https://example.com/bread')
+  assert.equal(result.hasPhoto, true)
+  assert.equal(result.stepPhotoCount, 1)
+  const { recipes, errors } = parseRecipeTemplate(result.template)
+  assert.deepEqual(errors, [])
+  assert.equal(recipes[0].photo_url, 'https://example.com/img/bread.jpg')
+  assert.equal(recipes[0].steps[0].items[0].content, 'Knead.')
+  assert.equal(recipes[0].steps[0].items[0].image_url, 'https://cdn.example.com/knead.jpg')
+  assert.equal(recipes[0].steps[0].items[1].image_url, undefined)
+})
+
+test('the template rejects photo fields that are not web links', () => {
+  const text = '--- RECIPE ---\nName: X\nPhoto (link): not-a-link\nINGREDIENTS\n1 | | egg\nSTEPS\n1. Boil. | photo: javascript:alert(1)\n--- END RECIPE ---\n'
+  const { errors } = parseRecipeTemplate(text)
+  assert.equal(errors.length, 2)
+})

@@ -120,6 +120,10 @@ export default function TemplateImportCard({ existingRecipes, onImported, initia
               <details style={{ marginTop: 4 }}>
                 <summary style={summaryStyle}>{nl ? 'Recept bekijken' : 'Preview recipe'}</summary>
                 <div style={{ marginTop: 8, paddingLeft: 4 }}>
+                  {r.photo_url && (
+                    <img src={r.photo_url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none' }}
+                      style={{ display: 'block', width: '100%', maxWidth: 260, maxHeight: 160, objectFit: 'cover', borderRadius: 9, marginBottom: 8 }} />
+                  )}
                   <div style={hintStyle0}>
                     {[r.tagline, r.servings && `${r.servings} ${nl ? 'porties' : 'servings'}`, r.total_minutes && `${r.total_minutes} min`, r.category, r.subcategory, ...r.tags].filter(Boolean).join(' · ')}
                   </div>
@@ -132,7 +136,7 @@ export default function TemplateImportCard({ existingRecipes, onImported, initia
                   {r.steps.map((g, i) => (
                     <div key={i} style={{ marginTop: 8 }}>
                       {g.group && <div style={groupTitleStyle}>{g.group}</div>}
-                      <ol style={listStyle}>{g.items.map(item => <li key={item.id}>{item.content}</li>)}</ol>
+                      <ol style={listStyle}>{g.items.map(item => <li key={item.id}>{item.content}{item.image_url ? ' 📷' : ''}</li>)}</ol>
                     </div>
                   ))}
                   {r.notes && <div style={{ ...noteStyle, whiteSpace: 'pre-wrap' }}>{r.notes}</div>}

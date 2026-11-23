@@ -13,6 +13,7 @@ Category:
 Subcategory:
 Tags (separate with commas):
 Source (link or description):
+Photo (link):
 Fridge storage:
 Freezer friendly (yes/no):
 Reheating:
@@ -28,6 +29,7 @@ INGREDIENTS
 STEPS
 # One numbered instruction per step, for example: 1. Boil the water.
 # Include temperatures and timings in the instruction.
+# Optional photo for a step: 2. Fold the dough. | photo: https://example.com/step2.jpg
 
 NOTES
 # Preparation, storage, reheating, or serving notes.

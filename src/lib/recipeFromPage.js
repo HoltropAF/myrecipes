@@ -6,6 +6,9 @@
 // import screen already previews and saves (docs/recipe-template.txt), so the
 // person still checks everything before anything is stored.
 //
+// The dish photo and any step photos come along as links to the site's own
+// pictures; they are shown from there, not copied.
+//
 // Pages without that data (Instagram, TikTok, YouTube, Pinterest, many video
 // pages) return null; the import screen then offers the chatbot route instead.
 
@@ -72,14 +75,36 @@ function servingsFrom(yieldValue) {
   return n >= 1 && n <= 1000 ? n : null
 }
 
-function stepGroups(instructions) {
+/**
+ * The first usable picture link in a schema.org image value: a string, an
+ * ImageObject ({ url }), or a list of either. Relative links are resolved
+ * against the page. Returns null for anything that isn't http(s).
+ */
+export function imageUrl(value, base) {
+  const pick = v => {
+    if (!v) return null
+    if (typeof v === 'string') return v
+    if (Array.isArray(v)) { for (const x of v) { const u = pick(x); if (u) return u } return null }
+    if (typeof v === 'object') return pick(v.url || v.contentUrl)
+    return null
+  }
+  const raw = pick(value)
+  if (!raw) return null
+  try {
+    const url = new URL(raw.trim(), base)
+    return ['http:', 'https:'].includes(url.protocol) ? url.href.replace(/\|/g, '%7C') : null
+  } catch { return null }
+}
+
+// Steps as [{ group, items: [{ text, image }] }]; image is a step photo link or null.
+function stepGroups(instructions, base) {
   const groups = [{ group: null, items: [] }]
-  const add = text => { const t = cleanText(text); if (t) groups.at(-1).items.push(t) }
+  const add = (text, image = null) => { const t = cleanText(text); if (t) groups.at(-1).items.push({ text: t, image: imageUrl(image, base) }) }
   const walk = node => {
     if (!node) return
     if (typeof node === 'string') {
       // A single block of text: one step per line, or the whole text as one step.
-      node.split(/\r?\n|<br\s*\/?>|<\/p>/i).forEach(add)
+      node.split(/\r?\n|<br\s*\/?>|<\/p>/i).forEach(line => add(line))
       return
     }
     if (Array.isArray(node)) { node.forEach(walk); return }
@@ -90,7 +115,7 @@ function stepGroups(instructions) {
       return
     }
     if (node.itemListElement) { walk(node.itemListElement); return }
-    add(node.text || node.name)
+    add(node.text || node.name, node.image)
   }
   walk(instructions)
   return groups.filter(g => g.items.length)
@@ -112,7 +137,7 @@ export function recipeTemplateFromHtml(html, pageUrl) {
   const title = cleanText(data.name)
   const ingredients = (Array.isArray(data.recipeIngredient) ? data.recipeIngredient : Array.isArray(data.ingredients) ? data.ingredients : [])
     .map(cleanText).filter(Boolean)
-  const steps = stepGroups(data.recipeInstructions)
+  const steps = stepGroups(data.recipeInstructions, pageUrl)
   if (!title || !ingredients.length || !steps.length) return null
 
   let description = cleanText(data.description)
@@ -126,8 +151,16 @@ export function recipeTemplateFromHtml(html, pageUrl) {
     const name = cleanText(row.name) || text
     return [formatAmount(row.amount), row.unit || '', name, row.note ? cleanText(row.note) : null].filter(v => v !== null).join(' | ')
   })
+  const photo = imageUrl(data.image, pageUrl)
   let number = 0
-  const stepLines = steps.flatMap(g => [...(g.group ? [`[${g.group}]`] : []), ...g.items.map(text => `${++number}. ${text}`)])
+  let stepPhotos = 0
+  const stepLines = steps.flatMap(g => [
+    ...(g.group ? [`[${g.group}]`] : []),
+    ...g.items.map(({ text, image }) => {
+      if (image) stepPhotos++
+      return `${++number}. ${text}${image ? ` | photo: ${image}` : ''}`
+    }),
+  ])
 
   const template = [
     '--- RECIPE ---',
@@ -139,6 +172,7 @@ export function recipeTemplateFromHtml(html, pageUrl) {
     'Subcategory:',
     'Tags (separate with commas):',
     `Source (link or description): ${source}`,
+    `Photo (link): ${photo ?? ''}`,
     'Fridge storage:',
     'Freezer friendly (yes/no):',
     'Reheating:',
@@ -153,5 +187,5 @@ export function recipeTemplateFromHtml(html, pageUrl) {
     '',
   ].join('\n')
 
-  return { title, template, ingredientCount: ingredientLines.length, stepCount: number }
+  return { title, template, ingredientCount: ingredientLines.length, stepCount: number, hasPhoto: !!photo, stepPhotoCount: stepPhotos }
 }

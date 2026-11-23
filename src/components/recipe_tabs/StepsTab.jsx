@@ -31,8 +31,15 @@ export default function StepsTab({ steps, unitSystem, onStartCooking }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 1,
                   }}>{si + 1}</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)', lineHeight: 1.5 }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--charcoal)', lineHeight: 1.5, minWidth: 0 }}>
                     {convertStepTemperatures(step.content, unitSystem)}
+                    {step.image_url && (
+                      <img
+                        src={step.image_url} alt="" loading="lazy" referrerPolicy="no-referrer"
+                        onError={e => { e.currentTarget.style.display = 'none' }}
+                        style={{ display: 'block', width: '100%', maxWidth: 320, maxHeight: 180, objectFit: 'cover', borderRadius: 9, marginTop: 8 }}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

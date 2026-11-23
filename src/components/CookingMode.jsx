@@ -237,6 +237,16 @@ export default function CookingMode({ recipe, steps, unitSystem, onClose, onLogg
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600, lineHeight: 1.4, marginBottom: stepSeconds ? 28 : 0 }}>
           {convertStepTemperatures(current.content, unitSystem)}
         </div>
+        {current.image_url && (
+          // Step photos are links to the recipe site's own pictures: no referrer
+          // is sent (some sites refuse hotlinked images otherwise), and a link
+          // that no longer works simply hides.
+          <img
+            key={current.id} src={current.image_url} alt="" loading="lazy" referrerPolicy="no-referrer"
+            onError={e => { e.currentTarget.style.display = 'none' }}
+            style={{ display: 'block', width: '100%', maxWidth: 420, maxHeight: '32dvh', objectFit: 'cover', borderRadius: 12, marginTop: 18, marginBottom: stepSeconds ? 10 : 0 }}
+          />
+        )}
 
         {stepSeconds && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
