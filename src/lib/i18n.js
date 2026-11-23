@@ -145,6 +145,8 @@ const en = {
     updateBtn: 'Update',
   },
   wizard: {
+    importInsteadTitle: "Don't feel like typing?",
+    importInsteadHint: 'Import it from a recipe website or video link instead →',
     photoTypeError: 'Photos must be JPG, PNG, WebP or GIF.',
     photoSizeError: 'That photo is too large (max 8 MB).',
     steps: ['Title', 'Ingredients', 'Steps', 'Extras', 'Variants'],
@@ -794,6 +796,8 @@ const nl = {
     updateBtn: 'Bijwerken',
   },
   wizard: {
+    importInsteadTitle: 'Geen zin om te typen?',
+    importInsteadHint: 'Importeer het recept dan van een website- of videolink →',
     photoTypeError: "Foto's moeten JPG, PNG, WebP of GIF zijn.",
     photoSizeError: 'Die foto is te groot (max 8 MB).',
     steps: ['Titel', 'Ingrediënten', 'Stappen', 'Extra', 'Varianten'],

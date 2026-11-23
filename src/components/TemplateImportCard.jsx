@@ -7,15 +7,23 @@ import { useT } from '../lib/i18n'
 import { markTemplateDuplicates, parseRecipeTemplate, saveTemplateRecipes } from '../lib/recipeTemplate'
 import template from '../../docs/recipe-template.txt?raw'
 
-export default function TemplateImportCard({ existingRecipes, onImported }) {
+// `initialText` arrives filled in (from the website import) and is previewed
+// straight away; mount with a new `key` for each new text.
+export default function TemplateImportCard({ existingRecipes, onImported, initialText = '' }) {
   const { lang } = useT()
   const nl = lang === 'nl'
-  const [parsed, setParsed] = useState(null)
-  const [selected, setSelected] = useState(new Set())
+  const [initial] = useState(() => {
+    if (!initialText) return null
+    try { return parseRecipeTemplate(initialText) } catch { return null }
+  })
+  const [parsed, setParsed] = useState(initial)
+  const [selected, setSelected] = useState(() => new Set(
+    initial ? markTemplateDuplicates(initial.recipes, existingRecipes).filter(e => !e.duplicate).map(e => e.recipe.id) : []
+  ))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [pasted, setPasted] = useState('')
+  const [pasted, setPasted] = useState(initialText)
   const input = useRef(null)
   const lock = useRef(false)
   const entries = parsed ? markTemplateDuplicates(parsed.recipes, existingRecipes) : []

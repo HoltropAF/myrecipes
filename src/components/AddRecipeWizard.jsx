@@ -34,7 +34,7 @@ async function uploadPhoto(file, userId, t, suffix = '') {
   return urlData.publicUrl
 }
 
-export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingSubcategories = {}, existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0 }) {
+export default function AddRecipeWizard({ onClose, onSaved, existingCategories = [], existingSubcategories = {}, existingGroups = [], existingTags = [], existingRecipe = null, prefillCategory = null, initialStep = 0, onSwitchToImport = null }) {
   const { t } = useT()
   const isEditing = !!existingRecipe
   const [stepIndex, setStepIndex] = useState(initialStep)
@@ -255,6 +255,19 @@ export default function AddRecipeWizard({ onClose, onSaved, existingCategories =
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 100px' }}>
         {step === 'title' && (
           <TitleStep title={title} setTitle={setTitle} tagline={tagline} setTagline={setTagline} />
+        )}
+        {step === 'title' && !isEditing && onSwitchToImport && (
+          <button
+            type="button" onClick={onSwitchToImport}
+            style={{
+              display: 'block', width: '100%', marginTop: 18, padding: '11px 14px', borderRadius: 10, textAlign: 'left',
+              border: '1px dashed var(--tomato)', background: 'var(--card)', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--charcoal)', lineHeight: 1.4,
+            }}
+          >
+            <b style={{ color: 'var(--tomato-deep)' }}>{t('wizard.importInsteadTitle', "Don't feel like typing?")}</b>{' '}
+            {t('wizard.importInsteadHint', 'Import it from a link instead →')}
+          </button>
         )}
         {step === 'ingredients' && (
           <IngredientsStep

@@ -630,6 +630,12 @@ function AppInner({ setLanguage }) {
           initialStep={editingRecipe ? editInitialStep : 0}
           prefillCategory={prefillCategory}
           onClose={closeWizard}
+          onSwitchToImport={() => {
+            closeWizard()
+            // Let the wizard's deferred history.back() run before the import
+            // screen pushes its own history entry (same race as DecideCard).
+            setTimeout(() => setShowImport(true), 0)
+          }}
           onSaved={async (updated) => {
             closeWizard()
             // The row returned by .select().single() has no allergen_tags/diet
