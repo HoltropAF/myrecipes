@@ -104,5 +104,6 @@ test('the dish photo and step photos come along as links', () => {
 test('the template rejects photo fields that are not web links', () => {
   const text = '--- RECIPE ---\nName: X\nPhoto (link): not-a-link\nINGREDIENTS\n1 | | egg\nSTEPS\n1. Boil. | photo: javascript:alert(1)\n--- END RECIPE ---\n'
   const { errors } = parseRecipeTemplate(text)
-  assert.equal(errors.length, 2)
+  assert.ok(errors.some(e => e.includes('Photo (link) must be a web link')))
+  assert.ok(errors.some(e => e.includes('A step photo must be a web link')))
 })
